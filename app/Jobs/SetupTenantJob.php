@@ -26,16 +26,12 @@ class SetupTenantJob implements ShouldQueue
     public function handle()
     {
         // Setup tenant DB connection
-        Config::set('database.connections.tenant', [
-            'driver' => 'mysql',
-            'host' => env('DB_HOST'),
-            'port' => env('DB_PORT'),
+
+        $base = config('database.connections.mysql');
+        
+        Config::set('database.connections.tenant', array_merge($base, [
             'database' => $this->dbName,
-            'username' => env('DB_USERNAME'),
-            'password' => env('DB_PASSWORD'),
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
-        ]);
+        ]));
 
         DB::purge('tenant');
         DB::reconnect('tenant');
