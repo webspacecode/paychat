@@ -32,16 +32,10 @@ class IdentifyTenant
         app()->instance('currentTenant', $tenant);
 
         // Dynamically set tenant DB connection
-        Config::set('database.connections.tenant', [
-            'driver' => 'mysql',
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
+        $base = config('database.connections.mysql');
+        Config::set('database.connections.tenant', array_merge($base, [
             'database' => $tenant->database,
-            'username' => env('DB_USERNAME'),
-            'password' => env('DB_PASSWORD'),
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
-        ]);
+        ]));
 
         DB::purge('tenant');
         DB::setDefaultConnection('tenant');

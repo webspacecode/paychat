@@ -117,8 +117,8 @@ return [
             'host' => env('DB_TENANT_HOST', '127.0.0.1'),
             'port' => env('DB_TENANT_PORT', '3306'),
             'database' => null, // this will be set dynamically
-            'username' => env('DB_TENANT_USERNAME', 'root'),
-            'password' => env('DB_TENANT_PASSWORD', 'mypass'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', 'mypass'),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
