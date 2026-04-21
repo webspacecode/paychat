@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a365d">
+    <title>Payment - Frozen Cafe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'navy': '#1a365d',
+                        'navy-light': '#2d5a87',
+                        'navy-dark': '#0f2a44',
+                        'gold': '#d4af37',
+                        'gold-light': '#e6c659',
+                        'gold-dark': '#b8941f',
+                        'cream': '#faf8f3',
+                        'warm-gray': '#8b7355'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Premium mobile-first styles */
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Native-like scrolling */
+        .native-scroll {
+            -webkit-overflow-scrolling: touch;
+            overflow-y: auto;
+        }
+        
+        /* Premium button states */
+        .btn-active:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+        
+        /* Premium shadows */
+        .shadow-premium {
+            box-shadow: 0 4px 20px rgba(26, 54, 93, 0.08);
+        }
+        
+        .shadow-premium-lg {
+            box-shadow: 0 8px 30px rgba(26, 54, 93, 0.12);
+        }
+        
+        /* Pulse animation for payment processing */
+        .pulse-gold {
+            animation: pulseGold 2s infinite;
+        }
+        
+        @keyframes pulseGold {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Success animation */
+        .success-bounce {
+            animation: successBounce 0.6s ease-out;
+        }
+        
+        @keyframes successBounce {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-cream h-full">
+    <div class="h-full flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-premium border-b border-gray-100 px-4 py-4 flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <button onclick="goBack()" class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center btn-active">
+                    <svg class="w-6 h-6 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                
+                <div class="text-center">
+                    <h1 class="text-xl font-semibold text-navy">Payment</h1>
+                    <p class="text-sm text-warm-gray">Complete your order</p>
+                </div>
+                
+                <div class="w-10 h-10"></div> <!-- Spacer for centering -->
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-hidden">
+            <div class="h-full native-scroll">
+                <!-- Bill Information -->
+                <div class="p-6 bg-white mx-4 mt-4 rounded-2xl shadow-premium border border-gray-100">
+                    <div class="text-center mb-6">
+                        <div class="flex items-center justify-center mb-2">
+                            <div class="w-12 h-12 bg-navy rounded-lg flex items-center justify-center p-2 mr-3">
+                                <img src="/logo.svg" alt="Frozen Cafe" class="w-full h-full object-contain">
+                            </div>
+                            <div class="text-left">
+                                <h2 class="text-lg font-semibold text-navy">Frozen Cafe</h2>
+                                <p class="text-sm text-warm-gray">Table 5</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-cream rounded-lg p-3 mb-4">
+                            <p class="text-sm text-warm-gray mb-1">Bill Number</p>
+                            <p class="text-lg font-bold text-navy">#3423678</p>
+                        </div>
+                        
+                        <!-- Total Amount -->
+                        <div class="mb-6">
+                            <p class="text-sm text-warm-gray mb-2">Total Amount</p>
+                            <p class="text-4xl font-bold text-gold">$550.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold text-navy mb-4 px-2">Choose Payment Method</h3>
+                    
+                    <!-- UPI Payment -->
+                    <button onclick="selectPaymentMethod('upi')" class="w-full bg-gradient-to-r from-navy to-navy-light text-white p-6 rounded-2xl mb-4 btn-active shadow-premium-lg payment-method" data-method="upi">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4">
+                                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-left">
+                                    <h4 class="text-xl font-bold">UPI Payment</h4>
+                                    <p class="text-blue-100 text-sm">Pay using UPI apps</p>
+                                </div>
+                            </div>
+                            <div class="w-6 h-6 border-2 border-white rounded-full flex items-center justify-center">
+                                <div class="w-3 h-3 bg-white rounded-full opacity-0 transition-opacity duration-200" id="upi-check"></div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Cash Payment -->
+                    <button onclick="selectPaymentMethod('cash')" class="w-full bg-white border-2 border-gray-200 text-navy p-6 rounded-2xl mb-6 btn-active shadow-premium payment-method" data-method="cash">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mr-4">
+                                    <svg class="w-7 h-7 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-left">
+                                    <h4 class="text-xl font-bold">Cash Payment</h4>
+                                    <p class="text-warm-gray text-sm">Pay with cash</p>
+                                </div>
+                            </div>
+                            <div class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center">
+                                <div class="w-3 h-3 bg-navy rounded-full opacity-0 transition-opacity duration-200" id="cash-check"></div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="mx-4 mb-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-premium border border-gray-100">
+                        <h3 class="text-lg font-semibold text-navy mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Order Summary
+                        </h3>
+                        
+                        <!-- Cart Items -->
+                        <div class="space-y-3 mb-4">
+                            <div class="flex items-center justify-between py-2">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center mr-3">
+                                        <span class="text-orange-600 font-semibold text-sm">PT</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-navy">Paneer Tikka</p>
+                                        <p class="text-sm text-warm-gray">Quantity: 2</p>
+                                    </div>
+                                </div>
+                                <span class="font-semibold text-navy">$500.00</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Summary Calculations -->
+                        <div class="border-t border-gray-200 pt-4 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-warm-gray">Subtotal</span>
+                                <span class="text-navy font-medium">$500.00</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-warm-gray">Discount</span>
+                                <span class="text-navy font-medium">$0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-warm-gray">Tax</span>
+                                <span class="text-navy font-medium">$50.00</span>
+                            </div>
+                            <div class="border-t border-gray-200 pt-2 mt-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lg font-semibold text-navy">Total</span>
+                                    <span class="text-xl font-bold text-gold">$550.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Action Button -->
+        <div class="p-4 bg-white border-t border-gray-200 shadow-premium-lg">
+            <button id="payButton" onclick="processPayment()" disabled class="w-full bg-gray-300 text-gray-500 font-semibold py-4 px-6 rounded-2xl transition-all duration-300">
+                Select Payment Method
+            </button>
+        </div>
+
+        <!-- Payment Processing Modal -->
+        <div id="processingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center">
+            <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
+                <div class="w-16 h-16 bg-gold rounded-full flex items-center justify-center mx-auto mb-4 pulse-gold">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-navy mb-2">Processing Payment</h3>
+                <p class="text-warm-gray mb-4">Please wait while we process your payment...</p>
+                <div class="flex justify-center">
+                    <div class="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center">
+            <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 success-bounce">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-navy mb-2">Payment Successful!</h3>
+                <p class="text-warm-gray mb-6">Your order has been confirmed. Thank you for dining with us!</p>
+                <button onclick="goToReceipt()" class="w-full bg-gradient-to-r from-gold to-gold-light text-white font-semibold py-3 px-6 rounded-xl btn-active">
+                    View Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedPaymentMethod = null;
+
+        function goBack() {
+            // In a real app, this would navigate back to the cart
+            alert('Going back to cart...');
+        }
+
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            
+            // Update visual states
+            const allMethods = document.querySelectorAll('.payment-method');
+            const payButton = document.getElementById('payButton');
+            
+            allMethods.forEach(btn => {
+                const methodType = btn.dataset.method;
+                const checkmark = document.getElementById(`${methodType}-check`);
+                
+                if (methodType === method) {
+                    // Selected state
+                    if (method === 'upi') {
+                        btn.className = 'w-full bg-gradient-to-r from-navy to-navy-light text-white p-6 rounded-2xl mb-4 btn-active shadow-premium-lg payment-method border-2 border-gold';
+                    } else {
+                        btn.className = 'w-full bg-white border-2 border-gold text-navy p-6 rounded-2xl mb-6 btn-active shadow-premium payment-method';
+                    }
+                    checkmark.style.opacity = '1';
+                } else {
+                    // Unselected state
+                    if (methodType === 'upi') {
+                        btn.className = 'w-full bg-gradient-to-r from-navy to-navy-light text-white p-6 rounded-2xl mb-4 btn-active shadow-premium-lg payment-method';
+                    } else {
+                        btn.className = 'w-full bg-white border-2 border-gray-200 text-navy p-6 rounded-2xl mb-6 btn-active shadow-premium payment-method';
+                    }
+                    checkmark.style.opacity = '0';
+                }
+            });
+            
+            // Enable pay button
+            if (method === 'upi') {
+                payButton.className = 'w-full bg-gradient-to-r from-navy to-navy-light text-white font-semibold py-4 px-6 rounded-2xl btn-active shadow-premium';
+                payButton.textContent = 'Pay with UPI - $550.00';
+            } else {
+                payButton.className = 'w-full bg-gradient-to-r from-gold to-gold-light text-white font-semibold py-4 px-6 rounded-2xl btn-active shadow-premium';
+                payButton.textContent = 'Pay with Cash - $550.00';
+            }
+            payButton.disabled = false;
+        }
+
+        function processPayment() {
+            if (!selectedPaymentMethod) return;
+            
+            // Show processing modal
+            const processingModal = document.getElementById('processingModal');
+            processingModal.classList.remove('opacity-0', 'pointer-events-none');
+            processingModal.querySelector('.bg-white').classList.remove('scale-95');
+            processingModal.querySelector('.bg-white').classList.add('scale-100');
+            window.location.href = "upi.html"
+            // Simulate payment processing
+            setTimeout(() => {
+                // Hide processing modal
+                processingModal.classList.add('opacity-0', 'pointer-events-none');
+                processingModal.querySelector('.bg-white').classList.add('scale-95');
+                processingModal.querySelector('.bg-white').classList.remove('scale-100');
+                
+                // Show success modal
+                setTimeout(() => {
+                    const successModal = document.getElementById('successModal');
+                    successModal.classList.remove('opacity-0', 'pointer-events-none');
+                    successModal.querySelector('.bg-white').classList.remove('scale-95');
+                    successModal.querySelector('.bg-white').classList.add('scale-100');
+                }, 200);
+                
+            }, 3000);
+        }
+
+        function goToReceipt() {
+            alert('Redirecting to receipt...');
+            // In a real app, this would navigate to the receipt page
+        }
+    </script>
+</body>
+</html>

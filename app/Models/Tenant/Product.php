@@ -13,4 +13,9 @@ class Product extends Model
     public function recipe()      { return $this->hasOne(Recipe::class); }
 
     public function scopeType($q, string $type) { return $q->where('type', $type); }
+
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class);
+    }
 }

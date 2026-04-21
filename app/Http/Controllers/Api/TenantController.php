@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\Tenant\Location;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -25,11 +26,20 @@ class TenantController extends Controller
             'industry' => 'required|string',
         ]);
 
-        $sanitizedSlug = str_replace('-', '_', strtolower($request->slug));
+        $sanitizedSlug = trim(strtolower($request->slug), '-');
+        $sanitizedSlug = str_replace('-', '_', $sanitizedSlug);
+
         $dbName = 'tenant_' . $sanitizedSlug;
+        // $dbName = $request->dbname;
 
         // Create tenant DB
-        DB::statement("CREATE DATABASE IF NOT EXISTS `$dbName`");
+        if (DB::connection('mysql')->select("SHOW DATABASES LIKE '$dbName'")) {
+            // database exists, just migrate
+        } else {
+            // return response()->json(['message' => 'Tenant db not found'], 500);
+            // throw exception or show message: "Please create the DB in hPanel"
+            DB::statement("CREATE DATABASE IF NOT EXISTS `$dbName`");
+        }
 
         // Store tenant info in central DB
         $tenant = Tenant::create([
@@ -37,6 +47,7 @@ class TenantController extends Controller
             'slug' => $request->slug,
             'database' => $dbName,
             'industry' => $request->industry,
+            'api_key' => $this->generateUniqueApiKey(),
         ]);
 
         // Create admin user in central DB
@@ -74,6 +85,32 @@ class TenantController extends Controller
             '--force' => true,
         ]);
 
-        return response()->json(['message' => 'Tenant registered', 'tenant' => $tenant], 201);
+        // Creating a default vendor location
+        $locationName = $request->input('location_name', $sanitizedSlug);
+        Location::on('tenant')->create([
+            'name' => $locationName,
+            'type' => 'default',
+        ]);
+
+        $token = null;
+        if ($request->isLogin) {
+            $token = $adminUser->createToken('api-token')->plainTextToken;
+        }
+
+        return response()->json([
+            'message' => 'Tenant registered', 
+            'tenant' => $tenant, 
+            'user' => $adminUser, 
+            'token' => $token
+        ], 201);
+    }
+
+    function generateUniqueApiKey()
+    {
+        do {
+            $key = Str::random(32);
+        } while (Tenant::where('api_key', $key)->exists());
+
+        return $key;
     }
 }

@@ -21,6 +21,12 @@ class RestaurantProductStrategy implements ProductStrategyInterface
         return $strategy->create($data);
     }
 
+    public function getProductPayload(array $data): Array
+    {
+        $strategy = $this->typeResolver->resolve($data['type'] ?? 'basic');
+        return $strategy->getProductPayload($data);
+    }
+
     public function update(Product $product, array $data): Product
     {
         $type = $data['type'] ?? $product->type;
@@ -34,10 +40,10 @@ class RestaurantProductStrategy implements ProductStrategyInterface
         return $strategy->delete($product);
     }
 
-    public function search(?string $keyword = null, ?string $type = null)
+    public function search(?string $keyword = null, ?string $type = null, ?int $locationId = null)
     {
-        $strategy = $this->typeResolver->resolve($type ?? 'basic');
-        return $strategy->search($keyword, $type);
+        $strategy = $this->typeResolver->resolve($type);
+        return $strategy->search($keyword, $type, $locationId);
     }
 
     public function getById(int $id): ?Product

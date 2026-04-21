@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a365d">
+    <title>Frozen Cafe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'navy': '#1a365d',
+                        'navy-light': '#2d5a87',
+                        'navy-dark': '#0f2a44',
+                        'gold': '#d4af37',
+                        'gold-light': '#e6c659',
+                        'gold-dark': '#b8941f',
+                        'cream': '#faf8f3',
+                        'warm-gray': '#8b7355'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Premium mobile-first styles */
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Native-like scrolling */
+        .native-scroll {
+            -webkit-overflow-scrolling: touch;
+            overflow-y: auto;
+        }
+        
+        /* Premium button states */
+        .btn-active:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+        
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Elegant slide animations */
+        .slide-in {
+            animation: slideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        
+        .slide-out {
+            animation: slideOut 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); }
+        }
+        
+        /* Premium shadows */
+        .shadow-premium {
+            box-shadow: 0 4px 20px rgba(26, 54, 93, 0.08);
+        }
+        
+        .shadow-premium-lg {
+            box-shadow: 0 8px 30px rgba(26, 54, 93, 0.12);
+        }
+    </style>
+</head>
+<body class="bg-cream h-full">
+    <div class="h-full flex flex-col">
+        <!-- Header - Premium Design -->
+        <header class="bg-white shadow-premium border-b border-gray-100 px-4 py-4 flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <!-- Simple Logo -->
+                    <div class="w-12 h-12 bg-navy rounded-lg flex items-center justify-center p-2">
+                        <img src="/logo.svg" alt="Frozen Cafe" class="w-full h-full object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-navy">Frozen Cafe</h1>
+                        <p class="text-sm text-warm-gray">Table 5 • 4:30 PM</p>
+                    </div>
+                </div>
+                
+                <!-- Profile Button -->
+                <button id="profileButton" onclick="toggleProfileMenu()" class="w-12 h-12 bg-navy rounded-lg flex items-center justify-center btn-active transition-all">
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-hidden">
+            <div class="h-full native-scroll no-scrollbar">
+                <!-- Order Controls -->
+                <div class="p-4 space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-navy mb-2">Order Type</label>
+                            <select class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-gold focus:border-gold text-base shadow-sm">
+                                <option>Dine-in</option>
+                                <option>Take Away</option>
+                                <option>Delivery</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-navy mb-2">Table</label>
+                            <input type="text" value="Table 5" class="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-gold focus:border-gold text-base shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="px-4 mb-4">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </div>
+                        <input type="text" placeholder="Search menu items..." class="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-gold focus:border-gold text-base shadow-sm">
+                    </div>
+                </div>
+
+                <!-- Category Tabs -->
+                <div class="px-4 mb-6">
+                    <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-2">
+                        <button onclick="switchCategory('main-course')" class="category-btn px-6 py-3 bg-navy text-white rounded-lg whitespace-nowrap font-medium btn-active shadow-sm" data-category="main-course">
+                            Main Course
+                        </button>
+                        <button onclick="switchCategory('starters')" class="category-btn px-6 py-3 bg-white text-warm-gray border border-gray-200 rounded-lg whitespace-nowrap font-medium btn-active" data-category="starters">
+                            Starters
+                        </button>
+                        <button onclick="switchCategory('breads')" class="category-btn px-6 py-3 bg-white text-warm-gray border border-gray-200 rounded-lg whitespace-nowrap font-medium btn-active" data-category="breads">
+                            Breads
+                        </button>
+                        <button onclick="switchCategory('desserts')" class="category-btn px-6 py-3 bg-white text-warm-gray border border-gray-200 rounded-lg whitespace-nowrap font-medium btn-active" data-category="desserts">
+                            Desserts
+                        </button>
+                        <button onclick="switchCategory('beverages')" class="category-btn px-6 py-3 bg-white text-warm-gray border border-gray-200 rounded-lg whitespace-nowrap font-medium btn-active" data-category="beverages">
+                            Beverages
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Menu Items Container -->
+                <div class="px-4 pb-24">
+                    <!-- Loading State -->
+                    <div id="loadingState" class="hidden flex items-center justify-center py-12">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin"></div>
+                            <span class="text-warm-gray">Loading menu...</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Course Items -->
+                    <div id="main-course" class="category-content space-y-4">
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center border border-orange-200">
+                                        <span class="text-orange-600 font-semibold text-lg">PT</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Paneer Tikka</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Grilled cottage cheese with spices</p>
+                                        <p class="text-xl font-bold text-gold">$250</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Paneer Tikka', 250)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center border border-green-200">
+                                        <span class="text-green-600 font-semibold text-lg">BM</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Butter Masala</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Rich and creamy tomato curry</p>
+                                        <p class="text-xl font-bold text-gold">$280</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Butter Masala', 280)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center border border-purple-200">
+                                        <span class="text-purple-600 font-semibold text-lg">DM</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Dal Makhani</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Creamy black lentil curry</p>
+                                        <p class="text-xl font-bold text-gold">$220</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Dal Makhani', 220)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-lg flex items-center justify-center border border-red-200">
+                                        <span class="text-red-600 font-semibold text-lg">CC</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Chicken Curry</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Traditional spiced chicken curry</p>
+                                        <p class="text-xl font-bold text-gold">$320</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Chicken Curry', 320)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Starters Items -->
+                    <div id="starters" class="category-content space-y-4 hidden">
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg flex items-center justify-center border border-yellow-200">
+                                        <span class="text-yellow-600 font-semibold text-lg">SP</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Samosa Platter</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Crispy pastries with spiced filling</p>
+                                        <p class="text-xl font-bold text-gold">$120</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Samosa Platter', 120)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-pink-100 to-pink-200 rounded-lg flex items-center justify-center border border-pink-200">
+                                        <span class="text-pink-600 font-semibold text-lg">CT</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Chicken Tikka</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Marinated grilled chicken pieces</p>
+                                        <p class="text-xl font-bold text-gold">$180</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Chicken Tikka', 180)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-teal-100 to-teal-200 rounded-lg flex items-center justify-center border border-teal-200">
+                                        <span class="text-teal-600 font-semibold text-lg">VK</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Veg Kebab</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Mixed vegetable skewers</p>
+                                        <p class="text-xl font-bold text-gold">$150</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Veg Kebab', 150)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Breads Items -->
+                    <div id="breads" class="category-content space-y-4 hidden">
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg flex items-center justify-center border border-amber-200">
+                                        <span class="text-amber-600 font-semibold text-lg">NB</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Naan Bread</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Fresh baked Indian bread</p>
+                                        <p class="text-xl font-bold text-gold">$80</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Naan Bread', 80)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center border border-orange-200">
+                                        <span class="text-orange-600 font-semibold text-lg">RB</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Roti Bread</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Whole wheat flatbread</p>
+                                        <p class="text-xl font-bold text-gold">$60</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Roti Bread', 60)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-lg flex items-center justify-center border border-yellow-200">
+                                        <span class="text-yellow-600 font-semibold text-lg">GB</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Garlic Bread</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Buttery bread with garlic</p>
+                                        <p class="text-xl font-bold text-gold">$90</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Garlic Bread', 90)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desserts Items -->
+                    <div id="desserts" class="category-content space-y-4 hidden">
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-pink-100 to-pink-200 rounded-lg flex items-center justify-center border border-pink-200">
+                                        <span class="text-pink-600 font-semibold text-lg">IC</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Ice Cream</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Vanilla, chocolate, strawberry</p>
+                                        <p class="text-xl font-bold text-gold">$100</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Ice Cream', 100)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center border border-purple-200">
+                                        <span class="text-purple-600 font-semibold text-lg">GJ</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Gulab Jamun</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Sweet milk dumplings in syrup</p>
+                                        <p class="text-xl font-bold text-gold">$80</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Gulab Jamun', 80)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-lg flex items-center justify-center border border-indigo-200">
+                                        <span class="text-indigo-600 font-semibold text-lg">KH</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Kheer</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Rice pudding with nuts</p>
+                                        <p class="text-xl font-bold text-gold">$90</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Kheer', 90)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Beverages Items -->
+                    <div id="beverages" class="category-content space-y-4 hidden">
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center border border-blue-200">
+                                        <span class="text-blue-600 font-semibold text-lg">MT</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Mango Lassi</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Creamy mango yogurt drink</p>
+                                        <p class="text-xl font-bold text-gold">$70</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Mango Lassi', 70)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center border border-green-200">
+                                        <span class="text-green-600 font-semibold text-lg">CT</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Chai Tea</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Spiced Indian tea</p>
+                                        <p class="text-xl font-bold text-gold">$40</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Chai Tea', 40)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-lg flex items-center justify-center border border-red-200">
+                                        <span class="text-red-600 font-semibold text-lg">CS</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Cold Soda</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Refreshing carbonated drinks</p>
+                                        <p class="text-xl font-bold text-gold">$50</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Cold Soda', 50)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl p-4 shadow-premium border border-gray-100 transform transition-all duration-300 hover:scale-[1.02]">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4 flex-1">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center border border-orange-200">
+                                        <span class="text-orange-600 font-semibold text-lg">FJ</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-navy">Fresh Juice</h3>
+                                        <p class="text-sm text-warm-gray mb-1">Orange, apple, or mixed fruit</p>
+                                        <p class="text-xl font-bold text-gold">$60</p>
+                                    </div>
+                                </div>
+                                <button onclick="addToCart('Fresh Juice', 60)" class="w-12 h-12 bg-gold rounded-lg flex items-center justify-center btn-active shadow-sm">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Cart Bar -->
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex-shrink-0 shadow-premium-lg">
+            <button onclick="showCart()" class="w-full bg-gradient-to-r from-navy to-navy-light text-white font-semibold py-4 px-6 rounded-xl flex items-center justify-between btn-active shadow-premium">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gold rounded-full flex items-center justify-center mr-3">
+                        <span id="cartCount" class="text-navy font-bold text-sm">2</span>
+                    </div>
+                    <span class="text-lg">View Cart</span>
+                </div>
+                <span id="cartTotal" class="text-lg font-bold">$500</span>
+            </button>
+        </div>
+
+        <!-- Profile Menu Slider - Full Height -->
+        <div id="profileMenu" class="fixed inset-0 z-50 transform translate-x-full transition-transform duration-300 ease-out">
+            <div class="absolute inset-0 bg-white flex flex-col">
+                <!-- Header -->
+                <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-cream">
+                    <h2 class="text-xl font-semibold text-navy">Menu</h2>
+                    <button onclick="toggleProfileMenu()" class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center btn-active">
+                        <svg class="w-6 h-6 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- User Profile Section -->
+                <div class="p-6 bg-gradient-to-r from-navy to-navy-light">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 bg-gold rounded-full flex items-center justify-center">
+                            <span class="text-navy font-bold text-xl">JD</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-white">John Doe</h3>
+                            <p class="text-blue-100">Manager</p>
+                            <p class="text-blue-200 text-sm">john.doe@frozencafe.com</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu Items -->
+                <div class="flex-1 overflow-y-auto native-scroll">
+                    <div class="py-2">
+                        <a href="#" onclick="navigateTo('dashboard')" class="flex items-center px-6 py-4 text-navy hover:bg-cream btn-active">
+                            <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mr-4">
+                                <svg class="w-5 h-5 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-navy">Dashboard</p>
+                                <p class="text-sm text-warm-gray">View analytics</p>
+                            </div>
+                        </a>
+
+                        <a href="#" onclick="navigateTo('inventory')" class="flex items-center px-6 py-4 text-navy hover:bg-cream btn-active">
+                            <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mr-4">
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-navy">Inventory</p>
+                                <p class="text-sm text-warm-gray">Manage stock</p>
+                            </div>
+                        </a>
+
+                        <a href="#" onclick="navigateTo('reports')" class="flex items-center px-6 py-4 text-navy hover:bg-cream btn-active">
+                            <div class="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center mr-4">
+                                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-navy">Reports</p>
+                                <p class="text-sm text-warm-gray">Sales data</p>
+                            </div>
+                        </a>
+
+                        <a href="#" onclick="navigateTo('users')" class="flex items-center px-6 py-4 text-navy hover:bg-cream btn-active">
+                            <div class="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center mr-4">
+                                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-navy">Users</p>
+                                <p class="text-sm text-warm-gray">Manage staff</p>
+                            </div>
+                        </a>
+
+                        <a href="#" onclick="navigateTo('settings')" class="flex items-center px-6 py-4 text-navy hover:bg-cream btn-active">
+                            <div class="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center mr-4">
+                                <svg class="w-5 h-5 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-navy">Settings</p>
+                                <p class="text-sm text-warm-gray">App preferences</p>
+                            </div>
+                        </a>
+
+                        <a href="#" onclick="navigateTo('profile')" class="flex items-center px-6 py-4 text-navy hover:bg-cream btn-active">
+                            <div class="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center mr-4">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-navy">Profile</p>
+                                <p class="text-sm text-warm-gray">Personal info</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Logout Button -->
+                <div class="p-6 border-t border-gray-200">
+                    <button onclick="logout()" class="w-full flex items-center justify-center px-6 py-4 bg-red-50 text-red-600 rounded-xl btn-active border border-red-100">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        <span class="font-medium">Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart Modal -->
+        <div id="cartModal" class="fixed inset-0 bg-black bg-opacity-50 z-40 opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl transform translate-y-full transition-transform duration-300" id="cartContent">
+                <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto my-4"></div>
+                
+                <div class="px-6 pb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-navy">Your Order</h2>
+                        <button onclick="hideCart()" class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center btn-active">
+                            <svg class="w-6 h-6 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Cart Items -->
+                    <div id="cartItems" class="space-y-4 mb-6 max-h-64 overflow-y-auto native-scroll">
+                        <!-- Items will be populated by JavaScript -->
+                    </div>
+
+                    <!-- Total -->
+                    <div class="border-t border-gray-200 pt-4 mb-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xl font-semibold text-navy">Total</span>
+                            <span id="modalTotal" class="text-xl font-bold text-gold">$500</span>
+                        </div>
+                    </div>
+
+                    <!-- Checkout Button -->
+                    <button onclick="proceedToPayment()" class="w-full bg-gradient-to-r from-gold to-gold-light text-white font-semibold py-4 px-6 rounded-xl btn-active shadow-premium">
+                        Proceed to Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overlay -->
+        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    </div>
+
+    <script>
+        let cart = [
+            { name: 'Paneer Tikka', price: 250, quantity: 1 },
+            { name: 'Paneer Tikka', price: 250, quantity: 1 }
+        ];
+
+        let isProfileMenuOpen = false;
+        let isCartOpen = false;
+
+        // Category switching functionality
+        let currentCategory = 'main-course';
+
+        function switchCategory(categoryId) {
+            // Show loading state
+            const loadingState = document.getElementById('loadingState');
+            const allCategories = document.querySelectorAll('.category-content');
+            const allButtons = document.querySelectorAll('.category-btn');
+            
+            // Hide all categories first
+            allCategories.forEach(category => {
+                category.classList.add('hidden');
+            });
+            
+            // Show loading
+            loadingState.classList.remove('hidden');
+            
+            // Update button states
+            allButtons.forEach(btn => {
+                if (btn.dataset.category === categoryId) {
+                    btn.className = 'category-btn px-6 py-3 bg-navy text-white rounded-lg whitespace-nowrap font-medium btn-active shadow-sm';
+                } else {
+                    btn.className = 'category-btn px-6 py-3 bg-white text-warm-gray border border-gray-200 rounded-lg whitespace-nowrap font-medium btn-active';
+                }
+            });
+            
+            // Simulate loading delay for smooth transition
+            setTimeout(() => {
+                loadingState.classList.add('hidden');
+                
+                // Show selected category with animation
+                const targetCategory = document.getElementById(categoryId);
+                if (targetCategory) {
+                    targetCategory.classList.remove('hidden');
+                    
+                    // Add slide-in animation to items
+                    const items = targetCategory.querySelectorAll('.bg-white');
+                    items.forEach((item, index) => {
+                        item.style.opacity = '0';
+                        item.style.transform = 'translateY(20px)';
+                        
+                        setTimeout(() => {
+                            item.style.transition = 'all 0.3s ease-out';
+                            item.style.opacity = '1';
+                            item.style.transform = 'translateY(0)';
+                        }, index * 100);
+                    });
+                }
+                
+                currentCategory = categoryId;
+            }, 300);
+        }
+
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            const overlay = document.getElementById('overlay');
+            
+            if (isProfileMenuOpen) {
+                menu.classList.add('translate-x-full');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                isProfileMenuOpen = false;
+            } else {
+                menu.classList.remove('translate-x-full');
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                isProfileMenuOpen = true;
+                
+                if (isCartOpen) hideCart();
+            }
+        }
+
+        function showCart() {
+            const modal = document.getElementById('cartModal');
+            const content = document.getElementById('cartContent');
+            
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('translate-y-full');
+            isCartOpen = true;
+            
+            if (isProfileMenuOpen) toggleProfileMenu();
+        }
+
+        function hideCart() {
+            const modal = document.getElementById('cartModal');
+            const content = document.getElementById('cartContent');
+            
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.add('translate-y-full');
+            isCartOpen = false;
+        }
+
+        function navigateTo(section) {
+            alert(`Navigating to ${section.charAt(0).toUpperCase() + section.slice(1)}...`);
+            toggleProfileMenu();
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                alert('Logging out...');
+            }
+            toggleProfileMenu();
+        }
+
+        function addToCart(itemName, price) {
+            const existingItem = cart.find(item => item.name === itemName);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ name: itemName, price: price, quantity: 1 });
+            }
+            updateCart();
+            
+            // Visual feedback
+            const button = event.target.closest('button');
+            const originalBg = button.className;
+            button.className = button.className.replace('bg-gold', 'bg-green-500');
+            button.innerHTML = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+            
+            setTimeout(() => {
+                button.className = originalBg;
+                button.innerHTML = '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>';
+            }, 1000);
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCart();
+        }
+
+        function updateCart() {
+            const cartItemsContainer = document.getElementById('cartItems');
+            const cartCount = document.getElementById('cartCount');
+            const cartTotal = document.getElementById('cartTotal');
+            const modalTotal = document.getElementById('modalTotal');
+            
+            let total = 0;
+            let itemCount = 0;
+            
+            cartItemsContainer.innerHTML = '';
+            
+            cart.forEach((item, index) => {
+                total += item.price * item.quantity;
+                itemCount += item.quantity;
+                
+                cartItemsContainer.innerHTML += `
+                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-navy">${item.name}</h4>
+                            <p class="text-sm text-warm-gray">Quantity: ${item.quantity}</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="font-semibold text-navy">$${item.price * item.quantity}</span>
+                            <button onclick="removeFromCart(${index})" class="w-8 h-8 bg-red-50 text-red-600 rounded-lg flex items-center justify-center btn-active border border-red-100">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            cartCount.textContent = itemCount;
+            cartTotal.textContent = `$${total}`;
+            modalTotal.textContent = `$${total}`;
+        }
+
+        function proceedToPayment() {
+            if (cart.length === 0) {
+                alert('Your cart is empty!');
+                return;
+            }
+            alert(`Processing payment for $${document.getElementById('modalTotal').textContent.replace('$', '')}...`);
+            hideCart();
+            window.location.href = "payments.html"
+        }
+
+        // Close modals when clicking overlay
+        document.getElementById('overlay').addEventListener('click', function() {
+            if (isProfileMenuOpen) toggleProfileMenu();
+        });
+
+        document.getElementById('cartModal').addEventListener('click', function(event) {
+            if (event.target === this) hideCart();
+        });
+
+        // Initialize
+        updateCart();
+    </script>
+</body>
+</html>

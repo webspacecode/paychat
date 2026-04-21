@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayChat - Customer Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <div class="mb-6">
+                    <!-- PayChat Logo -->
+                    <svg class="h-12 md:h-16 mx-auto" viewBox="0 0 401 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g filter="url(#filter0_n_953_186)">
+                            <path d="M55.7874 0C84.2844 3.05756e-05 107.386 21.4135 107.386 47.8281C107.386 74.2426 84.2843 95.6562 55.7874 95.6562C27.2903 95.6562 4.18886 74.2426 4.18872 47.8281C4.18872 21.4135 27.2902 0 55.7874 0ZM29.9192 72.1436H47.2717V54.8525H29.9192V72.1436ZM52.0588 66.7773H57.4436V50.6797H52.0588V66.7773ZM65.8206 57.2383V66.7773H57.4436V72.1436H80.7805V66.7773H70.6077V57.2383H65.8206ZM74.1985 61.4121H80.7805V56.0459H74.1985V61.4121ZM74.1985 56.0449H80.7805V45.3135H74.1985V56.0449ZM41.2874 45.3135H35.9026V50.6797H41.2874V45.3135H46.6731V50.6797H52.0579V39.9473H41.2874V45.3135ZM57.4436 50.6797H68.2141V45.3135H57.4436V50.6797ZM30.5168 45.3135H35.9026V39.9473H30.5168V45.3135ZM52.0588 45.3135H57.4436V39.9473H52.0588V45.3135ZM68.2141 45.3135H73.5999V39.9473H68.2141V45.3135ZM30.5168 36.9658H47.2708V20.8682H30.5168V36.9658ZM50.2629 36.9658H61.0344V31.6006H50.2629V36.9658ZM64.0256 36.9658H80.7805V20.8682H64.0256V36.9658ZM50.2629 31.5996H55.6487V26.2344H50.2629V31.5996ZM55.6487 26.2344H61.0344V20.8682H55.6487V26.2344Z" fill="black"/>
+                            <path d="M12.893 96.3597L14.3424 72.3833L36.674 92.4272L12.893 96.3597Z" fill="black"/>
+                        </g>
+                        <path d="M118.515 76.9812V21.4778H140.413C144.622 21.4778 148.209 22.2818 151.172 23.8898C154.135 25.4797 156.393 27.693 157.947 30.5296C159.519 33.3481 160.305 36.6003 160.305 40.2861C160.305 43.9718 159.51 47.224 157.92 50.0425C156.33 52.8611 154.026 55.0563 151.009 56.6281C148.01 58.2 144.378 58.986 140.114 58.986H126.157V49.5818H138.217C140.476 49.5818 142.337 49.1934 143.8 48.4165C145.282 47.6215 146.384 46.5284 147.107 45.1372C147.847 43.7279 148.218 42.1109 148.218 40.2861C148.218 38.4432 147.847 36.8352 147.107 35.462C146.384 34.0708 145.282 32.9958 143.8 32.237C142.319 31.4601 140.44 31.0716 138.163 31.0716H130.25V76.9812H118.515ZM178.463 77.7671C175.807 77.7671 173.44 77.3064 171.362 76.385C169.284 75.4455 167.64 74.0633 166.43 72.2385C165.237 70.3956 164.641 68.101 164.641 65.3548C164.641 63.0421 165.066 61.0999 165.915 59.528C166.764 57.9561 167.92 56.6914 169.384 55.7338C170.847 54.7762 172.509 54.0535 174.37 53.5657C176.249 53.0779 178.219 52.7346 180.279 52.5359C182.7 52.2829 184.651 52.048 186.132 51.8312C187.614 51.5963 188.689 51.2531 189.357 50.8014C190.026 50.3497 190.36 49.6812 190.36 48.7959V48.6333C190.36 46.9169 189.818 45.5889 188.734 44.6494C187.668 43.7099 186.15 43.2401 184.181 43.2401C182.103 43.2401 180.45 43.7008 179.222 44.6223C177.993 45.5257 177.18 46.6639 176.782 48.037L166.105 47.1698C166.647 44.6403 167.713 42.4542 169.302 40.6113C170.892 38.7503 172.943 37.323 175.454 36.3293C177.984 35.3175 180.911 34.8116 184.235 34.8116C186.548 34.8116 188.761 35.0826 190.875 35.6247C193.007 36.1667 194.895 37.0068 196.539 38.1451C198.201 39.2833 199.511 40.7468 200.469 42.5355C201.427 44.3061 201.905 46.429 201.905 48.9043V76.9812H190.956V71.2086H190.631C189.963 72.5095 189.068 73.6568 187.948 74.6505C186.828 75.6261 185.482 76.394 183.91 76.9541C182.338 77.4961 180.522 77.7671 178.463 77.7671ZM181.769 69.7994C183.467 69.7994 184.967 69.4651 186.268 68.7966C187.569 68.1101 188.59 67.1886 189.33 66.0323C190.071 64.876 190.441 63.5661 190.441 62.1026V57.6851C190.08 57.92 189.583 58.1368 188.951 58.3355C188.337 58.5162 187.641 58.6878 186.864 58.8504C186.087 58.995 185.31 59.1305 184.533 59.257C183.757 59.3654 183.052 59.4647 182.42 59.5551C181.064 59.7538 179.881 60.07 178.869 60.5036C177.857 60.9372 177.072 61.5244 176.511 62.2652C175.951 62.9879 175.671 63.8913 175.671 64.9753C175.671 66.5472 176.24 67.7487 177.379 68.5798C178.535 69.3928 179.998 69.7994 181.769 69.7994ZM216.499 92.5915C215.036 92.5915 213.663 92.4741 212.38 92.2392C211.115 92.0224 210.067 91.7424 209.236 91.3991L211.838 82.7809C213.193 83.1964 214.413 83.4223 215.497 83.4584C216.599 83.4945 217.547 83.2416 218.342 82.6996C219.155 82.1575 219.815 81.2361 220.321 79.9352L220.998 78.1737L206.065 35.3536H218.207L226.825 65.9239H227.259L235.958 35.3536H248.181L232.001 81.48C231.224 83.7204 230.167 85.6717 228.83 87.3339C227.512 89.0142 225.84 90.306 223.817 91.2094C221.793 92.1308 219.354 92.5915 216.499 92.5915Z" fill="#03010B"/>
+                        <path d="M353.864 33.7338C355.526 33.7338 357.288 33.933 359.149 34.3304C361.028 34.7099 362.781 35.4139 364.406 36.4437C366.051 37.4736 367.397 38.9466 368.445 40.8617C369.492 42.7587 370.016 45.225 370.016 48.2601V75.9037H362.103V70.2123H361.778C361.254 71.2602 360.467 72.2903 359.419 73.3021C358.371 74.3138 357.025 75.1542 355.381 75.8226C353.737 76.4911 351.767 76.8246 349.473 76.8246C346.835 76.8245 344.45 76.3373 342.319 75.3617C340.187 74.368 338.497 72.9311 337.25 71.0521C336.022 69.1732 335.408 66.8698 335.407 64.142C335.407 61.7932 335.86 59.8598 336.763 58.3422C337.666 56.8246 338.886 55.623 340.421 54.7377C341.957 53.8524 343.673 53.1835 345.571 52.7318C347.468 52.2801 349.401 51.9374 351.37 51.7025C353.864 51.4135 355.887 51.1781 357.441 50.9974C358.994 50.7987 360.124 50.4827 360.828 50.0492C361.533 49.6156 361.886 48.9106 361.886 47.9349V47.7455C361.886 45.3786 361.217 43.5444 359.88 42.2435C358.561 40.9428 356.592 40.2924 353.972 40.2924C351.244 40.2924 349.094 40.8983 347.522 42.1088C345.968 43.3011 344.893 44.6289 344.297 46.0922L336.682 44.3578C337.585 41.8284 338.904 39.7866 340.638 38.2328C342.39 36.6609 344.405 35.5224 346.682 34.8177C348.958 34.0951 351.352 33.7338 353.864 33.7338ZM246.936 36.7045C246.643 37.221 246.372 37.7661 246.122 38.3412C244.948 41.0332 244.361 44.3034 244.361 48.1517C244.361 52.1085 244.948 55.4333 246.122 58.1254C247.315 60.8174 248.978 62.8499 251.11 64.223C253.242 65.596 255.708 66.2826 258.508 66.2826C260.08 66.2826 261.534 66.0751 262.871 65.6595C264.226 65.244 265.428 64.6381 266.476 63.8431C267.524 63.0302 268.391 62.0452 269.077 60.889C269.782 59.7329 270.27 58.4143 270.541 56.933L282.411 56.9867C282.104 59.5342 281.336 61.9919 280.108 64.3588C278.897 66.7075 277.262 68.8123 275.202 70.6732C273.161 72.5161 270.722 73.9798 267.885 75.0638C265.066 76.1298 261.877 76.6625 258.318 76.6625C253.367 76.6624 248.941 75.5424 245.038 73.3021C241.154 71.0618 238.083 67.8184 235.824 63.5726C233.584 59.3268 232.463 54.1863 232.463 48.1517C232.463 42.0993 233.602 36.9502 235.878 32.7045C236.577 31.4015 237.353 30.1938 238.204 29.0814L246.936 36.7045ZM391.703 34.2758H400.24V40.7806H391.703V63.681C391.703 65.2527 391.939 66.4359 392.408 67.2308C392.878 68.0077 393.483 68.5413 394.224 68.8304C394.983 69.1015 395.805 69.2367 396.691 69.2367C397.341 69.2367 397.91 69.1913 398.398 69.101C398.886 69.0106 399.265 68.9384 399.536 68.8842L400.999 75.5785C400.53 75.7591 399.861 75.9399 398.994 76.1205C398.127 76.3192 397.042 76.4276 395.741 76.4457C393.61 76.4818 391.622 76.1019 389.78 75.307C387.937 74.512 386.446 73.2836 385.308 71.6215C384.17 69.9594 383.601 67.8728 383.601 65.3617V40.7806H377.503V34.2758H383.601V24.3031H391.703V34.2758ZM299.445 41.0511H299.959C300.935 38.8109 302.425 37.0312 304.431 35.7123C306.436 34.3934 309.056 33.7338 312.29 33.7338C315.145 33.7338 317.638 34.3212 319.77 35.4955C321.92 36.6699 323.583 38.4226 324.757 40.7533C325.95 43.0659 326.545 45.9572 326.545 49.4261V75.9037H318.443V50.4017C318.443 47.3484 317.656 44.9814 316.084 43.3011C314.512 41.6028 312.326 40.7533 309.526 40.7533C307.611 40.7533 305.895 41.1601 304.377 41.973C302.878 42.7861 301.694 43.9783 300.826 45.5502C299.977 47.1039 299.553 48.9828 299.553 51.1869V75.9037H291.449V20.3998H299.445V41.0511ZM361.912 55.5238C361.623 55.8127 361.063 56.0835 360.233 56.3363C359.42 56.5712 358.489 56.7787 357.441 56.9594C356.393 57.1219 355.372 57.2758 354.378 57.4203C353.385 57.5467 352.553 57.6552 351.885 57.7455C350.313 57.9442 348.877 58.2787 347.576 58.7484C346.294 59.2181 345.263 59.8955 344.487 60.7806C343.728 61.6479 343.348 62.805 343.348 64.2504C343.348 66.2557 344.089 67.7733 345.571 68.8031C347.052 69.8148 348.94 70.3206 351.235 70.3207C353.475 70.3207 355.391 69.8779 356.981 68.9926C358.589 68.1073 359.808 66.951 360.639 65.5238C361.488 64.0784 361.912 62.5332 361.912 60.889V55.5238ZM258.318 19.641C261.534 19.641 264.516 20.0931 267.262 20.9965C270.026 21.8998 272.474 23.2191 274.606 24.9535C276.738 26.6699 278.473 28.7746 279.81 31.2679C281.165 33.7611 282.032 36.6157 282.411 39.8314H270.541C270.324 38.2959 269.882 36.9319 269.213 35.7396C268.545 34.5291 267.686 33.499 266.638 32.6498C265.59 31.8008 264.38 31.1503 263.007 30.6986C261.652 30.2469 260.179 30.0209 258.589 30.0209C255.716 30.0209 253.214 30.7351 251.082 32.1625C251.032 32.1959 250.982 32.2308 250.932 32.265L242.412 24.8275C243.275 24.1578 244.186 23.5494 245.147 23.0023C249.049 20.762 253.44 19.6411 258.318 19.641Z" fill="black"/>
+                        <defs>
+                            <filter id="filter0_n_953_186" x="4.18872" y="0" width="103.197" height="96.3597" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                                <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+                                <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+                                <feTurbulence type="fractalNoise" baseFrequency="0.41930264234542847 0.41930264234542847" stitchTiles="stitch" numOctaves="3" result="noise" seed="1432" />
+                                <feColorMatrix in="noise" type="luminanceToAlpha" result="alphaNoise" />
+                                <feComponentTransfer in="alphaNoise" result="coloredNoise1">
+                                    <feFuncA type="discrete" tableValues="1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "/>
+                                </feComponentTransfer>
+                                <feComposite operator="in" in2="shape" in="coloredNoise1" result="noise1Clipped" />
+                                <feFlood flood-color="rgba(0, 0, 0, 0.25)" result="color1Flood" />
+                                <feComposite operator="in" in2="noise1Clipped" in="color1Flood" result="color1" />
+                                <feMerge result="effect1_noise_953_186">
+                                    <feMergeNode in="shape" />
+                                    <feMergeNode in="color1" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                    </svg>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Customer</h1>
+                <h2 class="text-3xl md:text-4xl font-bold text-blue-600">Login</h2>
+            </div>
+
+            <!-- Login Form -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+                <form class="space-y-4">
+                    <!-- Shop Slug Input -->
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m3 12 2-2m0 0 7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11 2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1m-6 0h6"/>
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Shop Slug"
+                            class="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 text-slate-700 placeholder-slate-400"
+                        />
+                    </div>
+
+                    <!-- Username Input -->
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z"/>
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Username"
+                            class="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 text-slate-700 placeholder-slate-400"
+                        />
+                    </div>
+
+                    <!-- Password Input -->
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/>
+                            </svg>
+                        </div>
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            class="w-full pl-12 pr-4 py-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 text-slate-700 placeholder-slate-400"
+                        />
+                    </div>
+
+                    <!-- Login Button -->
+                    <button
+                        type="submit"
+                        class="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-slate-800 font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl mt-6"
+                    >
+                        Login
+                    </button>
+                </form>
+
+                <!-- Divider -->
+                <div class="flex items-center my-6">
+                    <div class="flex-1 border-t border-slate-200"></div>
+                    <span class="px-4 text-red-500 font-medium text-sm">OR</span>
+                    <div class="flex-1 border-t border-slate-200"></div>
+                </div>
+
+                <!-- Send OTP Link -->
+                <div class="text-center">
+                    <button
+                        type="button"
+                        class="text-slate-500 hover:text-slate-700 font-medium transition-colors duration-200"
+                        onclick="handleSendOTP()"
+                    >
+                        Send OTP
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-6">
+                <p class="text-slate-400 text-sm">
+                    Don't have an account?
+                    <button class="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200 ml-1" onclick="handleSignUp()">
+                        Sign up
+                    </button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Basic form handling
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const shopSlug = document.querySelector('input[placeholder="Shop Slug"]').value;
+            const username = document.querySelector('input[placeholder="Username"]').value;
+            const password = document.querySelector('input[placeholder="Password"]').value;
+            
+            if (!shopSlug || !username || !password) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Add your login logic here
+            console.log('Login attempt:', { shopSlug, username, password });
+            // alert('Login functionality would be implemented here');
+            window.location.href = "products.html"
+        });
+
+        function handleSendOTP() {
+            // Add OTP logic here
+            alert('Send OTP functionality would be implemented here');
+        }
+
+        function handleSignUp() {
+            // Add sign up logic here
+            alert('Sign up functionality would be implemented here');
+        }
+
+        // Add loading state to login button
+        function showLoading(button) {
+            button.innerHTML = 'Logging in...';
+            button.disabled = true;
+        }
+
+        function hideLoading(button) {
+            button.innerHTML = 'Login';
+            button.disabled = false;
+        }
+    </script>
+</body>
+</html>

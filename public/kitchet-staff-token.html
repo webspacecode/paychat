@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frozen Cafe - Order Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        orange: {
+                            50: '#fff7ed',
+                            600: '#ea580c',
+                        },
+                        amber: {
+                            50: '#fffbeb',
+                        },
+                        blue: {
+                            50: '#eff6ff',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            600: '#2563eb',
+                            800: '#1e40af',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-4">
+    <div class="max-w-md mx-auto space-y-6">
+        <!-- Header -->
+        <div class="text-center space-y-1 pt-4">
+            <div class="flex items-center justify-center gap-2">
+                <!-- Coffee Icon SVG -->
+                <svg class="h-6 w-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3a2 2 0 002 2h4a2 2 0 002-2v-3M8 14V9a2 2 0 012-2h4a2 2 0 012 2v5M8 14H6a2 2 0 01-2-2V9a2 2 0 012-2h2m8 0h2a2 2 0 012 2v3a2 2 0 01-2 2h-2"></path>
+                </svg>
+                <h1 class="text-xl font-bold text-gray-900">Frozen Cafe</h1>
+            </div>
+        </div>
+
+        <!-- QR Code for Staff to Scan -->
+        <div class="border-2 border-blue-200 bg-blue-50 rounded-lg shadow-sm">
+            <div class="p-6">
+                <h2 class="text-center text-blue-800 text-lg font-semibold mb-4">Scan to Update Order</h2>
+                <div class="flex flex-col items-center space-y-3">
+                    <div class="bg-white p-6 rounded-lg border-2 border-blue-300 shadow-lg">
+                        <img
+                            src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2ZmZmZmZiIvPgogIDxnIGZpbGw9IiMwMDAwMDAiPgogICAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjcwIiBoZWlnaHQ9IjcwIi8+CiAgICA8cmVjdCB4PSIxMzAiIHk9IjAiIHdpZHRoPSI3MCIgaGVpZ2h0PSI3MCIvPgogICAgPHJlY3QgeD0iMCIgeT0iMTMwIiB3aWR0aD0iNzAiIGhlaWdodD0iNzAiLz4KICAgIDxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjZmZmZmZmIi8+CiAgICA8cmVjdCB4PSIxNDAiIHk9IjEwIiB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNmZmZmZmYiLz4KICAgIDxyZWN0IHg9IjEwIiB5PSIxNDAiIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgZmlsbD0iI2ZmZmZmZiIvPgogICAgPHJlY3QgeD0iMjAiIHk9IjIwIiB3aWR0aD0iMzAiIGhlaWdodD0iMzAiLz4KICAgIDxyZWN0IHg9IjE1MCIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIvPgogICAgPHJlY3QgeD0iMjAiIHk9IjE1MCIgd2lkdGg9IjMwIiBoZWlnaHQ9IjMwIi8+CiAgICA8cmVjdCB4PSI5MCIgeT0iOTAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIvPgogICAgPHJlY3QgeD0iODAiIHk9IjEwMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIi8+CiAgICA8cmVjdCB4PSIxMTAiIHk9IjEwMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIi8+CiAgICA8cmVjdCB4PSIxMDAiIHk9IjgwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiLz4KICAgIDxyZWN0IHg9IjEwMCIgeT0iMTIwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiLz4KICA8L2c+CiAgPHRleHQgeD0iMTAwIiB5PSIxODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzAwMDAwMCI+QTI0PC90ZXh0Pgo8L3N2Zz4K"
+                            alt="Kitchen Staff QR Code for Order A24"
+                            class="w-40 h-40"
+                        />
+                    </div>
+                    <div class="text-center">
+                        <p class="font-semibold text-blue-800 text-lg">Ask Kitchen Staff to Scan This</p>
+                        <p class="text-sm text-blue-600">For order status updates</p>
+                        <p class="text-xs text-gray-500 mt-1">Order: A24 | Table: 12</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Token Number -->
+        <div class="border-2 border-orange-200 rounded-lg shadow-sm bg-white">
+            <div class="pt-6 p-6">
+                <div class="text-center space-y-2">
+                    <p class="text-sm text-gray-600">Your Token Number</p>
+                    <div class="text-6xl font-bold text-orange-600">A24</div>
+                    <p class="text-sm text-gray-500">Please keep this number handy</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Status -->
+        <div class="rounded-lg shadow-sm bg-white border border-gray-200">
+            <div class="p-6">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <!-- Utensils Icon SVG -->
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                    </svg>
+                    Order Status
+                </h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium">Status:</span>
+                        <span id="status-badge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500 text-white">
+                            <!-- Clock Icon SVG -->
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span id="status-text">Preparing</span>
+                        </span>
+                    </div>
+
+                    <div id="estimated-time-section" class="flex items-center justify-between">
+                        <span class="font-medium">Estimated Time:</span>
+                        <span id="estimated-time" class="text-orange-600 font-semibold">12 min</span>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Order Received</span>
+                            <span>Preparing</span>
+                            <span>Ready</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="progress-bar" class="h-2 rounded-full transition-all duration-1000 bg-orange-500 w-2/3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Details -->
+        <div class="rounded-lg shadow-sm bg-white border border-gray-200">
+            <div class="p-6">
+                <h2 class="text-lg font-semibold mb-4">Order Details</h2>
+                <div class="space-y-4">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1">
+                                <span class="font-medium">Cappuccino</span>
+                                <span class="text-gray-500 ml-2">x2</span>
+                            </div>
+                            <span class="font-semibold">$8.50</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1">
+                                <span class="font-medium">Chocolate Croissant</span>
+                                <span class="text-gray-500 ml-2">x1</span>
+                            </div>
+                            <span class="font-semibold">$4.25</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1">
+                                <span class="font-medium">Avocado Toast</span>
+                                <span class="text-gray-500 ml-2">x1</span>
+                            </div>
+                            <span class="font-semibold">$12.00</span>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div class="flex justify-between items-center font-bold text-lg">
+                        <span>Total</span>
+                        <span class="text-orange-600">$24.75</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-sm text-gray-500 pb-8">
+            <p>Order placed at 2:45 PM</p>
+            <p>Order ID: #ORD-2024-001234</p>
+        </div>
+    </div>
+
+    <script>
+        // Order status simulation
+        let orderStatus = 'preparing';
+        let estimatedTime = 12;
+
+        function updateOrderStatus() {
+            const statusBadge = document.getElementById('status-badge');
+            const statusText = document.getElementById('status-text');
+            const estimatedTimeElement = document.getElementById('estimated-time');
+            const estimatedTimeSection = document.getElementById('estimated-time-section');
+            const progressBar = document.getElementById('progress-bar');
+
+            if (estimatedTime <= 1) {
+                orderStatus = 'ready';
+                estimatedTime = 0;
+            } else {
+                estimatedTime--;
+            }
+
+            if (orderStatus === 'ready') {
+                statusBadge.className = 'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500 text-white';
+                statusBadge.innerHTML = `
+                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Ready for Pickup</span>
+                `;
+                estimatedTimeSection.style.display = 'none';
+                progressBar.className = 'h-2 rounded-full transition-all duration-1000 bg-green-500 w-full';
+            } else {
+                estimatedTimeElement.textContent = estimatedTime + ' min';
+            }
+        }
+
+        // Update every 5 seconds for demo
+        setInterval(updateOrderStatus, 5000);
+    </script>
+</body>
+</html>

@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
-use App\Http\Controllers\Controller;
-use App\Models\Tenant\Product;
+use Throwable;
+use ZipArchive;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Models\Tenant\Product;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\LazyCollection;
+use Illuminate\Support\Facades\Storage;
 use App\Services\ProductManagement\Strategies\ProductStrategyResolver;
 
 class ProductController extends Controller
@@ -47,11 +53,16 @@ class ProductController extends Controller
         $validated = $request->validate([
             'industry' => ['required', Rule::in(['restaurant','bakery','cafe','retail'])], // 👈 new
             'keyword'  => ['nullable','string'],
+            'location_id'  => ['nullable','int'],
             'type'     => ['nullable', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
         ]);
-
+        
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
-        $items = $industryStrategy->search($validated['keyword'] ?? null, $validated['type'] ?? null);
+        $items = $industryStrategy->search(
+            $validated['keyword'] ?? null, 
+            $validated['type'] ?? null, 
+            $validated['location_id'] ?? null
+        );
 
         return response()->json($items);
     }
@@ -148,5 +159,171 @@ class ProductController extends Controller
         );
 
         return response()->json($movement);
+    }
+
+    public function bulkUpload(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt'
+        ]);
+
+        $created = 0;
+        $failed = [];
+        $now = now();
+
+        DB::beginTransaction();
+
+        try {
+
+            $file = $request->file('file');
+            
+            LazyCollection::make(function () use ($file) {
+                $handle = fopen($file->getRealPath(), 'r');
+
+                $header = fgetcsv($handle);
+                if (!$header) {
+                    fclose($handle);
+                    return;
+                }
+
+                $headerCount = count($header);
+
+                while (($row = fgetcsv($handle)) !== false) {
+
+                    // ✅ Skip empty rows
+                    if (count(array_filter($row)) === 0) {
+                        continue;
+                    }
+
+                    // // ✅ Fix column mismatch
+                    // if (count($row) !== $headerCount) {
+                    //     // Option 1: skip bad row
+                    //     continue;
+
+                    //     // Option 2 (alternative): pad row
+                    //     // $row = array_pad($row, $headerCount, null);
+                    // }
+
+                    // Allow missing optional columns
+                    if (count($row) < $headerCount) {
+                        $row = array_pad($row, $headerCount, null);
+                    }
+
+
+                    yield array_combine($header, $row);
+                }
+
+                fclose($handle);
+            })
+            ->chunk(500) // 🔥 memory + performance sweet spot
+            ->each(function ($rows) use (&$created, &$failed, $now, $request) {
+
+                $products = [];
+                $inventories = [];
+
+                foreach ($rows as $index => $row) {
+                    try {
+                        // Basic validation
+                        if (empty($row['name']) || empty($row['sku'])) {
+                            throw new \Exception('Name or SKU missing');
+                        }
+
+                        $created++;
+                        $industryStrategy = $this->resolver::resolve($request['industry']); // 👈 resolve by industry
+                        $productPayload = $industryStrategy->getProductPayload($row);
+                        $updated = $industryStrategy->create($productPayload);
+                    } catch (\Throwable $e) {
+                        $failed[] = [
+                            'row' => $row,
+                            'error' => $e->getMessage(),
+                        ];
+                    }
+                }
+
+            });
+
+            DB::commit();
+
+            return [
+                'status' => 'success',
+                'created' => $created,
+                'failed' => count($failed),
+                'errors' => $failed
+            ];
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function bulkImageUpload(Request $request)
+    {
+        $request->validate([
+            'zip' => 'required|file|mimes:zip',
+        ]);
+
+        $tenantId = auth()->user()->tenant_id;
+        
+        $zipFile = $request->file('zip');
+        $zipFileName = $zipFile->getClientOriginalName();
+
+        // Folder path inside public disk
+        $imagesFolder = 'tenants/' . $tenantId . '/products/images';
+        $tempZipFolder = 'tenants/' . $tenantId . '/products/temp';
+        $tempZipPath = $tempZipFolder . '/' . $zipFileName;
+
+        // 1️⃣ Store ZIP temporarily
+        Storage::disk('public')->putFileAs($tempZipFolder, $zipFile, $zipFileName);
+        $absoluteZipPath = storage_path('app/public/' . $tempZipPath);
+
+        // 2️⃣ Extract ZIP
+        $uploadedImages = [];
+
+        $zip = new ZipArchive;
+        if ($zip->open($absoluteZipPath) === true) {
+
+            // Ensure destination folder exists
+            Storage::disk('public')->makeDirectory($imagesFolder);
+
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $filename = $zip->getNameIndex($i);
+
+                // Skip directories
+                if (substr($filename, -1) === '/') continue;
+
+                $basename = basename($filename);
+
+                // Skip macOS hidden files
+                if (str_starts_with($basename, '._') || $basename === '.DS_Store') continue;
+
+                $fileContent = $zip->getFromIndex($i);
+
+                // Store file
+                Storage::disk('public')->put($imagesFolder . '/' . $basename, $fileContent);
+
+                // Track uploaded file
+                $uploadedImages[] = $imagesFolder . '/' . $basename;
+            }
+
+            $zip->close();
+
+            // Optional: delete temp ZIP
+            Storage::disk('public')->delete($tempZipPath);
+
+            // Prepare absolute paths and public URLs
+            $uploadedImagesAbsolute = array_map(fn($file) => storage_path('app/public/' . $file), $uploadedImages);
+            $uploadedImagesUrl = array_map(fn($file) => asset('storage/' . $file), $uploadedImages);
+
+            return response()->json([
+                'message' => 'Images uploaded successfully',
+                'images_relative' => $uploadedImages,
+                'images_absolute' => $uploadedImagesAbsolute,
+                'images_url' => $uploadedImagesUrl
+            ]);
+
+        } else {
+            return response()->json(['message' => 'Failed to open ZIP file'], 400);
+        }
     }
 }

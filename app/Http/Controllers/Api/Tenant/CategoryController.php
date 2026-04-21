@@ -61,7 +61,7 @@ class CategoryController extends Controller
     public function search(Request $request)
     {
         $request->validate([
-            'keyword' => 'required|string',
+            'keyword' => 'nullable|string',
             'industry' => 'nullable|string',
         ]);
 

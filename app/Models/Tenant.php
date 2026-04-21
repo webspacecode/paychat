@@ -22,7 +22,8 @@ class Tenant extends Model
         'settings',
         'created_by',
         'database',
-        'industry'
+        'industry',
+        'api_key'
     ];
 
     protected $casts = [
@@ -34,5 +35,13 @@ class Tenant extends Model
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function branding() {
+        return $this->hasOne(Branding::class);
+    }
+
+    public function taxConfig() {
+        return $this->hasOne(TaxConfig::class);
     }
 }

@@ -2,7 +2,12 @@
 
 namespace App\Services\ProductManagement\Strategies;
 
+use App\Models\Tenant\Category;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\Location;
+use Illuminate\Support\LazyCollection;
 use App\Models\Tenant\ProductInventory;
 use App\Models\Tenant\StockMovement;
 use Illuminate\Database\Eloquent\Collection;
@@ -14,22 +19,143 @@ class DefaultProductStrategy implements ProductStrategyInterface
 {
     public function create(array $data): Product
     {
-        $payload = collect($data)->only(['name','sku','type','price','unit'])->all();
-        $product = Product::create($payload);
+        return DB::transaction(function () use ($data) {
 
-        if (!empty($data['images']) && is_array($data['images'])) {
-            foreach ($data['images'] as $img) {
-                if ($img instanceof \Illuminate\Http\UploadedFile) {
-                    // store file into storage/app/public/products
-                    $path = $img->store('products', 'public');
-                    $product->images()->create(['image_path' => $path]);
-                } elseif (is_string($img)) {
-                    // fallback: accept string paths (maybe from API sync)
-                    $product->images()->create(['image_path' => $img]);
+            // 1. Create Product
+            $payload = collect($data)
+                ->only(['name', 'sku', 'type', 'price', 'unit'])
+                ->all();
+
+            $product = Product::create($payload);
+    
+            // 2. Save Images (handle file + string both)
+            if (!empty($data['images']) && is_array($data['images'])) {
+
+                foreach ($data['images'] as $img) {
+
+                    if (!$img) {
+                        continue;
+                    }
+
+                    $path = null;
+
+                    // Case 1: Uploaded File
+                    if ($img instanceof \Illuminate\Http\UploadedFile) {
+                        $path = $img->store('products', 'public');
+                    }
+
+                    // Case 2: Already stored path OR filename string
+                    elseif (is_string($img)) {
+
+                        // If it's just a filename, normalize it
+                        if (!str_contains($img, 'products/')) {
+                            $path = 'products/images/' . ltrim($img, '/');
+                        } else {
+                            $path = $img;
+                        }
+                    }
+
+                    if ($path) {
+                        $product->images()->updateOrCreate(
+                            ['image_path' => $path],
+                            ['image_path' => $path]
+                        );
+                    }
                 }
             }
+
+
+            // 3. Save Inventory (location-wise)
+            if (!empty($data['inventory']) && is_array($data['inventory'])) {
+                foreach ($data['inventory'] as $inventory) {
+                    $product->inventories()->updateOrCreate(
+                        [
+                            'location_id' => $inventory['location_id'],
+                        ],
+                        [
+                            'quantity' => $inventory['quantity'] ?? 0,
+                        ]
+                    );
+                }
+            }
+
+             // Add Categories
+            if (!empty($data['categories'])) {
+                $this->syncCategories($product, $data['categories']);
+            }
+
+            return $product->load([
+                'categories',
+                'images',
+                'inventories',
+                'recipe.items'
+            ]);
+        });
+    }
+
+    public function getProductPayload(array $row): Array
+    {
+        // Debug Tenant DB
+        // dd(DB::connection()->getDatabaseName());
+        $defaultLocation = Location::where('type', 'default')->first();
+
+        // ✅ Parse images column (comma separated)
+        $images = [];
+        if (!empty($row['images'])) {
+            $images = collect(explode(',', $row['images']))
+            ->map(fn ($img) => trim($img))
+            ->filter()
+            ->values()
+            ->toArray();
         }
-        return $product->load(['images','inventories','recipe.items']);
+
+        // 🔥 build SAME payload as store() expects
+        $product = [
+            'name'  => $row['name'],
+            'sku'   => $row['sku'],
+            'type'  => $row['type'] ?? 'raw',
+            'price' => isset($row['price']) ? (float) $row['price'] : null,
+            'unit'  => $row['unit'] ?? null,
+            'categories' => $row['categories'] ?? null,
+            'images' => $images, // ✅ Added here
+            'inventory' => !empty($row['location_id'])
+                ? [[
+                    'location_id' => (int) $row['location_id'],
+                    'quantity'    => isset($row['quantity'])
+                        ? (int) $row['quantity']
+                        : 0,
+                ]]
+                : [['location_id' => $defaultLocation->id, 'quantity' => 0]],
+        ];
+
+        return $product;
+    }
+
+
+    protected function syncCategories(Product $product, ?string $categories)
+    {
+        if (empty($categories)) {
+            return;
+        }
+
+        // Split by semicolon ;
+        $names = collect(explode(';', $categories))
+            ->map(fn ($c) => trim($c))
+            ->filter();
+
+        $categoryIds = [];
+
+        foreach ($names as $name) {
+            $category = Category::firstOrCreate(
+                ['name' => Str::slug($name)],
+                ['description' => $name]
+            );
+
+            $categoryIds[] = $category->id;
+        }
+
+        // Attach without removing existing ones
+        $product->categories()->syncWithoutDetaching($categoryIds);
     }
 
     public function update(Product $product, array $data): Product
@@ -60,17 +186,51 @@ class DefaultProductStrategy implements ProductStrategyInterface
         return (bool) $product->delete();
     }
 
-    public function search(string $keyword = null, ?string $type = null): Collection
+    public function search(string $keyword = null, ?string $type = null, ?int $locationId = null): Collection 
     {
-        $q = Product::query()->with('images');
 
+        $q = Product::query()
+            ->with(['images', 'categories:id,name,description']);
+
+        // 🔍 Keyword Search
         if ($keyword) {
-            $q->where(fn($w) => $w->where('name','like',"%{$keyword}%")
-                                  ->orWhere('sku','like',"%{$keyword}%"));
+            $q->where(function ($w) use ($keyword) {
+                $w->where('name', 'like', "%{$keyword}%")
+                ->orWhere('sku', 'like', "%{$keyword}%");
+            });
         }
-        if ($type) $q->where('type',$type);
 
-        return $q->orderBy('name')->limit(200)->get();
+        // 🎯 MAIN BUSINESS LOGIC
+        $q->where(function ($w) use ($locationId) {
+
+            // ✅ 1. Recipe products (ALWAYS show)
+            $w->where('type', 'recipe');
+
+            // ✅ 2. Simple products (ONLY if stock available at location)
+            $w->orWhere(function ($q2) use ($locationId) {
+
+                $q2->where('type', 'simple');
+
+                // Apply inventory filter ONLY if location is provided
+                if ($locationId) {
+                    $q2->whereHas('inventories', function ($inv) use ($locationId) {
+                        $inv->where('location_id', $locationId)
+                            ->where('quantity', '>', 0);
+                    });
+                }
+            });
+
+            // ❌ Raw products are automatically excluded
+        });
+
+        // 🔹 Optional: Explicit type filter (for admin/debug use)
+        if ($type) {
+            $q->where('type', $type);
+        }
+
+        return $q->orderBy('name')
+                ->limit(200)
+                ->get();
     }
 
     public function getById(int $id): ?Product

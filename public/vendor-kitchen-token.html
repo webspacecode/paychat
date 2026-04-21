@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitchen Token</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-md mx-auto bg-white min-h-screen">
+        <!-- Header -->
+        <div class="bg-white px-4 py-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <button onclick="history.back()" class="p-2">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <div>
+                    <h1 class="text-xl font-semibold text-slate-800">Kitchen Token</h1>
+                    <p class="text-sm text-gray-600">Show to kitchen staff</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-600">Ready in</p>
+                <p class="text-lg font-bold text-slate-800">08:30</p>
+            </div>
+        </div>
+
+        <!-- Token Number -->
+        <div class="bg-white mx-4 mt-4 rounded-lg p-6 shadow-sm text-center">
+            <p class="text-gray-600 mb-2">Kitchen Token Number</p>
+            <p class="text-6xl font-bold text-yellow-600 mb-2">A-15</p>
+            <p class="text-sm text-gray-500">Token ID: KT-A15-240703</p>
+        </div>
+
+        <!-- Order Info -->
+        <div class="bg-white mx-4 mt-4 rounded-lg p-4 shadow-sm">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-semibold text-sm">T5</span>
+                </div>
+                <div class="flex-1">
+                    <p class="font-semibold text-slate-800">Table 5 • Order #342367/8</p>
+                    <p class="text-xs text-gray-500">03 Jul 2024, 6:16 PM</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-bold text-lg text-yellow-600">₹550.00</p>
+                    <p class="text-xs text-gray-500">6 items</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="px-4 py-8">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-semibold text-slate-800 mb-2">Customer Scan Code</h2>
+                <p class="text-gray-600 text-sm">Show this to customer for scanning</p>
+            </div>
+
+            <!-- QR Code -->
+            <div class="flex justify-center mb-6">
+                <div class="relative">
+                    <div class="bg-white p-4 rounded-2xl shadow-lg border-4 border-slate-700">
+                        <div class="w-48 h-48 bg-white flex items-center justify-center relative">
+                            <!-- Simple QR Code Pattern for Token -->
+                            <div class="w-44 h-44 overflow-hidden">
+                                <img src="k-staff-qr.png" alt="Kitchen Staff QR" class="w-full h-full object-contain" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Golden corner brackets -->
+                    <div class="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-yellow-500 rounded-tl-lg"></div>
+                    <div class="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-yellow-500 rounded-tr-lg"></div>
+                    <div class="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-yellow-500 rounded-bl-lg"></div>
+                    <div class="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-yellow-500 rounded-br-lg"></div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                <p class="text-sm text-blue-800 text-center">
+                    <strong>Instructions:</strong> Ask customer to scan this QR code to get their kitchen token for order collection.
+                </p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="px-4 pb-6 space-y-3">
+            <button class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-4 text-lg rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                </svg>
+                Share Token
+            </button>
+
+            <button class="w-full border-2 border-slate-700 text-slate-700 font-semibold py-4 text-lg rounded-xl hover:bg-slate-50 bg-transparent transition-colors flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                Print Token
+            </button>
+        </div>
+    </div>
+    <script>
+        // Share Token functionality
+        document.querySelector('button:has(svg[viewBox="0 0 24 24"]):first-of-type').addEventListener('click', function() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Kitchen Token - A15',
+                    text: 'Your kitchen token is ready! Token: A-15, Order: #342367/8',
+                    url: window.location.href
+                });
+            } else {
+                // Fallback for browsers that don't support Web Share API
+                const tokenInfo = `Kitchen Token: A-15\nOrder: #342367/8\nTable: 5\nAmount: ₹550.00`;
+                navigator.clipboard.writeText(tokenInfo).then(function() {
+                    alert('Token details copied to clipboard!');
+                });
+            }
+        });
+
+        // Print Token functionality
+        document.querySelector('button:has(svg[viewBox="0 0 24 24"]):last-of-type').addEventListener('click', function() {
+            window.print();
+        });
+    </script>
+</body>
+</html>

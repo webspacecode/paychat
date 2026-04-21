@@ -43,8 +43,9 @@ class IdentifyTenant
             'collation' => 'utf8mb4_unicode_ci',
         ]);
 
-        // Set default connection for tenant models
+        DB::purge('tenant');
         DB::setDefaultConnection('tenant');
+        DB::reconnect('tenant');
 
         return $next($request);
     }

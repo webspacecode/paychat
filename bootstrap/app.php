@@ -4,16 +4,24 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+use App\Http\Middleware\ApiKeyMiddleware;
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         api: __DIR__.'/../routes/api.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-         $middleware->alias([
+        $middleware->alias([
             'tenant' => \App\Http\Middleware\IdentifyTenant::class, // 👈 register alias
+            'apikey' => ApiKeyMiddleware::class,
+        ]);
+
+        $middleware->group('api', [
+            // remove SubstituteBindings from default api group
         ]);
 
         // Full protected group for tenant
@@ -21,8 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'auth:sanctum',
             // 'throttle:api',
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
             'tenant',
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
         // Full protected group

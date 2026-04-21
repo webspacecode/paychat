@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a365d">
+    <title>UPI Payment - Frozen Cafe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'navy': '#1a365d',
+                        'navy-light': '#2d5a87',
+                        'navy-dark': '#0f2a44',
+                        'gold': '#d4af37',
+                        'gold-light': '#e6c659',
+                        'gold-dark': '#b8941f',
+                        'cream': '#faf8f3',
+                        'warm-gray': '#8b7355'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Premium mobile-first styles */
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Native-like scrolling */
+        .native-scroll {
+            -webkit-overflow-scrolling: touch;
+            overflow-y: auto;
+        }
+        
+        /* Premium button states */
+        .btn-active:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+        
+        /* Premium shadows */
+        .shadow-premium {
+            box-shadow: 0 4px 20px rgba(26, 54, 93, 0.08);
+        }
+        
+        .shadow-premium-lg {
+            box-shadow: 0 8px 30px rgba(26, 54, 93, 0.12);
+        }
+        
+        /* QR Code animations */
+        .qr-pulse {
+            animation: qrPulse 2s infinite;
+        }
+        
+        @keyframes qrPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        /* Timer animation */
+        .timer-warning {
+            animation: timerBlink 1s infinite;
+        }
+        
+        @keyframes timerBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+        
+        /* Success animation */
+        .success-bounce {
+            animation: successBounce 0.6s ease-out;
+        }
+        
+        @keyframes successBounce {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Scanning animation */
+        .scanning-line {
+            animation: scanLine 2s linear infinite;
+        }
+        
+        @keyframes scanLine {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(300px); }
+        }
+    </style>
+</head>
+<body class="bg-cream h-full">
+    <div class="h-full flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-premium border-b border-gray-100 px-4 py-4 flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <button onclick="goBack()" class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center btn-active">
+                    <svg class="w-6 h-6 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                
+                <div class="text-center">
+                    <h1 class="text-xl font-semibold text-navy">UPI Payment</h1>
+                    <p class="text-sm text-warm-gray">Scan to pay</p>
+                </div>
+                
+                <!-- Timer Display -->
+                <div id="timerDisplay" class="text-center">
+                    <div class="text-xs text-warm-gray">Expires in</div>
+                    <div id="timer" class="text-sm font-bold text-navy">05:00</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-hidden">
+            <div class="h-full native-scroll">
+                <!-- Payment Info -->
+                <div class="p-6 text-center">
+                    <div class="bg-white rounded-2xl p-6 shadow-premium border border-gray-100 mb-6">
+                        <div class="flex items-center justify-center mb-4">
+                            <div class="w-12 h-12 bg-navy rounded-lg flex items-center justify-center p-2 mr-3">
+                                <img src="/logo.svg" alt="Frozen Cafe" class="w-full h-full object-contain">
+                            </div>
+                            <div class="text-left">
+                                <h2 class="text-lg font-semibold text-navy">Frozen Cafe</h2>
+                                <p class="text-sm text-warm-gray">Table 5 • Bill #3423678</p>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <p class="text-sm text-warm-gray mb-2">Amount to Pay</p>
+                            <p class="text-3xl font-bold text-gold mb-4">₹550.00</p>
+                        </div>
+                    </div>
+
+                    <!-- QR Code Section -->
+                    <div class="bg-white rounded-2xl p-8 shadow-premium-lg border border-gray-100 mb-6">
+                        <h3 class="text-xl font-bold text-navy mb-2">Scan QR Code</h3>
+                        <p class="text-warm-gray mb-6">Use any UPI app to scan and pay</p>
+                        
+                        <!-- QR Code Container -->
+                        <div class="relative mx-auto w-64 h-64 mb-6">
+                            <div class="absolute inset-0 bg-gradient-to-br from-navy to-navy-light rounded-2xl p-4 qr-pulse">
+                                <!-- QR Code Placeholder - In real implementation, this would be generated -->
+                                <div class="w-full h-full bg-white rounded-lg flex items-center justify-center relative overflow-hidden">
+                                    <!-- QR Pattern Simulation -->
+                                    <div class="grid grid-cols-8 gap-1 w-48 h-48">
+                                        <div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-white"></div>
+                                        <div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div>
+                                        <div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div>
+                                        <div class="bg-white"></div><div class="bg-white"></div><div class="bg-white"></div><div class="bg-white"></div><div class="bg-white"></div><div class="bg-white"></div><div class="bg-white"></div><div class="bg-white"></div>
+                                        <div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-white"></div>
+                                        <div class="bg-white"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div>
+                                        <div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div>
+                                        <div class="bg-white"></div><div class="bg-white"></div><div class="bg-black"></div><div class="bg-black"></div><div class="bg-white"></div><div class="bg-white"></div><div class="bg-white"></div><div class="bg-black"></div>
+                                    </div>
+                                    
+                                    <!-- Scanning Line Animation -->
+                                    <div id="scanningLine" class="absolute top-0 left-0 right-0 h-1 bg-gold opacity-0 scanning-line"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Corner Decorations -->
+                            <div class="absolute -top-2 -left-2 w-6 h-6 border-l-4 border-t-4 border-gold rounded-tl-lg"></div>
+                            <div class="absolute -top-2 -right-2 w-6 h-6 border-r-4 border-t-4 border-gold rounded-tr-lg"></div>
+                            <div class="absolute -bottom-2 -left-2 w-6 h-6 border-l-4 border-b-4 border-gold rounded-bl-lg"></div>
+                            <div class="absolute -bottom-2 -right-2 w-6 h-6 border-r-4 border-b-4 border-gold rounded-br-lg"></div>
+                        </div>
+
+                        <!-- UPI ID -->
+                        <div class="bg-cream rounded-xl p-4 mb-4">
+                            <p class="text-sm text-warm-gray mb-1">UPI ID</p>
+                            <div class="flex items-center justify-between">
+                                <p class="text-lg font-bold text-navy">frozencafe@upi</p>
+                                <button onclick="copyUpiId()" class="w-8 h-8 bg-navy rounded-lg flex items-center justify-center btn-active">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Payment Status -->
+                        <div id="paymentStatus" class="flex items-center justify-center text-warm-gray">
+                            <div class="w-2 h-2 bg-orange-400 rounded-full mr-2 animate-pulse"></div>
+                            <span class="text-sm">Waiting for payment...</span>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="bg-blue-50 rounded-2xl p-6 mb-6 border border-blue-100">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <h4 class="font-semibold text-navy mb-2">How to Pay:</h4>
+                                <ol class="text-sm text-warm-gray space-y-1">
+                                    <li>1. Open any UPI app (GPay, PhonePe, Paytm, etc.)</li>
+                                    <li>2. Scan the QR code above</li>
+                                    <li>3. Verify amount ₹550.00</li>
+                                    <li>4. Complete the payment</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Popular UPI Apps -->
+                    <div class="bg-white rounded-2xl p-6 shadow-premium border border-gray-100">
+                        <h4 class="font-semibold text-navy mb-4 text-center">Supported UPI Apps</h4>
+                        <div class="flex justify-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center">
+                                <span class="text-white font-bold text-xs">GPay</span>
+                            </div>
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center">
+                                <span class="text-white font-bold text-xs">PhonePe</span>
+                            </div>
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center">
+                                <span class="text-white font-bold text-xs">Paytm</span>
+                            </div>
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
+                                <span class="text-white font-bold text-xs">BHIM</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Actions -->
+        <div class="p-4 bg-white border-t border-gray-200 shadow-premium-lg space-y-3">
+            <!-- Manual Confirmation Button -->
+            <button id="markPaidBtn"
+                    onclick="getToken()"
+                    class="w-full bg-[#FDBA24] hover:bg-[#f29e0d] transition-all duration-150 ease-in-out text-white font-semibold py-4 px-6 rounded-xl shadow-md text-base flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M15 8a3 3 0 00-6 0v1H7a1 1 0 000 2h2v1a3 3 0 006 0v-4zM9 9V8a1 1 0 012 0v1H9z"/>
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8 7a7 7 0 100-14 7 7 0 000 14z" clip-rule="evenodd"/>
+            </svg>
+            Get Token
+            </button>
+
+            <button id="markPaidBtn" onclick="markAsPaid()" class="w-full bg-gradient-to-r from-gold to-gold-light text-white font-semibold py-4 px-6 rounded-2xl btn-active shadow-premium">
+                Mark as Paid
+            </button>
+            
+            <!-- Refresh/Check Status Button -->
+            <button onclick="checkPaymentStatus()" class="w-full bg-white border-2 border-navy text-navy font-semibold py-3 px-6 rounded-2xl btn-active">
+                <div class="flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Check Payment Status
+                </div>
+            </button>
+        </div>
+
+        <!-- Payment Success Modal -->
+        <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center">
+            <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 success-bounce">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-navy mb-2">Payment Received!</h3>
+                <p class="text-warm-gray mb-4">₹550.00 has been successfully received via UPI</p>
+                <div class="bg-cream rounded-xl p-3 mb-6">
+                    <p class="text-sm text-warm-gray">Transaction ID</p>
+                    <p class="font-mono text-sm text-navy" id="transactionId">UPI123456789</p>
+                </div>
+                <button onclick="completeOrder()" class="w-full bg-gradient-to-r from-gold to-gold-light text-white font-semibold py-3 px-6 rounded-xl btn-active">
+                    Complete Order
+                </button>
+            </div>
+        </div>
+
+        <!-- Timeout Modal -->
+        <div id="timeoutModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center">
+            <div class="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full text-center transform scale-95 transition-transform duration-300">
+                <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-navy mb-2">QR Code Expired</h3>
+                <p class="text-warm-gray mb-6">The QR code has expired. Please generate a new one to continue.</p>
+                <button onclick="regenerateQR()" class="w-full bg-gradient-to-r from-navy to-navy-light text-white font-semibold py-3 px-6 rounded-xl btn-active">
+                    Generate New QR Code
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let paymentTimer = 300; // 5 minutes in seconds
+        let timerInterval;
+        let paymentCheckInterval;
+
+        function getToken() {
+            const btn = document.getElementById("markPaidBtn");
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"></circle>
+                <path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+                Generating...`;
+
+            // Simulate token creation delay
+            setTimeout(() => {
+                btn.innerHTML = `✔ Token Generated`;
+                btn.classList.replace("bg-[#FDBA24]", "bg-green-600");
+
+                setTimeout(() => {
+                    window.location.href = "vendor-kitchen-token.html"; // 🔁 change to your actual token page
+                }, 1000); // optional: slight delay to show "✔"
+            }, 2000);
+        }
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                paymentTimer--;
+                updateTimerDisplay();
+                
+                if (paymentTimer <= 60) {
+                    document.getElementById('timerDisplay').classList.add('timer-warning');
+                }
+                
+                if (paymentTimer <= 0) {
+                    clearInterval(timerInterval);
+                    showTimeoutModal();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(paymentTimer / 60);
+            const seconds = paymentTimer % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startPaymentStatusCheck() {
+            // Simulate checking payment status every 5 seconds
+            paymentCheckInterval = setInterval(() => {
+                // In real implementation, this would call your backend API
+                console.log('Checking payment status...');
+                
+                // Simulate random payment success for demo (10% chance every check)
+                if (Math.random() < 0.1) {
+                    clearInterval(paymentCheckInterval);
+                    clearInterval(timerInterval);
+                    showSuccessModal();
+                }
+            }, 5000);
+        }
+
+        function goBack() {
+            clearInterval(timerInterval);
+            clearInterval(paymentCheckInterval);
+            alert('Going back to payment options...');
+        }
+
+        function copyUpiId() {
+            navigator.clipboard.writeText('frozencafe@upi').then(() => {
+                // Show temporary feedback
+                const button = event.target.closest('button');
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+                button.classList.add('bg-green-500');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.classList.remove('bg-green-500');
+                    button.classList.add('bg-navy');
+                }, 1500);
+            });
+        }
+
+        function checkPaymentStatus() {
+            const button = event.target.closest('button');
+            const originalContent = button.innerHTML;
+            
+            // Show loading state
+            button.innerHTML = '<div class="flex items-center justify-center"><div class="w-5 h-5 border-2 border-navy border-t-transparent rounded-full animate-spin mr-2"></div>Checking...</div>';
+            button.disabled = true;
+            
+            // Show scanning animation
+            document.getElementById('scanningLine').style.opacity = '1';
+            
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+                button.disabled = false;
+                document.getElementById('scanningLine').style.opacity = '0';
+                
+                // Simulate payment found (30% chance)
+                if (Math.random() < 0.3) {
+                    clearInterval(paymentCheckInterval);
+                    clearInterval(timerInterval);
+                    showSuccessModal();
+                }
+            }, 2000);
+        }
+
+        function markAsPaid() {
+            if (confirm('Confirm that payment has been received via UPI?')) {
+                clearInterval(timerInterval);
+                clearInterval(paymentCheckInterval);
+                showSuccessModal();
+            }
+        }
+
+        function showSuccessModal() {
+            // Generate random transaction ID
+            const transactionId = 'UPI' + Math.random().toString(36).substr(2, 9).toUpperCase();
+            document.getElementById('transactionId').textContent = transactionId;
+            
+            const modal = document.getElementById('successModal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.bg-white').classList.remove('scale-95');
+            modal.querySelector('.bg-white').classList.add('scale-100');
+            
+            // Update payment status
+            document.getElementById('paymentStatus').innerHTML = `
+                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                <span class="text-sm text-green-600 font-medium">Payment received!</span>
+            `;
+        }
+
+        function showTimeoutModal() {
+            const modal = document.getElementById('timeoutModal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.querySelector('.bg-white').classList.remove('scale-95');
+            modal.querySelector('.bg-white').classList.add('scale-100');
+        }
+
+        function regenerateQR() {
+            // Reset timer
+            paymentTimer = 300;
+            document.getElementById('timerDisplay').classList.remove('timer-warning');
+            
+            // Hide timeout modal
+            const modal = document.getElementById('timeoutModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.bg-white').classList.add('scale-95');
+            modal.querySelector('.bg-white').classList.remove('scale-100');
+            
+            // Restart timer and status checking
+            startTimer();
+            startPaymentStatusCheck();
+            
+            // Reset payment status
+            document.getElementById('paymentStatus').innerHTML = `
+                <div class="w-2 h-2 bg-orange-400 rounded-full mr-2 animate-pulse"></div>
+                <span class="text-sm">Waiting for payment...</span>
+            `;
+        }
+
+        function completeOrder() {
+            // Hide the success modal first
+            const modal = document.getElementById('successModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.querySelector('.bg-white').classList.add('scale-95');
+            modal.querySelector('.bg-white').classList.remove('scale-100');
+            
+            // Show a brief "Processing..." state
+            setTimeout(() => {
+                // In a real app, you would redirect to the main menu or receipt page
+                // For now, let's redirect back to the main ordering interface
+                window.location.href = 'products.html'; // Redirect to main menu
+                
+                // Alternative: You could also show a final completion screen
+                // showOrderCompletionScreen();
+            }, 500);
+        }
+
+        function showOrderCompletionScreen() {
+            // Hide success modal
+            const modal = document.getElementById('successModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            
+            // Replace the entire page content with completion screen
+            document.body.innerHTML = `
+        <div class="h-full flex flex-col bg-cream">
+            <div class="flex-1 flex items-center justify-center p-6">
+                <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-premium-lg">
+                    <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 success-bounce">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-navy mb-2">Order Complete!</h2>
+                    <p class="text-warm-gray mb-6">Thank you for dining with us. Your order has been successfully processed.</p>
+                    
+                    <div class="bg-cream rounded-xl p-4 mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-warm-gray">Bill Number:</span>
+                            <span class="font-bold text-navy">#3423678</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm text-warm-gray">Amount Paid:</span>
+                            <span class="font-bold text-gold">₹550.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-warm-gray">Table:</span>
+                            <span class="font-bold text-navy">Table 5</span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <button onclick="window.location.href='index.html'" class="w-full bg-gradient-to-r from-navy to-navy-light text-white font-semibold py-4 px-6 rounded-2xl btn-active shadow-premium">
+                            Back to Menu
+                        </button>
+                        <button onclick="printReceipt()" class="w-full bg-white border-2 border-gold text-gold font-semibold py-3 px-6 rounded-2xl btn-active">
+                            Print Receipt
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function printReceipt() {
+    // In a real implementation, this would trigger receipt printing
+    alert('Receipt sent to printer!');
+    setTimeout(() => {
+        window.location.href = 'products.html';
+    }, 1000);
+}
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            startTimer();
+            startPaymentStatusCheck();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(timerInterval);
+            clearInterval(paymentCheckInterval);
+        });
+    </script>
+</body>
+</html>

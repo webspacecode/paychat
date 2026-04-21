@@ -6,6 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Location extends Model
 {
-    protected $fillable = ['name', 'address'];
+    protected $fillable = ['name', 'address', 'type'];
     public function inventories() { return $this->hasMany(ProductInventory::class); }
 }
