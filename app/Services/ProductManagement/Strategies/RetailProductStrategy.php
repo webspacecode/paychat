@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\ProductStrategies;
+namespace App\Services\ProductManagement\Strategies;
 
 class RetailProductStrategy implements ProductStrategyInterface
 {
