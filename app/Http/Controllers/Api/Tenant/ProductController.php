@@ -14,6 +14,8 @@ use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Facades\Storage;
 use App\Services\ProductManagement\Strategies\ProductStrategyResolver;
 
+use App\Jobs\ProcessProductImagesZip;
+
 class ProductController extends Controller
 {
     public function __construct(private ProductStrategyResolver $resolver) {
@@ -264,66 +266,20 @@ class ProductController extends Controller
         ]);
 
         $tenantId = auth()->user()->tenant_id;
-        
+
         $zipFile = $request->file('zip');
         $zipFileName = $zipFile->getClientOriginalName();
 
-        // Folder path inside public disk
-        $imagesFolder = 'tenants/' . $tenantId . '/products/images';
-        $tempZipFolder = 'tenants/' . $tenantId . '/products/temp';
-        $tempZipPath = $tempZipFolder . '/' . $zipFileName;
+        $tempFolder = 'tenants/' . $tenantId . '/products/temp';
+        $tempPath = $tempFolder . '/' . $zipFileName;
 
-        // 1️⃣ Store ZIP temporarily
-        Storage::disk('public')->putFileAs($tempZipFolder, $zipFile, $zipFileName);
-        $absoluteZipPath = storage_path('app/public/' . $tempZipPath);
+        Storage::disk('public')->putFileAs($tempFolder, $zipFile, $zipFileName);
 
-        // 2️⃣ Extract ZIP
-        $uploadedImages = [];
+        // 🚀 Dispatch job
+        ProcessProductImagesZip::dispatch($tempPath, $tenantId);
 
-        $zip = new ZipArchive;
-        if ($zip->open($absoluteZipPath) === true) {
-
-            // Ensure destination folder exists
-            Storage::disk('public')->makeDirectory($imagesFolder);
-
-            for ($i = 0; $i < $zip->numFiles; $i++) {
-                $filename = $zip->getNameIndex($i);
-
-                // Skip directories
-                if (substr($filename, -1) === '/') continue;
-
-                $basename = basename($filename);
-
-                // Skip macOS hidden files
-                if (str_starts_with($basename, '._') || $basename === '.DS_Store') continue;
-
-                $fileContent = $zip->getFromIndex($i);
-
-                // Store file
-                Storage::disk('public')->put($imagesFolder . '/' . $basename, $fileContent);
-
-                // Track uploaded file
-                $uploadedImages[] = $imagesFolder . '/' . $basename;
-            }
-
-            $zip->close();
-
-            // Optional: delete temp ZIP
-            Storage::disk('public')->delete($tempZipPath);
-
-            // Prepare absolute paths and public URLs
-            $uploadedImagesAbsolute = array_map(fn($file) => storage_path('app/public/' . $file), $uploadedImages);
-            $uploadedImagesUrl = array_map(fn($file) => asset('storage/' . $file), $uploadedImages);
-
-            return response()->json([
-                'message' => 'Images uploaded successfully',
-                'images_relative' => $uploadedImages,
-                'images_absolute' => $uploadedImagesAbsolute,
-                'images_url' => $uploadedImagesUrl
-            ]);
-
-        } else {
-            return response()->json(['message' => 'Failed to open ZIP file'], 400);
-        }
+        return response()->json([
+            'message' => 'Upload started. Images are being processed in background.'
+        ]);
     }
 }
