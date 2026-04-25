@@ -656,9 +656,11 @@
 
     <script>
 
-        async function loadTenants() {
+async function loadTenants() {
     try {
-        const res = await fetch("http://frozen-cafe.localhost:8000/api/tenant/list");
+        const baseUrl = window.location.origin;
+
+        const res = await fetch(`${baseUrl}/api/tenant/list`);
         const json = await res.json();
 
         const tenants = json?.data?.tenants || [];
