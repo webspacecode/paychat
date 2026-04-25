@@ -19,6 +19,7 @@ return new class extends Migration
             //  $table->enum('type', ['basic', 'raw', 'semi_finished', 'finished', 'recipe', 'other']);
             $table->decimal('price', 10, 2)->nullable();
             $table->string('unit')->nullable(); // e.g. kg, litre, pcs
+            $table->boolean('track_inventory')->default(true);
             $table->timestamps();
 
             $table->index(['name', 'type']);

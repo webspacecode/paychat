@@ -41,6 +41,8 @@ class ProductController extends Controller
             'items.*.raw_product_id' => ['required_with:items','integer','exists:products,id'],
             'items.*.quantity'       => ['required_with:items','integer','min:1'],
             'items.*.unit'           => ['nullable','string','max:50'],
+            'inventory' => ['nullable', 'array'],
+            'track_inventory' => ['nullable', 'boolean']
         ]);
 
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry

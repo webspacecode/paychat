@@ -23,8 +23,8 @@ class DefaultProductStrategy implements ProductStrategyInterface
 
             // 1. Create Product
             $payload = collect($data)
-                ->only(['name', 'sku', 'type', 'price', 'unit'])
-                ->all();
+            ->only(['name', 'sku', 'type', 'price', 'unit', 'track_inventory'])
+            ->all();
 
             $product = Product::create($payload);
     
@@ -64,7 +64,6 @@ class DefaultProductStrategy implements ProductStrategyInterface
                 }
             }
 
-
             // 3. Save Inventory (location-wise)
             if (!empty($data['inventory']) && is_array($data['inventory'])) {
                 foreach ($data['inventory'] as $inventory) {
@@ -77,6 +76,8 @@ class DefaultProductStrategy implements ProductStrategyInterface
                         ]
                     );
                 }
+            } else {
+
             }
 
              // Add Categories

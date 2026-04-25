@@ -11,6 +11,14 @@ class SimpleProductStrategy implements StockDeductionStrategy
 {
     public function deduct(OrderItem $item, $locationId)
     {
+        // 👇 Get product from item
+        $product = $item->product;
+
+        // 🚀 Skip inventory logic if not tracked
+        if (!$product || !$product->track_inventory) {
+            return;
+        }
+        
         // Get inventory row
         $inventory = ProductInventory::where('product_id', $item->product_id)
             ->where('location_id', $locationId)
