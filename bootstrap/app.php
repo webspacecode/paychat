@@ -43,8 +43,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Public group (NO auth)
         $middleware->group('api-public', [
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
             'tenant',
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

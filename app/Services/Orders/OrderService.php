@@ -266,7 +266,7 @@ class OrderService
     public function completeOrder(Order $order)
     {
         if ($order->status !== 'pending_payment') {
-            throw new Exception('Invalid state');
+            throw new \Exception('Invalid state');
         }
 
         if ($order->payment_status !== 'paid') {

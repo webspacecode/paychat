@@ -15,7 +15,13 @@ class IdentifyTenant
     {
         $slug = $request->route('tenant_slug');
 
-        $tenant = Tenant::where('slug', $slug)->first();
+        if (preg_match('/^[A-Za-z0-9]{32}$/', $slug)) {
+            // looks like hash → api_key
+            $tenant = Tenant::where('api_key', $slug)->first();
+        } else {
+            // normal slug
+            $tenant = Tenant::where('slug', $slug)->first();
+        }
 
         if (!$tenant) {
             throw new NotFoundHttpException("Tenant not found.");

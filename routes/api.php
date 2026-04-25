@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Tenant\PaymentController;
 use App\Http\Controllers\Api\Tenant\WebhookController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\InventoryController;
+use App\Http\Controllers\Api\Tenant\InfoController;
 
 
 
@@ -24,6 +25,18 @@ Route::middleware(['api-public'])->prefix('kiosk/{tenant_slug}')->group(function
     Route::get('/users', function() {
         return response()->json(['tenant' => app('currentTenant')->id]);
     });
+
+    Route::get('/locations', [LocationController::class, 'index']);
+    Route::get('/payments/methods', [PaymentController::class, 'list']);
+    Route::get('/categories/search', [CategoryController::class, 'search']);
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::post('/orders', [OrderController::class, 'create']);
+    Route::put('/orders/{order}/items', [OrderController::class, 'updateItems'])->whereNumber('order');
+    Route::post('/orders/{order}/pending-payment', [OrderController::class, 'moveToPayment']);
+    Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment']);
+    Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer'])->whereNumber('order');
+    Route::post('/payments/{payment}/success', [PaymentController::class, 'markSuccess']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
 });
 
 Route::post('/register-tenant', [TenantController::class, 'register']);
@@ -137,5 +150,9 @@ Route::middleware(['api-protected-untenant'])->prefix('{tenant_slug}')->group(fu
 });
 
 Route::middleware('apikey')->post('/invoice/generate',[InvoiceController::class,'generate']);
+Route::middleware('apikey')->get('/tenant/info',[InfoController::class,'index']);
+Route::get('/tenant/list',[InfoController::class,'list']);
+
+
 Route::get('/invoice/{uuid}',[InvoiceController::class,'view']);
 

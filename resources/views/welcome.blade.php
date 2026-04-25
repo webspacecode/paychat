@@ -6,6 +6,7 @@
     <meta name="description" content="PayChat - Revolutionary POS & Business Management Platform. Unified solution for real-time orders, inventory management, and payments.">
     <title>PayChat - Revolutionary POS & Business Management Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -104,7 +105,9 @@
                 <div class="flex items-center space-x-3">
                     <img src="color-paychat-logo-main.svg" alt="PayChat Logo" class="h-10 lg:h-12 w-auto">
                     <div class="flex items-center space-x-2">
-                        <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">Coming Soon</span>
+                        <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
+                            Early Customers Only
+                        </span>                    
                     </div>
                 </div>
                 
@@ -152,7 +155,7 @@
             <div class="text-center">
                 <div class="flex items-center justify-center mb-6">
                     <span class="bg-white bg-opacity-20 text-white px-4 py-2 rounded-full font-semibold text-sm flex items-center">
-                        ⭐ Launching Q4 2025
+                        ⭐ Early Customer Access
                     </span>
                 </div>
                 
@@ -169,14 +172,9 @@
                 <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 mb-8 max-w-md mx-auto border border-white border-opacity-20">
                     <h3 class="text-xl font-semibold mb-6">Join the Waitlist</h3>
                     <div class="space-y-4">
-                        <input 
-                            type="email" 
-                            id="waitlistEmail"
-                            placeholder="Enter your email" 
-                            class="w-full px-4 py-3 rounded-lg text-navy placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary"
-                        >
-                        <button onclick="submitWaitlist()" class="w-full gradient-secondary text-white py-3 rounded-lg font-semibold text-lg hover:shadow-xl transition-all duration-300">
-                            Get Early Access
+                        <button onclick="openEarlyBirdForm()" 
+                        class="gradient-secondary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300">
+                            Register Early Bird Access
                         </button>
                     </div>
                     <p class="text-blue-200 text-sm mt-4">Be the first to know when we launch. No spam, ever.</p>
@@ -189,12 +187,12 @@
                         <div class="text-blue-100 text-sm lg:text-base">On Waitlist</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Q4 2025</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Launch Date</div>
+                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Live Soon</div>
+                        <div class="text-blue-100 text-sm lg:text-base">Early Access Phase</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Beta</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Testing Soon</div>
+                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Founding</div>
+                        <div class="text-blue-100 text-sm lg:text-base">Early Customers</div>
                     </div>
                 </div>
             </div>
@@ -479,39 +477,7 @@
             <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">Join our waitlist and be among the first to experience the future of business management. Early adopters get exclusive benefits.</p>
             
             <!-- Enhanced Waitlist Form -->
-            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 mb-8 max-w-lg mx-auto border border-white border-opacity-20">
-                <h3 class="text-2xl font-bold mb-6">Get Early Access</h3>
-                <div class="space-y-4">
-                    <input 
-                        type="text" 
-                        id="businessName"
-                        placeholder="Business Name" 
-                        class="w-full px-4 py-3 rounded-lg text-navy placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary"
-                    >
-                    <input 
-                        type="email" 
-                        id="businessEmail"
-                        placeholder="Business Email" 
-                        class="w-full px-4 py-3 rounded-lg text-navy placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary"
-                    >
-                    <select 
-                        id="businessType"
-                        class="w-full px-4 py-3 rounded-lg text-navy focus:outline-none focus:ring-2 focus:ring-secondary"
-                    >
-                        <option value="">Select Business Type</option>
-                        <option value="restaurant">Restaurant/Cafe</option>
-                        <option value="retail">Retail Store</option>
-                        <option value="salon">Salon/Beauty</option>
-                        <option value="clinic">Clinic/Healthcare</option>
-                        <option value="service">Service Business</option>
-                        <option value="other">Other</option>
-                    </select>
-                    <button onclick="submitEnhancedWaitlist()" class="w-full gradient-secondary text-white py-4 rounded-lg font-semibold text-lg hover:shadow-xl transition-all duration-300">
-                        Get Early Access + Priority Support
-                    </button>
-                </div>
-                <p class="text-blue-200 text-sm mt-4">Early adopters get priority support + exclusive features</p>
-            </div>
+           
             
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
                 <div>
@@ -529,7 +495,30 @@
             </div>
         </div>
     </section>
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6">
 
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-navy">Live Partner Businesses</h2>
+                <p class="text-gray-600">Discover shops using PayChat (early pilot network)</p>
+            </div>
+
+            <!-- Search -->
+            <div class="max-w-md mx-auto mb-8">
+                <input 
+                    placeholder="Search shops..." 
+                    class="w-full border p-4 rounded-xl"
+                >
+            </div>
+
+            <!-- Tenant Grid -->
+            <div id="tenantsGrid" class="grid md:grid-cols-3 gap-6">
+                <div id="tenantsGrid">
+                    <p>Loading partner businesses...</p>
+                </div>
+            </div>
+        </div>
+    </section>
     <!-- Footer -->
     <footer class="bg-navy text-white py-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -605,14 +594,7 @@
             
             <!-- Scanner Frame -->
             <div class="relative w-64 h-64 mx-auto mb-8 bg-gray-100 rounded-2xl overflow-hidden">
-                <div class="absolute inset-4 border-2 border-secondary rounded-xl"></div>
-                <div class="absolute top-4 left-4 w-6 h-6 border-l-4 border-t-4 border-secondary rounded-tl-lg"></div>
-                <div class="absolute top-4 right-4 w-6 h-6 border-r-4 border-t-4 border-secondary rounded-tr-lg"></div>
-                <div class="absolute bottom-4 left-4 w-6 h-6 border-l-4 border-b-4 border-secondary rounded-bl-lg"></div>
-                <div class="absolute bottom-4 right-4 w-6 h-6 border-r-4 border-b-4 border-secondary rounded-br-lg"></div>
-                
-                <!-- Scanning Line -->
-                <div id="scanningLine" class="absolute top-8 left-8 right-8 h-0.5 bg-secondary animate-pulse"></div>
+                <div id="qr-reader" class="w-64 h-64 mx-auto rounded-2xl overflow-hidden"></div>
             </div>
             
             <div class="space-y-4">
@@ -673,6 +655,97 @@
     </div>
 
     <script>
+
+        async function loadTenants() {
+    try {
+        const res = await fetch("http://frozen-cafe.localhost:8000/api/tenant/list");
+        const json = await res.json();
+
+        const tenants = json?.data?.tenants || [];
+        renderTenants(tenants);
+
+    } catch (err) {
+        console.error("Failed to load tenants:", err);
+    }
+}
+
+
+function renderTenants(tenants) {
+    const container = document.getElementById("tenantsGrid");
+
+    if (!container) return;
+
+    // If no tenants, show fallback UI (IMPORTANT for SEO + UX)
+    if (!tenants || tenants.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full text-center py-10">
+                <h3 class="text-xl font-semibold text-gray-700">No partner businesses yet</h3>
+                <p class="text-gray-500 mt-2">
+                    PayChat is onboarding early merchants. Stay tuned!
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = tenants.map(t => {
+
+        const branding = t?.branding || {};
+
+        const name = t?.name || "Unnamed Business";
+        const industry = t?.industry || "Business";
+        const address = branding?.address || "Partner Store";
+
+        const logo = branding?.logo
+            ? branding.logo
+            : `https://dummyimage.com/200x60/ddd/000&text=${encodeURIComponent(name)}`;
+
+        // safer API key handling
+        const apiKey = t?.api_key || "";
+        const baseUrl = window.location.origin || "http://localhost:8000";
+
+        const shopUrl = `${baseUrl}/pos#/self-pos/${encodeURIComponent(apiKey)}`;
+
+        return `
+            <div class="bg-white p-6 rounded-2xl shadow hover:shadow-lg transition border border-gray-100">
+
+                <!-- Header -->
+                <div class="flex items-center gap-3 mb-3">
+                    <img 
+                        src="${logo}" 
+                        alt="${name} logo"
+                        class="h-10 w-10 object-cover rounded"
+                        loading="lazy"
+                    />
+
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-900">${name}</h3>
+                        <p class="text-gray-500 text-sm">${industry}</p>
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <p class="text-gray-500 text-sm mb-4 line-clamp-2">
+                    ${address}
+                </p>
+
+                <!-- CTA -->
+                <a 
+                    href="${shopUrl}" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl font-semibold transition"
+                >
+                    Visit Shop →
+                </a>
+            </div>
+        `;
+    }).join("");
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    loadTenants();
+});
         let waitlistCount = 10;
         let detectedLink = null;
 
@@ -682,13 +755,54 @@
             menu.classList.toggle('hidden');
         }
 
-        // Scanner functionality
-        function startScanner() {
-            const modal = document.getElementById('scannerModal');
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            modal.querySelector('.bg-white').classList.remove('scale-95');
-            modal.querySelector('.bg-white').classList.add('scale-100');
-        }
+        let qrScanner = null;
+
+function startScanner() {
+    const modal = document.getElementById('scannerModal');
+    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.querySelector('.bg-white').classList.remove('scale-95');
+    modal.querySelector('.bg-white').classList.add('scale-100');
+
+    setTimeout(() => {
+        qrScanner = new Html5Qrcode("qr-reader");
+
+        qrScanner.start(
+            { facingMode: "environment" }, // back camera
+            {
+                fps: 10,
+                qrbox: 250
+            },
+            (decodedText) => {
+                detectedLink = decodedText;
+                document.getElementById('detectedUrl').textContent = decodedText;
+
+                stopScanner();
+                simulateScan(); // reuse your success modal
+            },
+            (errorMessage) => {
+                // ignore scan errors (normal while scanning)
+            }
+        );
+    }, 300);
+}
+
+function stopScanner() {
+    if (qrScanner) {
+        qrScanner.stop().then(() => {
+            qrScanner.clear();
+            qrScanner = null;
+        });
+    }
+}
+
+function closeScannerModal() {
+    stopScanner();
+
+    const modal = document.getElementById('scannerModal');
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    modal.querySelector('.bg-white').classList.add('scale-95');
+    modal.querySelector('.bg-white').classList.remove('scale-100');
+}
 
         function closeScannerModal() {
             const modal = document.getElementById('scannerModal');
@@ -884,6 +998,116 @@
             waitlistCount = initialCount;
             document.getElementById('waitlistCount').textContent = waitlistCount + '+';
         });
+
+        function openEarlyBirdForm() {
+            document.getElementById('earlyBirdModal').classList.remove('hidden');
+        }
+
+        function closeEarlyBirdForm() {
+            document.getElementById('earlyBirdModal').classList.add('hidden');
+        }
     </script>
+
+    <script>
+let step = 1;
+
+function openEarlyBirdForm() {
+  document.getElementById('earlyBirdModal').classList.remove('hidden');
+  step = 1;
+  updateUI();
+}
+
+function closeEarlyBirdForm() {
+  document.getElementById('earlyBirdModal').classList.add('hidden');
+}
+
+function nextStep() {
+  if (step < 3) {
+    document.getElementById('step' + step).classList.add('hidden');
+    step++;
+    document.getElementById('step' + step).classList.remove('hidden');
+    updateUI();
+  }
+}
+
+function updateUI() {
+  document.getElementById('stepCount').innerText = step;
+
+  let progress = (step / 3) * 100;
+  document.getElementById('progressBar').style.width = progress + '%';
+}
+
+function submitForm() {
+  const data = {
+    businessName: document.getElementById('businessName').value,
+    ownerName: document.getElementById('ownerName').value,
+    contactNumber: document.getElementById('contactNumber').value
+  };
+
+  console.log("Submitted:", data);
+
+  document.querySelectorAll('.step').forEach(s => s.classList.add('hidden'));
+  document.getElementById('success').classList.remove('hidden');
+
+  document.getElementById('stepCount').innerText = "Done";
+  document.getElementById('progressBar').style.width = "100%";
+}
+</script>
+
+<!-- Early Bird Typeform Style Modal -->
+<div id="earlyBirdModal" class="fixed inset-0 bg-white z-50 hidden flex items-center justify-center">
+
+  <div class="w-full max-w-2xl px-6 text-center">
+
+    <!-- Progress -->
+    <div class="mb-10">
+      <div class="h-1 bg-gray-200 rounded-full overflow-hidden">
+        <div id="progressBar" class="h-full bg-indigo-500 w-1/3 transition-all duration-300"></div>
+      </div>
+      <p class="text-sm text-gray-400 mt-2">Step <span id="stepCount">1</span> of 3</p>
+    </div>
+
+    <!-- STEP 1 -->
+    <div id="step1" class="step">
+      <h1 class="text-3xl font-bold mb-6">What is your Business Name?</h1>
+      <input id="businessName" class="w-full border p-4 rounded-xl text-lg" placeholder="e.g. Cafe Mocha">
+
+      <button onclick="nextStep()" class="mt-8 bg-indigo-600 text-white px-8 py-4 rounded-xl text-lg">
+        Next →
+      </button>
+    </div>
+
+    <!-- STEP 2 -->
+    <div id="step2" class="step hidden">
+      <h1 class="text-3xl font-bold mb-6">Owner Name?</h1>
+      <input id="ownerName" class="w-full border p-4 rounded-xl text-lg" placeholder="e.g. Archit">
+
+      <button onclick="nextStep()" class="mt-8 bg-indigo-600 text-white px-8 py-4 rounded-xl text-lg">
+        Next →
+      </button>
+    </div>
+
+    <!-- STEP 3 -->
+    <div id="step3" class="step hidden">
+      <h1 class="text-3xl font-bold mb-6">Contact Number?</h1>
+      <input id="contactNumber" class="w-full border p-4 rounded-xl text-lg" placeholder="+91 XXXXX XXXXX">
+
+      <button onclick="submitForm()" class="mt-8 bg-green-600 text-white px-8 py-4 rounded-xl text-lg">
+        Submit →
+      </button>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="success" class="hidden">
+      <h1 class="text-3xl font-bold text-green-600 mb-4">You're in Early Access 🎉</h1>
+      <p class="text-gray-500">We will contact you soon.</p>
+
+      <button onclick="closeEarlyBirdForm()" class="mt-8 bg-gray-200 px-6 py-3 rounded-xl">
+        Close
+      </button>
+    </div>
+
+  </div>
+</div>
 </body>
 </html>
