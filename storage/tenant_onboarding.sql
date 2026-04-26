@@ -1,13 +1,13 @@
 -- =========================================
 -- 🔧 SELECT DATABASE
 -- =========================================
-USE paychatapi0;
+USE paychat;
 
 
 -- =========================================
 -- 🔧 VARIABLES (EDIT THESE PER CLIENT)
 -- =========================================
-SET @tenant_id = 36;
+SET @tenant_id = 38;
 SET @gst_number = '27ABCDE1234F1Z5';
 SET @company_name = 'Coffee Latte';
 SET @logo_url = 'https://dummyimage.com/200x60/000/fff&text=Coffee+Latte';
@@ -72,7 +72,7 @@ INSERT INTO brandings (
 -- =========================================
 -- 🔄 ENSURE DB CONTEXT AGAIN (AS REQUESTED)
 -- =========================================
-USE your_database_name;
+USE tenant_cafe_one;
 
 
 -- =========================================
@@ -114,8 +114,8 @@ INSERT INTO payment_methods (
 -- =========================================
 -- ⚙️ OPTIONAL SETTINGS (COMMENT IF NOT NEEDED)
 -- =========================================
-INSERT INTO settings (setting_key, value, type) VALUES
-('token_system_enabled', 'true', 'boolean'),
-('token_prefix', 'A', 'string'),
-('token_start_number', '100', 'string'),
-('token_reset_daily', 'true', 'boolean');
+-- INSERT INTO settings (setting_key, value, type) VALUES
+-- ('token_system_enabled', 'true', 'boolean'),
+-- ('token_prefix', 'A', 'string'),
+-- ('token_start_number', '100', 'string'),
+-- ('token_reset_daily', 'true', 'boolean');

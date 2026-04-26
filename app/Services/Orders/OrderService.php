@@ -228,31 +228,34 @@ class OrderService
 
     private function recalculate(Order $order, array $payload = [])
     {
-        
-        // ✅ This is your SUBTOTAL (from item totals)
-        $subtotal = $order->items->sum(function ($item) {
-            return $item->price * $item->quantity;
-        });
+        $tenant = app('currentTenant');
 
-        // ✅ Tax (global)
-        $taxRate = 18;
-        $tax = round(($subtotal * $taxRate) / 100);
+        // ✅ Subtotal
+        $subtotal = $order->items->sum(fn ($item) => $item->price * $item->quantity);
+
+        // ✅ Get tax config using tenant
+        $taxConfig = \App\Models\TaxConfig::where('tenant_id', $tenant->id)->first();
+
+        $tax = 0;
+
+        if ($taxConfig && $taxConfig->is_gst_enabled) {
+            $taxRate = $taxConfig->cgst_rate + $taxConfig->sgst_rate;
+
+            if ($taxConfig->is_inclusive) {
+                $tax = round($subtotal - ($subtotal / (1 + ($taxRate / 100))));
+            } else {
+                $tax = round(($subtotal * $taxRate) / 100);
+            }
+        }
 
         // ✅ Discount
-        $discount = 0;
-
-        if (!empty($payload['discount'])) {
-            $discount = min($payload['discount'], $subtotal);
-        }
+        $discount = !empty($payload['discount'])
+            ? min($payload['discount'], $subtotal)
+            : 0;
 
         // ✅ Final total
         $finalTotal = $subtotal + $tax - $discount;
-        // dd([
-        //     'subtotal' => $subtotal,
-        //     'tax'      => $tax,
-        //     'discount' => $discount,
-        //     'total'    => $finalTotal,
-        // ]);
+
         $order->update([
             'subtotal' => $subtotal,
             'tax'      => $tax,
