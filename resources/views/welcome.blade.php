@@ -133,6 +133,12 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
+                    <a 
+                    href="#book-demo" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm lg:text-base"
+                    >
+                    Book Demo
+                    </a>
                 </div>
             </div>
             
@@ -172,10 +178,10 @@
                 <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 mb-8 max-w-md mx-auto border border-white border-opacity-20">
                     <h3 class="text-xl font-semibold mb-6">Join the Waitlist</h3>
                     <div class="space-y-4">
-                        <button onclick="openEarlyBirdForm()" 
+                        <a href="#book-demo"
                         class="gradient-secondary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300">
-                            Register Early Bird Access
-                        </button>
+                            Book A Demo
+                        </a>
                     </div>
                     <p class="text-blue-200 text-sm mt-4">Be the first to know when we launch. No spam, ever.</p>
                 </div>
@@ -198,7 +204,27 @@
             </div>
         </div>
     </section>
+    <!-- Demo Video Section -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-4xl mx-auto text-center px-6">
 
+            <h2 class="text-3xl font-bold text-navy mb-6">See PayChat in Action</h2>
+            <p class="text-gray-600 mb-10">
+            Watch how PayChat handles orders, payments, and inventory in real-time.
+            </p>
+
+            <div class="rounded-2xl overflow-hidden shadow-lg">
+            <iframe 
+                class="w-full h-64 md:h-96"
+                src="https://www.youtube.com/embed/n6fcyBb1LZk"
+                title="PayChat Demo"
+                frameborder="0"
+                allowfullscreen>
+            </iframe>
+            </div>
+
+        </div>
+    </section>
     <!-- QR Scanner Section -->
     <section id="scanner" class="py-16 lg:py-20 bg-cream">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -469,7 +495,34 @@
             </div>
         </div>
     </section>
+    <!-- Book Demo Section -->
+    <section class="py-16 bg-white" id="book-demo">
+    <div class="max-w-3xl mx-auto text-center px-6">
 
+        <h2 class="text-3xl font-bold text-navy mb-4">Book a Free Demo</h2>
+        <p class="text-gray-600 mb-8">
+        See how PayChat can run your business in just 15 minutes.
+        </p>
+
+        <div class="bg-gray-50 p-8 rounded-2xl shadow">
+
+        <input id="demoName" placeholder="Your Name" class="w-full p-4 mb-4 border rounded-xl">
+        <input id="demoPhone" placeholder="Phone Number" class="w-full p-4 mb-4 border rounded-xl">
+        <input id="demoBusiness" placeholder="Business Name" class="w-full p-4 mb-4 border rounded-xl">
+        <input 
+        type="datetime-local" 
+        id="demoDate" 
+        min=""
+        class="w-full p-4 mb-4 border rounded-xl"
+        />
+        <button onclick="submitDemo()" 
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold">
+            Book My Demo →
+        </button>
+
+        </div>
+    </div>
+    </section>
     <!-- CTA Section -->
     <section class="py-16 lg:py-20 gradient-primary text-white">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -656,6 +709,35 @@
 
     <script>
 
+function submitDemo() {
+  const name = document.getElementById('demoName').value;
+  const phone = document.getElementById('demoPhone').value;
+  const business = document.getElementById('demoBusiness').value;
+  const date = document.getElementById('demoDate').value;
+
+  if (!name || !phone || !date) {
+    alert("Please fill all required details");
+    return;
+  }
+
+  const formattedDate = new Date(date).toLocaleString();
+
+  const msg = `Hi PayChat, I want a demo.%0A
+Name: ${name}%0A
+Business: ${business}%0A
+Phone: ${phone}%0A
+Preferred Time: ${formattedDate}`;
+
+  window.open(`https://wa.me/919834969229?text=${msg}`, '_blank');
+}
+
+// Set min date = now
+document.addEventListener("DOMContentLoaded", () => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+
+  document.getElementById('demoDate').min = now.toISOString().slice(0,16);
+}); 
 async function loadTenants() {
     try {
         const baseUrl = window.location.origin;
@@ -1111,5 +1193,15 @@ function submitForm() {
 
   </div>
 </div>
+<!-- WhatsApp Floating Button -->
+<a 
+  href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more%20about%20your%20POS"
+  target="_blank"
+  class="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-50"
+>
+  <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20.52 3.48A11.91 11.91 0 0012.02 0C5.38 0 .02 5.36.02 12c0 2.12.56 4.18 1.63 6L0 24l6.19-1.62A11.96 11.96 0 0012.02 24c6.64 0 12-5.36 12-12 0-3.19-1.24-6.18-3.5-8.52zM12 22c-1.9 0-3.75-.5-5.38-1.45l-.38-.23-3.67.96.98-3.58-.25-.37A9.94 9.94 0 012 12C2 6.48 6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm5.17-7.36c-.28-.14-1.65-.82-1.9-.91-.25-.09-.43-.14-.61.14-.18.28-.7.91-.86 1.1-.16.18-.32.21-.6.07-.28-.14-1.18-.43-2.25-1.36-.83-.74-1.4-1.65-1.57-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.42-.48.14-.16.18-.28.28-.46.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.83-2.01-.22-.53-.44-.46-.61-.47-.16-.01-.34-.01-.52-.01-.18 0-.48.07-.73.34-.25.28-.96.94-.96 2.29s.99 2.66 1.13 2.85c.14.18 1.96 2.99 4.75 4.19.66.28 1.18.44 1.58.56.66.21 1.26.18 1.73.11.53-.08 1.65-.67 1.88-1.32.23-.65.23-1.2.16-1.32-.07-.11-.25-.18-.53-.32z"/>
+  </svg>
+</a>
 </body>
 </html>
