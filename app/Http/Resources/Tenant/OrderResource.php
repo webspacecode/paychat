@@ -115,11 +115,11 @@ class OrderResource extends JsonResource
             'payments' => $this->payments->map(function ($payment) {
                 return [
                     'id' => $payment->id,
-                    'method' => $payment->method,
+                    'payment_method' => $payment->payment_method,
                     'amount' => $payment->amount,
-                    'reference' => $payment->transaction_reference ?? null,
+                    'transaction_id' => $payment->transaction_id ?? null,
                     'status' => $payment->status,
-                    'paid_at' => $payment->paid_at,
+                    'paid_at' => $payment->updated_at,
                 ];
             }),
 

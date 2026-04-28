@@ -48,7 +48,9 @@ class InvoiceService
 
         try {
             $qr = $qrCode->format('svg')->size(120)->generate($url);
-            $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
+            if ($token) {
+                $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
+            }
         } catch (\Exception $e) {
             $qr = null; // fallback (important for production)
             $kitchenQr = null; // fallback (important for production)

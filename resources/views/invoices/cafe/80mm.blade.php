@@ -195,7 +195,6 @@
         <span>GST</span>
         <span>₹{{ number_format($totals['gst'] ?? 0, 2) }}</span>
     </div>
-
     <div class="divider"></div>
 
     <div class="row total">
@@ -207,13 +206,24 @@
 
     <!-- FOOTER -->
     <div class="footer">
-        
+        @if(!empty($order['payments'][0]['payment_method']))
+            <div class="row">
+                <span>Paid via</span>
+                <span>{{ strtoupper($order['payments'][0]['payment_method']) }}</span>
+            </div>
+        @endif
         @if(isset($qr))
             <div class="qr-box">
                 {!! $qr !!}
             </div>
 
             <div class="qr-text">Scan for invoice</div>
+            <div style="text-align:center; margin-top:8px;">
+                <a href="{!! $url !!}" target="_blank" style="font-size:12px; text-decoration:underline; color:#000;">
+                    View Invoice
+                </a>
+            </div>
+
         @endif
 
         <div class="thanks">☕ Thank you! Visit again</div>

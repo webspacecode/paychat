@@ -142,25 +142,68 @@ class PaymentService
 
     private function handleBusinessUpi(Order $order, $amount, $config)
     {
-        $provider = $config->config['provider'] ?? 'phonepe';
-        $ref = (string) \Str::uuid();
+        $baseUrl   = config('services.phonepe.base_url');
+        $merchantId = $config->config['merchant_id'];
+        $saltKey    = $config->config['salt_key'];
+        $saltIndex  = $config->config['salt_index'];
+
+        $txnId = "ORD-" . $order->id . "-" . time();
+
+        $payload = [
+            "merchantId" => $merchantId,
+            "merchantTransactionId" => $txnId,
+            "merchantUserId" => "USER-" . $order->id,
+            "amount" => (int) ($amount * 100), // paise
+            "callbackUrl" => route('phonepe.callback'),
+            "paymentInstrument" => [
+                "type" => "UPI_QR"
+            ]
+        ];
+
+        $encodedPayload = base64_encode(json_encode($payload));
+
+        $endpoint = "/pg/v1/pay";
+
+        $checksum = hash('sha256', $encodedPayload . $endpoint . $saltKey)
+            . "###" . $saltIndex;
+
+        $url = $baseUrl . $endpoint;
+
+        $response = \Http::withHeaders([
+            "Content-Type" => "application/json",
+            "X-VERIFY" => $checksum
+        ])->post($url, [
+            "request" => $encodedPayload
+        ]);
+
+        if (!$response->successful()) {
+            \Log::error("PhonePe Pay API Error", [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+            throw new \Exception("PhonePe API failed");
+        }
+
+        $res = $response->json();
+
+        if (!isset($res['data']['instrumentResponse']['qrCode'])) {
+            throw new \Exception("QR not returned from PhonePe");
+        }
 
         $payment = Payment::create([
             'order_id' => $order->id,
             'payment_method' => 'upi',
             'mode' => 'business',
-            'provider' => $provider,
-            'provider_ref' => $ref,
+            'provider' => 'phonepe',
+            'provider_ref' => $txnId,
             'amount' => $amount,
-            'status' => 'processing'
+            'status' => 'pending',
+            'meta' => $res
         ]);
-
-        // simulate payment link (replace with real API later)
-        $paymentLink = "upi://pay?ref={$ref}";
 
         return [
             'payment' => $payment,
-            'link' => $paymentLink
+            'qr' => $res['data']['instrumentResponse']['qrCode']
         ];
     }
 
