@@ -7,16 +7,16 @@ USE paychat;
 -- =========================================
 -- 🔧 VARIABLES (EDIT THESE PER CLIENT)
 -- =========================================
-SET @tenant_id = 38;
+SET @tenant_id = 7;
 SET @gst_number = '27ABCDE1234F1Z5';
-SET @company_name = 'Coffee Latte';
-SET @logo_url = 'https://dummyimage.com/200x60/000/fff&text=Coffee+Latte';
+SET @company_name = 'One Piece Cafe';
+SET @logo_url = 'https://dummyimage.com/200x60/000/fff&text=One+Piece+Cafe';
 SET @primary_color = '#1F2937';
 SET @phone = '9021345678';
 SET @address = '2nd Floor, Food Court, Eternity Mall, Nagpur';
 
 SET @upi_id = '9834969229@ybl';
-SET @upi_name = 'Coffee Latte';
+SET @upi_name = 'One Piece Cafe';
 
 
 -- =========================================
@@ -72,7 +72,7 @@ INSERT INTO brandings (
 -- =========================================
 -- 🔄 ENSURE DB CONTEXT AGAIN (AS REQUESTED)
 -- =========================================
-USE tenant_cafe_one;
+USE tenant_one_piece_cafe;
 
 
 -- =========================================
@@ -114,8 +114,8 @@ INSERT INTO payment_methods (
 -- =========================================
 -- ⚙️ OPTIONAL SETTINGS (COMMENT IF NOT NEEDED)
 -- =========================================
--- INSERT INTO settings (setting_key, value, type) VALUES
--- ('token_system_enabled', 'true', 'boolean'),
--- ('token_prefix', 'A', 'string'),
--- ('token_start_number', '100', 'string'),
--- ('token_reset_daily', 'true', 'boolean');
+INSERT INTO settings (setting_key, value, type) VALUES
+('token_system_enabled', 'true', 'boolean'),
+('token_prefix', 'A', 'string'),
+('token_start_number', '100', 'string'),
+('token_reset_daily', 'true', 'boolean');
