@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PayChat - Revolutionary POS & Business Management Platform. Unified solution for real-time orders, inventory management, and payments.">
-    <title>PayChat - Revolutionary POS & Business Management Platform</title>
+    <meta name="description" content="Flexible pricing plans for PayChat POS. Choose based on your business scale and order volume.">
+    <title>PayChat Pricing - Flexible Plans for Every Business</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
@@ -122,22 +122,22 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16 lg:h-20">
                 <!-- Logo -->
-                <a href="{{ url('/') }}" class="flex items-center space-x-3">
+                <div class="flex items-center space-x-3">
                     <img src="color-paychat-logo-main.svg" alt="PayChat Logo" class="h-10 lg:h-12 w-auto">
                     <div class="flex items-center space-x-2">
                         <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
                             Early Customers Only
                         </span>                    
                     </div>
-                </a>
+                </div>
                 
                 <!-- Desktop Navigation -->
                 <!-- Desktop Navigation -->
                 <div class="hidden lg:flex items-center space-x-8">
-                    <a href="{{ url('/features') }}" class="text-navy hover:text-primary font-medium">Features</a>
-                    <a href="{{ url('/pricing') }}" class="text-navy hover:text-primary font-medium">Pricing</a>
-                    <a href="{{ url('/about') }}" class="text-navy hover:text-primary font-medium">About</a>
-                    <a href="{{ url('/contact') }}" class="text-navy hover:text-primary font-medium">Contact</a>
+                    <a href="features.html" class="text-navy hover:text-primary font-medium">Features</a>
+                    <a href="pricing.html" class="text-navy hover:text-primary font-medium">Pricing</a>
+                    <a href="about.html" class="text-navy hover:text-primary font-medium">About</a>
+                    <a href="contact.html" class="text-navy hover:text-primary font-medium">Contact</a>
                 </div>
                 
                 <!-- CTA Buttons -->
@@ -166,10 +166,10 @@
             <!-- Mobile Navigation -->
             <div id="mobileMenu" class="lg:hidden hidden border-t border-gray-200 py-4">
                 <div class="flex flex-col space-y-3">
-                    <a href="{{ url('/features') }}">Features</a>
-                    <a href="{{ url('/pricing') }}">Pricing</a>
-                    <a href="{{ url('/about') }}">About</a>
-                    <a href="{{ url('/contact') }}">Contact</a>
+                    <a href="features.html">Features</a>
+                    <a href="pricing.html">Pricing</a>
+                    <a href="about.html">About</a>
+                    <a href="contact.html">Contact</a>
                 </div>
             </div>
         </div>
@@ -224,374 +224,62 @@
             </div>
         </div>
     </section>
-    <!-- Demo Video Section -->
     <section class="py-16 bg-gray-50">
-        <div class="max-w-4xl mx-auto text-center px-6">
+        <div class="max-w-6xl mx-auto px-6 text-center">
 
-            <h2 class="text-3xl font-bold text-navy mb-6">See PayChat in Action</h2>
-            <p class="text-gray-600 mb-10">
-            Watch how PayChat handles orders, payments, and inventory in real-time.
-            </p>
+            <h1 class="text-4xl font-bold text-navy mb-4">Simple & Scalable Pricing</h1>
+            <p class="text-gray-600 mb-12">Choose a plan based on your business size</p>
 
-            <div class="rounded-2xl overflow-hidden shadow-lg">
-            <iframe 
-                class="w-full h-64 md:h-96"
-                src="https://www.youtube.com/embed/n6fcyBb1LZk"
-                title="PayChat Demo"
-                frameborder="0"
-                allowfullscreen>
-            </iframe>
+            <div class="grid md:grid-cols-3 gap-8">
+
+            <!-- Starter -->
+            <div class="bg-white p-8 rounded-xl shadow">
+                <h3 class="text-xl font-bold mb-4">Starter</h3>
+                <p class="mb-4 text-gray-500">For small shops</p>
+                <ul class="text-sm space-y-2 mb-6">
+                <li>✔ Limited Orders</li>
+                <li>✔ Vendor POS</li>
+                <li>✔ Basic Reports</li>
+                </ul>
+                <button onclick="openContact()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg">Contact Sales</button>
+            </div>
+
+            <!-- Growth -->
+            <div class="bg-white p-8 rounded-xl shadow border-2 border-indigo-500">
+                <h3 class="text-xl font-bold mb-4">Growth</h3>
+                <p class="mb-4 text-gray-500">For growing businesses</p>
+                <ul class="text-sm space-y-2 mb-6">
+                <li>✔ Higher Order Limits</li>
+                <li>✔ QR Self POS</li>
+                <li>✔ Inventory Management</li>
+                <li>✔ Reports</li>
+                </ul>
+                <button onclick="openContact()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg">Contact Sales</button>
+            </div>
+
+            <!-- Pro -->
+            <div class="bg-white p-8 rounded-xl shadow">
+                <h3 class="text-xl font-bold mb-4">Pro</h3>
+                <p class="mb-4 text-gray-500">For multi-branch & scaling</p>
+                <ul class="text-sm space-y-2 mb-6">
+                <li>✔ Unlimited Orders</li>
+                <li>✔ Multi Branch</li>
+                <li>✔ Token System</li>
+                <li>✔ Custom Features</li>
+                </ul>
+                <button onclick="openContact()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg">Contact Sales</button>
+            </div>
+
             </div>
 
         </div>
     </section>
-    <!-- QR Scanner Section -->
-    <section id="scanner" class="py-16 lg:py-20 bg-cream">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">Try Our QR Scanner</h2>
-            <p class="text-xl text-gray-600 mb-12">Experience the future of instant access. Scan any QR code to see how PayChat will work.</p>
-            
-            <div class="bg-white rounded-3xl p-8 lg:p-12 shadow-custom-lg">
-                <div class="max-w-md mx-auto">
-                    <button onclick="startScanner()" class="w-32 h-32 lg:w-40 lg:h-40 gradient-primary rounded-3xl flex items-center justify-center mx-auto mb-8 hover:shadow-xl transition-all duration-300 scanner-pulse">
-                        <svg class="w-16 h-16 lg:w-20 lg:h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h-4.01M12 12v4m6-4h.01M12 8h.01M12 8h4.01M12 8H7.99"/>
-                        </svg>
-                    </button>
-                    
-                    <h3 class="text-2xl font-bold text-navy mb-4">Tap to Scan</h3>
-                    <p class="text-gray-600 mb-6">Point your camera at any QR code to test our scanning technology. Try scanning a website QR code!</p>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <!-- Features Section -->
-    <section id="features" class="py-16 lg:py-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">Complete Business Management Platform</h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Everything you need to run your business efficiently, from POS to mobile app integration</p>
-            </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Product & Inventory Management -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Product & Inventory Management</h3>
-                    <p class="text-gray-600 mb-4">User-friendly dashboard to add and edit products or services. Real-time inventory tracking automatically adjusts stock counts to prevent overselling.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Easy product management dashboard</li>
-                        <li>• Real-time stock tracking</li>
-                        <li>• Automatic restock alerts</li>
-                        <li>• Sales-based inventory updates</li>
-                    </ul>
-                </div>
-
-                <!-- POS Screen & QR-based Order Entry -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h-4.01M12 12v4m6-4h.01M12 8h.01M12 8h4.01M12 8H7.99"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">POS Screen & QR Order Entry</h3>
-                    <p class="text-gray-600 mb-4">Advanced POS interface with barcode and QR scanning capabilities. Accept multiple order types with speed and accuracy.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Barcode & QR code scanning</li>
-                        <li>• Multiple order types support</li>
-                        <li>• Instant product data retrieval</li>
-                        <li>• Fast checkout process</li>
-                    </ul>
-                </div>
-
-                <!-- Token System (Queue Management) -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">QR-Based Token System</h3>
-                    <p class="text-gray-600 mb-4">Smart queue management system. Customers receive unique QR tokens to track their turn—perfect for restaurants, clinics, and retail.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• QR-based queue tokens</li>
-                        <li>• Real-time queue tracking</li>
-                        <li>• Customer turn notifications</li>
-                        <li>• Ideal for service businesses</li>
-                    </ul>
-                </div>
-
-                <!-- Paperless Invoicing & Payment Links -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Paperless Invoicing</h3>
-                    <p class="text-gray-600 mb-4">Send invoices via mobile app or messaging platforms. Customers receive receipts directly after payment—completely paperless process.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Digital invoice delivery</li>
-                        <li>• Multiple delivery channels</li>
-                        <li>• No printing required</li>
-                        <li>• Integrated payment flow</li>
-                    </ul>
-                </div>
-
-                <!-- Merchant Dashboard -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Merchant Dashboard</h3>
-                    <p class="text-gray-600 mb-4">Comprehensive business insights with daily and monthly analytics. Manage team members, generate reports, and configure settings.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Business analytics & insights</li>
-                        <li>• Team management & access control</li>
-                        <li>• Customizable reports</li>
-                        <li>• POS settings & preferences</li>
-                    </ul>
-                </div>
-
-                <!-- Mobile App & Integrations -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 app-gradient rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Mobile App & Integrations</h3>
-                    <p class="text-gray-600 mb-4">Accept orders through our mobile app and integrate with popular messaging platforms. Customers can browse catalogs, place orders, and make payments seamlessly.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Native mobile app ordering</li>
-                        <li>• Product catalog sharing</li>
-                        <li>• Messaging platform integration</li>
-                        <li>• Multi-channel communication</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Customer Journey Flow -->
-    <section class="py-16 lg:py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">How PayChat Works</h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Simple, seamless customer journey from order to payment</p>
-            </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <!-- Step 1 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">1</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Setup Products</h3>
-                    <p class="text-gray-600 text-sm">Merchant sets up products and inventory in the dashboard</p>
-                </div>
-                
-                <!-- Step 2 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 gradient-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">2</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Customer Orders</h3>
-                    <p class="text-gray-600 text-sm">Customer scans QR, visits outlet, or orders via mobile app</p>
-                </div>
-                
-                <!-- Step 3 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">3</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Invoice & Payment</h3>
-                    <p class="text-gray-600 text-sm">Receives invoice digitally and pays through the app</p>
-                </div>
-                
-                <!-- Step 4 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">4</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Real-time Updates</h3>
-                    <p class="text-gray-600 text-sm">Merchant sees updates, receipt delivered automatically</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Benefits Section -->
-    <section id="benefits" class="py-16 lg:py-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">Why Choose PayChat?</h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">All-in-one solution designed for modern businesses</p>
-            </div>
-            
-            <div class="grid lg:grid-cols-2 gap-16 items-center">
-                <!-- Benefits List -->
-                <div class="space-y-8">
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">All-in-One Platform</h3>
-                            <p class="text-gray-600">Sales, inventory, invoicing, payments, token systems—everything under one roof. No need for multiple apps or systems.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 app-gradient rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">Native Mobile Experience</h3>
-                            <p class="text-gray-600">Purpose-built mobile app with seamless user experience. Fast, reliable, and designed specifically for business operations.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 bg-accent rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">Real-Time Control</h3>
-                            <p class="text-gray-600">Inventory, tokens, orders, and analytics update instantly as your business flows throughout the day.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 gradient-secondary rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">Scalable for Small Businesses</h3>
-                            <p class="text-gray-600">Perfect for retail, F&B, services, and appointment-based businesses across all industries.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Visual Element -->
-                <div class="flex justify-center">
-                    <div class="relative">
-                        <div class="w-80 h-80 lg:w-96 lg:h-96 bg-white rounded-3xl shadow-custom-lg flex items-center justify-center">
-                            <div class="text-center">
-                                <div class="w-24 h-24 gradient-primary rounded-3xl flex items-center justify-center mx-auto mb-6">
-                                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                    </svg>
-                                </div>
-                                <h3 class="text-2xl font-bold text-navy mb-2">Complete Solution</h3>
-                                <p class="text-gray-600">Everything your business needs in one platform</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Floating Elements -->
-                        <div class="absolute -top-4 -right-4 bg-accent text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-                            Mobile Ready
-                        </div>
-                        <div class="absolute -bottom-4 -left-4 bg-secondary text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-                            Real-Time
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Book Demo Section -->
-    <section class="py-16 bg-white" id="book-demo">
-    <div class="max-w-3xl mx-auto text-center px-6">
-
-        <h2 class="text-3xl font-bold text-navy mb-4">Book a Free Demo</h2>
-        <p class="text-gray-600 mb-8">
-        See how PayChat can run your business in just 15 minutes.
-        </p>
-
-        <div class="bg-gray-50 p-8 rounded-2xl shadow">
-
-        <input id="demoName" placeholder="Your Name" class="w-full p-4 mb-4 border rounded-xl">
-        <input id="demoPhone" placeholder="Phone Number" class="w-full p-4 mb-4 border rounded-xl">
-        <input id="demoBusiness" placeholder="Business Name" class="w-full p-4 mb-4 border rounded-xl">
-        <input 
-        type="datetime-local" 
-        id="demoDate" 
-        min=""
-        class="w-full p-4 mb-4 border rounded-xl"
-        />
-        <button onclick="submitDemo()" 
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold">
-            Book My Demo →
-        </button>
-
-        </div>
-    </div>
-    </section>
-    <!-- CTA Section -->
-    <section class="py-16 lg:py-20 gradient-primary text-white">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl lg:text-4xl font-bold mb-6">Ready to Transform Your Business?</h2>
-            <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">Join our waitlist and be among the first to experience the future of business management. Early adopters get exclusive benefits.</p>
-            
-            <!-- Enhanced Waitlist Form -->
-           
-            
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-                <div>
-                    <div class="text-2xl font-bold text-secondary mb-2">✓ Early Access</div>
-                    <div class="text-blue-100">Beta testing invitation</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-secondary mb-2">✓ Priority Support</div>
-                    <div class="text-blue-100">Direct line to founders</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-secondary mb-2">✓ Exclusive Features</div>
-                    <div class="text-blue-100">First access to new features</div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <section class="py-16 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-6">
-
-            <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold text-navy">Live Partner Businesses</h2>
-                <p class="text-gray-600">Discover shops using PayChat (early pilot network)</p>
-            </div>
-
-            <!-- Search -->
-            <div class="max-w-md mx-auto mb-8">
-                <input 
-                    placeholder="Search shops..." 
-                    class="w-full border p-4 rounded-xl"
-                >
-            </div>
-
-            <!-- Tenant Grid -->
-            <div id="tenantsGrid" class="grid md:grid-cols-3 gap-6">
-                <div id="tenantsGrid">
-                    <p>Loading partner businesses...</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <script>
+    function openContact(){
+    window.location.href = "contact.html";
+    }
+    </script>
     <!-- Footer -->
     <footer class="bg-navy text-white py-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
