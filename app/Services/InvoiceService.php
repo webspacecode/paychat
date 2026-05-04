@@ -39,22 +39,27 @@ class InvoiceService
         
         $token = $order['data']['data']['token']['token_code'] ?? null;
 
-        $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
 
         $qrCode = new Generator();
 
         $qr = null;
         $kitchenQr = null;
+        $tokenQr = null;
 
         try {
             $qr = $qrCode->format('svg')->size(120)->generate($url);
             if ($token) {
+                $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
+                $tokenUrl = url("/pos#/tokens/$uuid");
+
                 $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
+                $tokenQr = $qrCode->format('svg')->size(120)->generate($tokenUrl);
+
             }
         } catch (\Exception $e) {
             $qr = null; // fallback (important for production)
             $kitchenQr = null; // fallback (important for production)
-            
+            $tokenQr = null;
         }
         
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
@@ -71,7 +76,8 @@ class InvoiceService
             ])->render(),
             'url'=>$url,
             'qr'=> base64_encode($qr),
-            'kitchenQr'=> base64_encode($kitchenQr)
+            'kitchenQr'=> base64_encode($kitchenQr),
+            'tokenQr'=> base64_encode($tokenQr),
         ];
     }
 
