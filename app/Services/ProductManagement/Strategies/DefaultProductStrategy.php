@@ -210,15 +210,25 @@ class DefaultProductStrategy implements ProductStrategyInterface
             // ✅ 2. Simple products (ONLY if stock available at location)
             $w->orWhere(function ($q2) use ($locationId) {
 
-                $q2->where('type', 'simple');
+                $q2->where('type', 'basic')
+                ->where(function ($q3) use ($locationId) {
 
-                // Apply inventory filter ONLY if location is provided
-                if ($locationId) {
-                    $q2->whereHas('inventories', function ($inv) use ($locationId) {
-                        $inv->where('location_id', $locationId)
-                            ->where('quantity', '>', 0);
+                    // ✅ Case 1: No inventory tracking → ALWAYS include
+                    $q3->where('track_inventory', 0);
+
+                    // ✅ Case 2: Track inventory → check stock
+                    $q3->orWhere(function ($q4) use ($locationId) {
+
+                        $q4->where('track_inventory', 1);
+
+                        if ($locationId) {
+                            $q4->whereHas('inventories', function ($inv) use ($locationId) {
+                                $inv->where('location_id', $locationId)
+                                    ->where('quantity', '>', 0);
+                            });
+                        }
                     });
-                }
+                });
             });
 
             // ❌ Raw products are automatically excluded

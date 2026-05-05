@@ -45,6 +45,7 @@ class InvoiceService
         $qr = null;
         $kitchenQr = null;
         $tokenQr = null;
+        $tokenUrl = null;
 
         try {
             $qr = $qrCode->format('svg')->size(120)->generate($url);
@@ -78,6 +79,7 @@ class InvoiceService
             'qr'=> base64_encode($qr),
             'kitchenQr'=> base64_encode($kitchenQr),
             'tokenQr'=> base64_encode($tokenQr),
+            'tokenUrl' => $tokenUrl
         ];
     }
 
@@ -114,6 +116,46 @@ class InvoiceService
                 'url'=>request()->url()
             ]
         );
+    }
+
+    public function viewToken($uuid)
+    {
+        $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
+
+        $config = config("invoice.industries.$inv->industry");
+    
+        if(!$config){
+            throw new \Exception("Invalid industry");
+        }
+
+        $template = $config['templates'][$inv->paper_size] ?? null;
+        
+        $tenant = Tenant::where('id', $inv->tenant_id)->first();
+
+        $totals = $this->calculateGST($inv->order_data,$tenant->taxConfig);
+
+        $qrCode = new Generator();
+
+        $url = url("/pos#/invoices/$uuid");
+
+        try {
+            $qr = $qrCode->format('svg')->size(120)->generate($url);
+            $token = $inv->order_data['token']['token_code'];
+            if ($token) {
+                $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
+                $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
+            }
+        } catch (\Exception $e) {
+            $qr = null; // fallback (important for production)
+            $kitchenQr = null; // fallback (important for production)
+        }
+
+        return [
+            'orderData' => $inv->order_data,
+            'token' => $inv->order_data['token'],
+            'qr'=> base64_encode($qr),
+            'kitchenQr'=> base64_encode($kitchenQr),
+        ];
     }
 
     private function calculateGST($order,$tax)

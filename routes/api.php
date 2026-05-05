@@ -155,6 +155,8 @@ Route::get('/tenant/list',[InfoController::class,'list']);
 
 
 Route::get('/invoice/{uuid}',[InvoiceController::class,'view']);
+Route::get('/token/{uuid}',[InvoiceController::class,'viewToken']);
+
 
 Route::post('/phonepe/callback', [PhonePeController::class, 'callback'])
     ->name('phonepe.callback');

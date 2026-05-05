@@ -30,4 +30,13 @@ class InvoiceController extends Controller
         );
         
     }
+
+    public function viewToken($uuid, InvoiceService $service)
+    {
+        
+        return $service->viewToken(
+            $uuid
+        );
+        
+    }
 }
