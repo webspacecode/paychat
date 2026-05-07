@@ -13,8 +13,10 @@ use App\Http\Controllers\Api\Tenant\WebhookController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\InventoryController;
 use App\Http\Controllers\Api\Tenant\InfoController;
+use App\Http\Controllers\Api\DemoLeadController;
 
 
+Route::post('/demo-leads', [DemoLeadController::class, 'store']);
 
 
 Route::get('/ping', function() {

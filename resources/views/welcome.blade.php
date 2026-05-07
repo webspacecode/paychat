@@ -154,12 +154,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
-                    <a 
-                    href="#book-demo" 
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm lg:text-base"
-                    >
-                    Book Demo
-                    </a>
+                    <button onclick="openDemoModal()" 
+                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                            Book Free Demo
+                        </button>
                 </div>
             </div>
             
@@ -178,51 +176,118 @@
     <!-- Hero Section -->
     <section class="gradient-primary text-white py-16 lg:py-24">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <div class="flex items-center justify-center mb-6">
-                    <span class="bg-white bg-opacity-20 text-white px-4 py-2 rounded-full font-semibold text-sm flex items-center">
-                        ⭐ Early Customer Access
-                    </span>
-                </div>
-                
-                <h1 class="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
-                    PayChat: Revolutionary POS & 
-                    <span class="text-secondary">Business Management</span> 
-                    Platform
-                </h1>
-                <p class="text-xl lg:text-2xl text-blue-100 mb-8 leading-relaxed max-w-4xl mx-auto">
-                    A unified solution that processes real-time orders, manages inventory, and handles payments—all from the point of sale or through our mobile app. Designed for small outlets like retail stores, restaurants, salons, and appointment-based businesses.
-                </p>
-                
-                <!-- Waitlist Form -->
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 mb-8 max-w-md mx-auto border border-white border-opacity-20">
-                    <h3 class="text-xl font-semibold mb-6">Join the Waitlist</h3>
-                    <div class="space-y-4">
-                        <a href="#book-demo"
-                        class="gradient-secondary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300">
-                            Book A Demo
+
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+
+                <!-- LEFT -->
+                <div>
+
+                    <div class="inline-flex items-center bg-white/10 px-4 py-2 rounded-full mb-6">
+                        <span class="text-sm font-semibold">
+                            Free 30-Day Trial • Setup Support Included
+                        </span>
+                    </div>
+
+                    <h1 class="text-4xl lg:text-6xl font-bold leading-tight mb-6">
+                        Smart POS for
+                        <span class="text-secondary">
+                            Cafes, Restaurants & Retail Stores
+                        </span>
+                    </h1>
+
+                    <p class="text-xl text-blue-100 mb-8 leading-relaxed">
+                        Billing, KOT, QR ordering, inventory, token system,
+                        reports, online orders and customer management —
+                        all in one easy-to-use POS platform.
+                    </p>
+
+                    <!-- CTA -->
+                    <div class="flex flex-col sm:flex-row gap-4">
+
+                        <button onclick="openDemoModal()" 
+                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                            Book Free Demo
+                        </button>
+
+                        <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more"
+                        target="_blank"
+                        class="bg-green-500 hover:bg-green-600 px-8 py-4 rounded-xl font-semibold text-center">
+                            Chat on WhatsApp
                         </a>
+
                     </div>
-                    <p class="text-blue-200 text-sm mt-4">Be the first to know when we launch. No spam, ever.</p>
+
+                    <!-- TRUST -->
+                    <div class="mt-8 flex flex-wrap gap-6 text-sm text-blue-100">
+
+                        <div>✓ No setup fees</div>
+                        <div>✓ Runs on laptop/tablet</div>
+                        <div>✓ Free onboarding</div>
+                        <div>✓ GST-ready billing</div>
+
+                    </div>
+
                 </div>
-                
-                <!-- Launch Stats -->
-                <div class="grid grid-cols-3 gap-8 pt-8 border-t border-blue-300 border-opacity-30 max-w-2xl mx-auto">
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary" id="waitlistCount">10+</div>
-                        <div class="text-blue-100 text-sm lg:text-base">On Waitlist</div>
+
+                <!-- RIGHT -->
+                <div class="relative">
+
+                    <div class="bg-white rounded-3xl shadow-2xl p-6">
+
+                        <img
+                            src="YOUR_POS_SCREENSHOT.png"
+                            class="rounded-2xl w-full"
+                        >
+
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Live Soon</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Early Access Phase</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Founding</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Early Customers</div>
-                    </div>
+
                 </div>
+
             </div>
+
         </div>
+    </section>
+    <section class="py-16 bg-white">
+
+        <div class="max-w-6xl mx-auto px-6">
+
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-navy mb-4">
+                    Built for Growing Businesses
+                </h2>
+
+                <p class="text-gray-600 text-lg">
+                    PayChat works best for businesses handling fast orders,
+                    walk-in customers and daily billing.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-4 gap-6">
+
+                <div class="bg-gray-50 rounded-2xl p-6 text-center">
+                    ☕
+                    <h3 class="font-bold mt-4">Cafes</h3>
+                </div>
+
+                <div class="bg-gray-50 rounded-2xl p-6 text-center">
+                    🍴
+                    <h3 class="font-bold mt-4">Restaurants</h3>
+                </div>
+
+                <div class="bg-gray-50 rounded-2xl p-6 text-center">
+                    🛍️
+                    <h3 class="font-bold mt-4">Retail Stores</h3>
+                </div>
+
+                <div class="bg-gray-50 rounded-2xl p-6 text-center">
+                    💇
+                    <h3 class="font-bold mt-4">Salons</h3>
+                </div>
+
+            </div>
+
+        </div>
+
     </section>
     <!-- Demo Video Section -->
     <section class="py-16 bg-gray-50">
@@ -245,138 +310,235 @@
 
         </div>
     </section>
-    <!-- QR Scanner Section -->
-    <section id="scanner" class="py-16 lg:py-20 bg-cream">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">Try Our QR Scanner</h2>
-            <p class="text-xl text-gray-600 mb-12">Experience the future of instant access. Scan any QR code to see how PayChat will work.</p>
-            
-            <div class="bg-white rounded-3xl p-8 lg:p-12 shadow-custom-lg">
-                <div class="max-w-md mx-auto">
-                    <button onclick="startScanner()" class="w-32 h-32 lg:w-40 lg:h-40 gradient-primary rounded-3xl flex items-center justify-center mx-auto mb-8 hover:shadow-xl transition-all duration-300 scanner-pulse">
-                        <svg class="w-16 h-16 lg:w-20 lg:h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h-4.01M12 12v4m6-4h.01M12 8h.01M12 8h4.01M12 8H7.99"/>
-                        </svg>
-                    </button>
-                    
-                    <h3 class="text-2xl font-bold text-navy mb-4">Tap to Scan</h3>
-                    <p class="text-gray-600 mb-6">Point your camera at any QR code to test our scanning technology. Try scanning a website QR code!</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    
 
     <!-- Features Section -->
-    <section id="features" class="py-16 lg:py-20">
+    <section id="features" class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <!-- Heading -->
             <div class="text-center mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">Complete Business Management Platform</h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Everything you need to run your business efficiently, from POS to mobile app integration</p>
+                <span class="inline-block bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
+                    Built for Real Businesses
+                </span>
+
+                <h2 class="text-4xl lg:text-5xl font-bold text-navy mb-6">
+                    Everything You Need To Run Your Outlet
+                </h2>
+
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    From billing and kitchen tokens to inventory and WhatsApp invoices —
+                    PayChat helps cafés, restaurants, retail shops and service businesses
+                    manage daily operations smoothly.
+                </p>
             </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Product & Inventory Management -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
+
+            <!-- Feature Grid -->
+            <div class="grid lg:grid-cols-3 gap-8">
+
+                <!-- POS -->
+                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
                     <div class="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mb-6">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 14l6-6m-5 0h5v5M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Product & Inventory Management</h3>
-                    <p class="text-gray-600 mb-4">User-friendly dashboard to add and edit products or services. Real-time inventory tracking automatically adjusts stock counts to prevent overselling.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Easy product management dashboard</li>
-                        <li>• Real-time stock tracking</li>
-                        <li>• Automatic restock alerts</li>
-                        <li>• Sales-based inventory updates</li>
+
+                    <h3 class="text-2xl font-bold text-navy mb-4">
+                        Fast Billing POS
+                    </h3>
+
+                    <p class="text-gray-600 mb-5">
+                        Lightweight and fast billing screen designed for quick operations
+                        during rush hours. Works smoothly on desktop, tablet and mobile devices.
+                    </p>
+
+                    <ul class="space-y-2 text-sm text-gray-500">
+                        <li>✓ Instant cart & checkout</li>
+                        <li>✓ Barcode & QR scanning</li>
+                        <li>✓ Hold & resume orders</li>
+                        <li>✓ Multiple payment methods</li>
+                        <li>✓ Kitchen & counter workflow</li>
                     </ul>
                 </div>
 
-                <!-- POS Screen & QR-based Order Entry -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h-4.01M12 12v4m6-4h.01M12 8h.01M12 8h4.01M12 8H7.99"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">POS Screen & QR Order Entry</h3>
-                    <p class="text-gray-600 mb-4">Advanced POS interface with barcode and QR scanning capabilities. Accept multiple order types with speed and accuracy.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Barcode & QR code scanning</li>
-                        <li>• Multiple order types support</li>
-                        <li>• Instant product data retrieval</li>
-                        <li>• Fast checkout process</li>
-                    </ul>
-                </div>
-
-                <!-- Token System (Queue Management) -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
+                <!-- Inventory -->
+                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
                     <div class="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-6">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">QR-Based Token System</h3>
-                    <p class="text-gray-600 mb-4">Smart queue management system. Customers receive unique QR tokens to track their turn—perfect for restaurants, clinics, and retail.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• QR-based queue tokens</li>
-                        <li>• Real-time queue tracking</li>
-                        <li>• Customer turn notifications</li>
-                        <li>• Ideal for service businesses</li>
+
+                    <h3 class="text-2xl font-bold text-navy mb-4">
+                        Smart Inventory
+                    </h3>
+
+                    <p class="text-gray-600 mb-5">
+                        Track stock automatically as sales happen. Avoid manual calculations
+                        and know exactly what is running low in real time.
+                    </p>
+
+                    <ul class="space-y-2 text-sm text-gray-500">
+                        <li>✓ Live stock updates</li>
+                        <li>✓ Product variants</li>
+                        <li>✓ Purchase tracking</li>
+                        <li>✓ Low stock alerts</li>
+                        <li>✓ Inventory reports</li>
                     </ul>
                 </div>
 
-                <!-- Paperless Invoicing & Payment Links -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
+                <!-- QR Ordering -->
+                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
+                    <div class="w-16 h-16 gradient-secondary rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h-4.01"/>
+                        </svg>
+                    </div>
+
+                    <h3 class="text-2xl font-bold text-navy mb-4">
+                        QR Ordering & Tokens
+                    </h3>
+
+                    <p class="text-gray-600 mb-5">
+                        Customers can scan QR codes to order directly from tables or counters.
+                        Perfect for cafés, food courts and busy service outlets.
+                    </p>
+
+                    <ul class="space-y-2 text-sm text-gray-500">
+                        <li>✓ QR menu access</li>
+                        <li>✓ Token generation</li>
+                        <li>✓ Live order tracking</li>
+                        <li>✓ Reduce counter rush</li>
+                        <li>✓ Faster customer flow</li>
+                    </ul>
+                </div>
+
+                <!-- Reports -->
+                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
                     <div class="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mb-6">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-6m4 6V7m4 10v-3M5 21h14"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Paperless Invoicing</h3>
-                    <p class="text-gray-600 mb-4">Send invoices via mobile app or messaging platforms. Customers receive receipts directly after payment—completely paperless process.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Digital invoice delivery</li>
-                        <li>• Multiple delivery channels</li>
-                        <li>• No printing required</li>
-                        <li>• Integrated payment flow</li>
+
+                    <h3 class="text-2xl font-bold text-navy mb-4">
+                        Reports & Analytics
+                    </h3>
+
+                    <p class="text-gray-600 mb-5">
+                        Understand your business better with daily sales reports,
+                        top-selling products and performance insights.
+                    </p>
+
+                    <ul class="space-y-2 text-sm text-gray-500">
+                        <li>✓ Daily sales reports</li>
+                        <li>✓ Product performance</li>
+                        <li>✓ Staff activity tracking</li>
+                        <li>✓ Profit insights</li>
+                        <li>✓ Business growth metrics</li>
                     </ul>
                 </div>
 
-                <!-- Merchant Dashboard -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
-                    <div class="w-16 h-16 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                <!-- WhatsApp -->
+                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
+                    <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20.52 3.48A11.91 11.91 0 0012.02 0C5.38 0 .02 5.36.02 12c0 2.12.56 4.18 1.63 6L0 24l6.19-1.62A11.96 11.96 0 0012.02 24c6.64 0 12-5.36 12-12 0-3.19-1.24-6.18-3.5-8.52z"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Merchant Dashboard</h3>
-                    <p class="text-gray-600 mb-4">Comprehensive business insights with daily and monthly analytics. Manage team members, generate reports, and configure settings.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Business analytics & insights</li>
-                        <li>• Team management & access control</li>
-                        <li>• Customizable reports</li>
-                        <li>• POS settings & preferences</li>
+
+                    <h3 class="text-2xl font-bold text-navy mb-4">
+                        WhatsApp & Digital Bills
+                    </h3>
+
+                    <p class="text-gray-600 mb-5">
+                        Send invoices, payment links and order updates directly
+                        to customers digitally without paper bills.
+                    </p>
+
+                    <ul class="space-y-2 text-sm text-gray-500">
+                        <li>✓ WhatsApp invoices</li>
+                        <li>✓ Digital receipts</li>
+                        <li>✓ Payment links</li>
+                        <li>✓ Paperless operations</li>
+                        <li>✓ Better customer experience</li>
                     </ul>
                 </div>
 
-                <!-- Mobile App & Integrations -->
-                <div class="bg-white rounded-2xl p-8 shadow-custom hover:shadow-custom-lg transition-all duration-300 fade-in-up">
+                <!-- Multi Business -->
+                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
                     <div class="w-16 h-16 app-gradient rounded-2xl flex items-center justify-center mb-6">
                         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 7h18M5 7v13m14-13v13M9 11h6"/>
                         </svg>
                     </div>
-                    <h3 class="text-2xl font-bold text-navy mb-4">Mobile App & Integrations</h3>
-                    <p class="text-gray-600 mb-4">Accept orders through our mobile app and integrate with popular messaging platforms. Customers can browse catalogs, place orders, and make payments seamlessly.</p>
-                    <ul class="text-sm text-gray-500 space-y-1">
-                        <li>• Native mobile app ordering</li>
-                        <li>• Product catalog sharing</li>
-                        <li>• Messaging platform integration</li>
-                        <li>• Multi-channel communication</li>
+
+                    <h3 class="text-2xl font-bold text-navy mb-4">
+                        Cloud Based Access
+                    </h3>
+
+                    <p class="text-gray-600 mb-5">
+                        Access your business from anywhere. Manage multiple counters,
+                        staff members and even multiple outlets from one dashboard.
+                    </p>
+
+                    <ul class="space-y-2 text-sm text-gray-500">
+                        <li>✓ Multi-device support</li>
+                        <li>✓ Cloud sync</li>
+                        <li>✓ Staff permissions</li>
+                        <li>✓ Outlet management</li>
+                        <li>✓ Secure backups</li>
                     </ul>
                 </div>
+
             </div>
+
+            <!-- Bottom Highlight -->
+            <div class="mt-16 bg-indigo-50 border border-indigo-100 rounded-3xl p-10 text-center">
+
+                <h3 class="text-3xl font-bold text-navy mb-4">
+                    Built For Indian Businesses
+                </h3>
+
+                <p class="text-lg text-gray-600 max-w-4xl mx-auto mb-8">
+                    PayChat is focused on helping small and medium businesses operate faster,
+                    reduce manual work and avoid expensive enterprise software costs.
+                </p>
+
+                <div class="flex flex-wrap justify-center gap-4">
+                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
+                        Cafés
+                    </span>
+
+                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
+                        Restaurants
+                    </span>
+
+                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
+                        Retail Shops
+                    </span>
+
+                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
+                        Salons
+                    </span>
+
+                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
+                        Clinics
+                    </span>
+
+                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
+                        Service Businesses
+                    </span>
+                </div>
+
+            </div>
+
         </div>
     </section>
 
@@ -515,34 +677,7 @@
             </div>
         </div>
     </section>
-    <!-- Book Demo Section -->
-    <section class="py-16 bg-white" id="book-demo">
-    <div class="max-w-3xl mx-auto text-center px-6">
 
-        <h2 class="text-3xl font-bold text-navy mb-4">Book a Free Demo</h2>
-        <p class="text-gray-600 mb-8">
-        See how PayChat can run your business in just 15 minutes.
-        </p>
-
-        <div class="bg-gray-50 p-8 rounded-2xl shadow">
-
-        <input id="demoName" placeholder="Your Name" class="w-full p-4 mb-4 border rounded-xl">
-        <input id="demoPhone" placeholder="Phone Number" class="w-full p-4 mb-4 border rounded-xl">
-        <input id="demoBusiness" placeholder="Business Name" class="w-full p-4 mb-4 border rounded-xl">
-        <input 
-        type="datetime-local" 
-        id="demoDate" 
-        min=""
-        class="w-full p-4 mb-4 border rounded-xl"
-        />
-        <button onclick="submitDemo()" 
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold">
-            Book My Demo →
-        </button>
-
-        </div>
-    </div>
-    </section>
     <!-- CTA Section -->
     <section class="py-16 lg:py-20 gradient-primary text-white">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -601,7 +736,7 @@
                     <div class="flex items-center space-x-3 mb-6">
                         <img src="color-paychat-logo-main.svg" alt="PayChat Logo" class="h-12 w-auto filter brightness-0 invert">
                         <div>
-                            <p class="text-blue-200 text-sm">Launching Q4 2025</p>
+                            <p class="text-blue-200 text-sm">Launched Beta 0.1</p>
                         </div>
                     </div>
                     <p class="text-blue-200 mb-6 max-w-md">Revolutionary POS & business management platform. Simplify operations, reduce paper, manage queues smartly, and engage customers through our mobile app—all from one dashboard.</p>
@@ -645,66 +780,22 @@
             </div>
             
             <div class="border-t border-blue-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-                <p class="text-blue-200 text-sm">© 2025 PayChat. All rights reserved. Launching Q2 2025.</p>
-                <div class="flex space-x-6 mt-4 md:mt-0">
-                    <a href="#" class="text-blue-200 hover:text-white text-sm transition-colors">Privacy Policy</a>
-                    <a href="#" class="text-blue-200 hover:text-white text-sm transition-colors">Terms of Service</a>
+                <p class="text-blue-200 text-sm">© 2026 PayChat. All rights reserved by Webspace Studio Pvt Ltd.</p>
+                
+                <div class="flex flex-wrap justify-center items-center gap-4 mt-4 text-sm text-gray-500">
+                    <button onclick="openModal('privacyModal')" class="hover:text-primary transition">
+                        Privacy Policy
+                    </button>
+
+                    <span>•</span>
+
+                    <button onclick="openModal('termsModal')" class="hover:text-primary transition">
+                        Terms of Service
+                    </button>
                 </div>
             </div>
         </div>
     </footer>
-
-    <!-- Scanner Modal -->
-    <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center transform scale-95 transition-transform duration-300">
-            <div class="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h-4.01M12 12v4m6-4h.01M12 8h.01M12 8h4.01M12 8H7.99"/>
-                </svg>
-            </div>
-            <h3 class="text-2xl font-bold text-navy mb-4">QR Code Scanner</h3>
-            <p class="text-gray-600 mb-8">Point your camera at any QR code to test our scanning technology</p>
-            
-            <!-- Scanner Frame -->
-            <div class="relative w-64 h-64 mx-auto mb-8 bg-gray-100 rounded-2xl overflow-hidden">
-                <div id="qr-reader" class="w-64 h-64 mx-auto rounded-2xl overflow-hidden"></div>
-            </div>
-            
-            <div class="space-y-4">
-                <button onclick="simulateScan()" class="w-full gradient-primary text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300">
-                    Demo Scan (Test)
-                </button>
-                <button onclick="closeScannerModal()" class="w-full bg-gray-100 text-gray-600 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 transition-all duration-300">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Success Modal -->
-    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center transform scale-95 transition-transform duration-300">
-            <div class="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-            </div>
-            <h3 class="text-2xl font-bold text-navy mb-4">QR Code Detected!</h3>
-            <p class="text-gray-600 mb-6">We found a valid link. Would you like to visit it?</p>
-            <div class="bg-cream rounded-xl p-4 mb-8">
-                <p class="text-sm text-gray-500 mb-1">Detected URL:</p>
-                <p class="text-navy font-mono text-sm break-all" id="detectedUrl">https://example.com</p>
-            </div>
-            <div class="space-y-3">
-                <button onclick="confirmRedirect()" class="w-full gradient-secondary text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300">
-                    Visit Link
-                </button>
-                <button onclick="closeSuccessModal()" class="w-full bg-gray-100 text-gray-600 font-semibold py-3 px-6 rounded-xl hover:bg-gray-200 transition-all duration-300">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Waitlist Success Modal -->
     <div id="waitlistModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
@@ -727,29 +818,161 @@
         </div>
     </div>
 
-    <script>
+<script>
 
-function submitDemo() {
-  const name = document.getElementById('demoName').value;
-  const phone = document.getElementById('demoPhone').value;
-  const business = document.getElementById('demoBusiness').value;
-  const date = document.getElementById('demoDate').value;
+async function submitDemo() {
 
-  if (!name || !phone || !date) {
-    alert("Please fill all required details");
-    return;
-  }
+    const button = event.target;
 
-  const formattedDate = new Date(date).toLocaleString();
+    const originalText = button.innerHTML;
 
-  const msg = `Hi PayChat, I want a demo.%0A
-Name: ${name}%0A
-Business: ${business}%0A
-Phone: ${phone}%0A
-Preferred Time: ${formattedDate}`;
+    const payload = {
 
-  window.open(`https://wa.me/919834969229?text=${msg}`, '_blank');
+        name: document.getElementById('demoName').value,
+
+        email: document.getElementById('demoEmail').value,
+
+        phone: document.getElementById('demoPhone').value,
+
+        business_name: document.getElementById('demoBusiness').value,
+
+        business_type: document.getElementById('demoBusinessType').value,
+
+        counters: document.getElementById('demoCounters').value,
+
+        preferred_demo_time: document.getElementById('demoDate').value,
+
+    };
+
+    // Validation
+    if (
+        !payload.name ||
+        !payload.phone ||
+        !payload.business_name ||
+        !payload.preferred_demo_time
+    ) {
+
+        alert("Please fill all required fields");
+
+        return;
+    }
+
+    try {
+
+        button.disabled = true;
+
+        button.innerHTML = `
+            <div class="flex items-center justify-center gap-2">
+                <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Scheduling...
+            </div>
+        `;
+
+        const response = await fetch('/api/demo-leads', {
+
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+
+            body: JSON.stringify(payload)
+
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(result.message || 'Something went wrong');
+
+        }
+
+        // Success UI
+        document.getElementById('demoModal').innerHTML = `
+
+            <div class="h-screen w-full bg-white flex flex-col items-center justify-center text-center p-10">
+
+                <div class="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-8">
+                    <span class="text-5xl">✓</span>
+                </div>
+
+                <h2 class="text-4xl font-bold text-navy mb-4">
+                    Demo Scheduled
+                </h2>
+
+                <p class="text-gray-600 text-lg max-w-md leading-relaxed">
+                    Our team will contact you shortly to confirm your demo timing.
+                </p>
+
+                <button
+                    onclick="closeDemoModal()"
+                    class="mt-10 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-semibold"
+                >
+                    Close
+                </button>
+
+            </div>
+
+        `;
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(error.message || 'Failed to submit demo request');
+
+        button.disabled = false;
+
+        button.innerHTML = originalText;
+
+    }
 }
+
+function openDemoModal() {
+
+    document
+        .getElementById('demoModal')
+        .classList.remove('hidden');
+
+    document
+        .getElementById('demoModal')
+        .classList.add('flex');
+}
+
+function closeDemoModal() {
+
+    document
+        .getElementById('demoModal')
+        .classList.add('hidden');
+
+    document
+        .getElementById('demoModal')
+        .classList.remove('flex');
+
+    location.reload();
+}
+
+// Set minimum datetime
+document.addEventListener("DOMContentLoaded", () => {
+
+    const now = new Date();
+
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+
+    const input = document.getElementById('demoDate');
+
+    if (input) {
+
+        input.min = now.toISOString().slice(0,16);
+
+    }
+});
+
+</script>
+
+<script>
 
 // Set min date = now
 document.addEventListener("DOMContentLoaded", () => {
@@ -859,82 +1082,8 @@ document.addEventListener("DOMContentLoaded", function () {
             menu.classList.toggle('hidden');
         }
 
-        let qrScanner = null;
 
-function startScanner() {
-    const modal = document.getElementById('scannerModal');
-    modal.classList.remove('opacity-0', 'pointer-events-none');
-    modal.querySelector('.bg-white').classList.remove('scale-95');
-    modal.querySelector('.bg-white').classList.add('scale-100');
 
-    setTimeout(() => {
-        qrScanner = new Html5Qrcode("qr-reader");
-
-        qrScanner.start(
-            { facingMode: "environment" }, // back camera
-            {
-                fps: 10,
-                qrbox: 250
-            },
-            (decodedText) => {
-                detectedLink = decodedText;
-                document.getElementById('detectedUrl').textContent = decodedText;
-
-                stopScanner();
-                simulateScan(); // reuse your success modal
-            },
-            (errorMessage) => {
-                // ignore scan errors (normal while scanning)
-            }
-        );
-    }, 300);
-}
-
-function stopScanner() {
-    if (qrScanner) {
-        qrScanner.stop().then(() => {
-            qrScanner.clear();
-            qrScanner = null;
-        });
-    }
-}
-
-function closeScannerModal() {
-    stopScanner();
-
-    const modal = document.getElementById('scannerModal');
-    modal.classList.add('opacity-0', 'pointer-events-none');
-    modal.querySelector('.bg-white').classList.add('scale-95');
-    modal.querySelector('.bg-white').classList.remove('scale-100');
-}
-
-        function closeScannerModal() {
-            const modal = document.getElementById('scannerModal');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            modal.querySelector('.bg-white').classList.add('scale-95');
-            modal.querySelector('.bg-white').classList.remove('scale-100');
-        }
-
-        function simulateScan() {
-            closeScannerModal();
-            
-            setTimeout(() => {
-                const urls = [
-                    'https://www.google.com',
-                    'https://github.com',
-                    'index.html',
-                    'https://www.wikipedia.org'
-                ];
-                
-                detectedLink = urls[Math.floor(Math.random() * urls.length)];
-                document.getElementById('detectedUrl').textContent = detectedLink;
-                
-                const modal = document.getElementById('successModal');
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                modal.querySelector('.bg-white').classList.remove('scale-95');
-                modal.querySelector('.bg-white').classList.add('scale-100');
-            }, 500);
-        }
 
         function closeSuccessModal() {
             const modal = document.getElementById('successModal');
@@ -1068,24 +1217,7 @@ function closeScannerModal() {
             observer.observe(el);
         });
 
-        // Close modals when clicking outside
-        document.addEventListener('click', function(e) {
-            const scannerModal = document.getElementById('scannerModal');
-            const successModal = document.getElementById('successModal');
-            const waitlistModal = document.getElementById('waitlistModal');
-            
-            if (e.target === scannerModal) {
-                closeScannerModal();
-            }
-            
-            if (e.target === successModal) {
-                closeSuccessModal();
-            }
-            
-            if (e.target === waitlistModal) {
-                closeWaitlistModal();
-            }
-        });
+        
 
         // Update waitlist count periodically (simulate real-time updates)
         setInterval(() => {
@@ -1095,14 +1227,6 @@ function closeScannerModal() {
             }
         }, 10000);
 
-        // Initialize dynamic waitlist count
-        document.addEventListener('DOMContentLoaded', function() {
-            // Simulate some initial activity
-            const initialCount = 10 + Math.floor(Math.random() * 10);
-            waitlistCount = initialCount;
-            document.getElementById('waitlistCount').textContent = waitlistCount + '+';
-        });
-
         function openEarlyBirdForm() {
             document.getElementById('earlyBirdModal').classList.remove('hidden');
         }
@@ -1110,9 +1234,9 @@ function closeScannerModal() {
         function closeEarlyBirdForm() {
             document.getElementById('earlyBirdModal').classList.add('hidden');
         }
-    </script>
+</script>
 
-    <script>
+<script>
 let step = 1;
 
 function openEarlyBirdForm() {
@@ -1223,5 +1347,352 @@ function submitForm() {
     <path d="M20.52 3.48A11.91 11.91 0 0012.02 0C5.38 0 .02 5.36.02 12c0 2.12.56 4.18 1.63 6L0 24l6.19-1.62A11.96 11.96 0 0012.02 24c6.64 0 12-5.36 12-12 0-3.19-1.24-6.18-3.5-8.52zM12 22c-1.9 0-3.75-.5-5.38-1.45l-.38-.23-3.67.96.98-3.58-.25-.37A9.94 9.94 0 012 12C2 6.48 6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm5.17-7.36c-.28-.14-1.65-.82-1.9-.91-.25-.09-.43-.14-.61.14-.18.28-.7.91-.86 1.1-.16.18-.32.21-.6.07-.28-.14-1.18-.43-2.25-1.36-.83-.74-1.4-1.65-1.57-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.42-.48.14-.16.18-.28.28-.46.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.83-2.01-.22-.53-.44-.46-.61-.47-.16-.01-.34-.01-.52-.01-.18 0-.48.07-.73.34-.25.28-.96.94-.96 2.29s.99 2.66 1.13 2.85c.14.18 1.96 2.99 4.75 4.19.66.28 1.18.44 1.58.56.66.21 1.26.18 1.73.11.53-.08 1.65-.67 1.88-1.32.23-.65.23-1.2.16-1.32-.07-.11-.25-.18-.53-.32z"/>
   </svg>
 </a>
+
+<!-- DEMO MODAL -->
+<div
+    id="demoModal"
+    class="fixed inset-0 bg-white z-[9999] hidden"
+>
+
+    <!-- SCROLLABLE AREA -->
+    <div class="w-full h-full overflow-y-auto">
+
+        <!-- CLOSE -->
+        <button
+            onclick="closeDemoModal()"
+            class="fixed top-6 right-6 w-12 h-12 rounded-2xl hover:bg-gray-100 flex items-center justify-center text-gray-500 z-50 transition"
+        >
+            ✕
+        </button>
+
+        <!-- CENTER WRAPPER -->
+        <div class="min-h-screen w-full flex items-center justify-center px-6 py-16">
+
+            <!-- CONTENT -->
+            <div class="w-full max-w-2xl mx-auto">
+
+                <!-- HEADER -->
+                <div class="text-center mb-10">
+
+                    <div class="inline-flex items-center bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+                        Free Personalized Walkthrough
+                    </div>
+
+                    <h2 class="text-5xl font-bold text-navy leading-tight">
+                        See PayChat Live
+                    </h2>
+
+                    <p class="text-gray-500 text-lg mt-5 max-w-xl mx-auto leading-relaxed">
+                        Tell us about your business and we'll schedule
+                        a quick live demo of billing, QR ordering,
+                        reports and setup process.
+                    </p>
+
+                </div>
+
+                <!-- TRUST -->
+                <div class="bg-indigo-50 border border-indigo-100 rounded-3xl p-5 mb-8">
+
+                    <div class="flex gap-4 items-start">
+
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                            ✓
+                        </div>
+
+                        <div>
+                            <h3 class="font-semibold text-indigo-700 text-lg">
+                                Quick & Founder-Led Demo
+                            </h3>
+
+                            <p class="text-gray-600 mt-1 leading-relaxed">
+                                We usually respond within a few hours via WhatsApp or phone.
+                                No complicated setup or sales pressure.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- FORM -->
+                <div class="space-y-6">
+
+                    <!-- NAME -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Name *
+                        </label>
+
+                        <input
+                            id="demoName"
+                            type="text"
+                            placeholder="Your name"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- BUSINESS -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Business Name *
+                        </label>
+
+                        <input
+                            id="demoBusiness"
+                            type="text"
+                            placeholder="Cafe Mocha"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- PHONE -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Phone Number *
+                        </label>
+
+                        <input
+                            id="demoPhone"
+                            type="tel"
+                            placeholder="+91 XXXXX XXXXX"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- EMAIL -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Email
+                        </label>
+
+                        <input
+                            id="demoEmail"
+                            type="email"
+                            placeholder="you@example.com"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- GRID -->
+                    <div class="grid md:grid-cols-2 gap-5">
+
+                        <!-- TYPE -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Business Type
+                            </label>
+
+                            <select
+                                id="demoBusinessType"
+                                class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                            >
+                                <option value="">Select</option>
+                                <option>Cafe</option>
+                                <option>Restaurant</option>
+                                <option>Retail Store</option>
+                                <option>Salon</option>
+                                <option>Bakery</option>
+                                <option>Food Court</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+
+                        <!-- COUNTERS -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Number of Counters
+                            </label>
+
+                            <select
+                                id="demoCounters"
+                                class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                            >
+                                <option value="">Select</option>
+                                <option>1 Counter</option>
+                                <option>2-3 Counters</option>
+                                <option>4-6 Counters</option>
+                                <option>7+ Counters</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <!-- DEMO TIME -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Preferred Demo Time *
+                        </label>
+
+                        <input
+                            type="datetime-local"
+                            id="demoDate"
+                            min=""
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        />
+                    </div>
+
+                    <!-- BUTTON -->
+                    <button
+                        id="demoSubmitBtn"
+                        onclick="submitDemo()"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-semibold text-xl transition-all duration-300"
+                    >
+                        Get Free Demo →
+                    </button>
+
+                    <!-- FOOTER -->
+                    <p class="text-center text-sm text-gray-400 leading-relaxed">
+                        No spam. No commitment required.
+                        We'll contact you shortly after submission.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- Privacy Policy Modal -->
+<div id="privacyModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 relative">
+
+        <button onclick="closeModal('privacyModal')"
+            class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl">
+            &times;
+        </button>
+
+        <h2 class="text-3xl font-bold mb-6 text-navy">Privacy Policy</h2>
+
+        <div class="space-y-5 text-gray-600 leading-relaxed">
+
+            <p>
+                PayChat by Webspace Studio Pvt Ltd values your privacy and is committed
+                to protecting your business and customer information.
+            </p>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Information We Collect</h3>
+                <p>
+                    We may collect business details, contact information, payment data,
+                    and usage analytics to improve our services.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">How We Use Data</h3>
+                <p>
+                    Your data is used to provide POS services, process transactions,
+                    improve performance, and enhance customer support.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Data Security</h3>
+                <p>
+                    We implement industry-standard security measures to protect your data.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Third-Party Services</h3>
+                <p>
+                    Some integrations may involve trusted third-party providers including
+                    payment gateways and analytics platforms.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Contact</h3>
+                <p>
+                    For privacy-related concerns, contact Webspace Studio Pvt Ltd.
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+<!-- Terms of Service Modal -->
+<div id="termsModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 relative">
+
+        <button onclick="closeModal('termsModal')"
+            class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl">
+            &times;
+        </button>
+
+        <h2 class="text-3xl font-bold mb-6 text-navy">Terms of Service</h2>
+
+        <div class="space-y-5 text-gray-600 leading-relaxed">
+
+            <p>
+                By using PayChat services, you agree to comply with these terms.
+            </p>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Service Usage</h3>
+                <p>
+                    Users must use the platform responsibly and comply with all applicable laws.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Account Responsibility</h3>
+                <p>
+                    You are responsible for maintaining the confidentiality of your account.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Payments</h3>
+                <p>
+                    Subscription fees and transaction-related charges may apply depending
+                    on selected services.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Limitation of Liability</h3>
+                <p>
+                    Webspace Studio Pvt Ltd shall not be liable for indirect or consequential damages.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-lg text-black mb-2">Updates</h3>
+                <p>
+                    Terms may be updated periodically without prior notice.
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script>
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }
+
+    window.addEventListener('click', function(e) {
+        ['privacyModal', 'termsModal'].forEach(id => {
+            const modal = document.getElementById(id);
+            if (e.target === modal) {
+                closeModal(id);
+            }
+        });
+    });
+</script>
 </body>
 </html>
