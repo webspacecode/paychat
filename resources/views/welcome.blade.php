@@ -125,9 +125,9 @@
                 <a href="{{ url('/') }}" class="flex items-center space-x-3">
                     <img src="color-paychat-logo-main.svg" alt="PayChat Logo" class="h-10 lg:h-12 w-auto">
                     <div class="flex items-center space-x-2">
-                        <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
+                        <!-- <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
                             Early Customers Only
-                        </span>                    
+                        </span>                     -->
                     </div>
                 </a>
                 
