@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="PayChat - Revolutionary POS & Business Management Platform. Unified solution for real-time orders, inventory management, and payments.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="PayChat POS">
+    <meta property="og:description" content="POS & QR Ordering Platform">
+    <meta property="og:image" content="https://paychat.shop/og-banner.jpg">
+    <meta property="og:url" content="https://paychat.shop">
     <title>PayChat - Revolutionary POS & Business Management Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -316,189 +321,6 @@
     <section id="features" class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            <!-- Heading -->
-            <div class="text-center mb-16">
-                <span class="inline-block bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
-                    Built for Real Businesses
-                </span>
-
-                <h2 class="text-4xl lg:text-5xl font-bold text-navy mb-6">
-                    Everything You Need To Run Your Outlet
-                </h2>
-
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                    From billing and kitchen tokens to inventory and WhatsApp invoices —
-                    PayChat helps cafés, restaurants, retail shops and service businesses
-                    manage daily operations smoothly.
-                </p>
-            </div>
-
-            <!-- Feature Grid -->
-            <div class="grid lg:grid-cols-3 gap-8">
-
-                <!-- POS -->
-                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
-                    <div class="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 14l6-6m-5 0h5v5M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
-                        </svg>
-                    </div>
-
-                    <h3 class="text-2xl font-bold text-navy mb-4">
-                        Fast Billing POS
-                    </h3>
-
-                    <p class="text-gray-600 mb-5">
-                        Lightweight and fast billing screen designed for quick operations
-                        during rush hours. Works smoothly on desktop, tablet and mobile devices.
-                    </p>
-
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li>✓ Instant cart & checkout</li>
-                        <li>✓ Barcode & QR scanning</li>
-                        <li>✓ Hold & resume orders</li>
-                        <li>✓ Multiple payment methods</li>
-                        <li>✓ Kitchen & counter workflow</li>
-                    </ul>
-                </div>
-
-                <!-- Inventory -->
-                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
-                    <div class="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
-                        </svg>
-                    </div>
-
-                    <h3 class="text-2xl font-bold text-navy mb-4">
-                        Smart Inventory
-                    </h3>
-
-                    <p class="text-gray-600 mb-5">
-                        Track stock automatically as sales happen. Avoid manual calculations
-                        and know exactly what is running low in real time.
-                    </p>
-
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li>✓ Live stock updates</li>
-                        <li>✓ Product variants</li>
-                        <li>✓ Purchase tracking</li>
-                        <li>✓ Low stock alerts</li>
-                        <li>✓ Inventory reports</li>
-                    </ul>
-                </div>
-
-                <!-- QR Ordering -->
-                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
-                    <div class="w-16 h-16 gradient-secondary rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h-4.01"/>
-                        </svg>
-                    </div>
-
-                    <h3 class="text-2xl font-bold text-navy mb-4">
-                        QR Ordering & Tokens
-                    </h3>
-
-                    <p class="text-gray-600 mb-5">
-                        Customers can scan QR codes to order directly from tables or counters.
-                        Perfect for cafés, food courts and busy service outlets.
-                    </p>
-
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li>✓ QR menu access</li>
-                        <li>✓ Token generation</li>
-                        <li>✓ Live order tracking</li>
-                        <li>✓ Reduce counter rush</li>
-                        <li>✓ Faster customer flow</li>
-                    </ul>
-                </div>
-
-                <!-- Reports -->
-                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
-                    <div class="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 17v-6m4 6V7m4 10v-3M5 21h14"/>
-                        </svg>
-                    </div>
-
-                    <h3 class="text-2xl font-bold text-navy mb-4">
-                        Reports & Analytics
-                    </h3>
-
-                    <p class="text-gray-600 mb-5">
-                        Understand your business better with daily sales reports,
-                        top-selling products and performance insights.
-                    </p>
-
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li>✓ Daily sales reports</li>
-                        <li>✓ Product performance</li>
-                        <li>✓ Staff activity tracking</li>
-                        <li>✓ Profit insights</li>
-                        <li>✓ Business growth metrics</li>
-                    </ul>
-                </div>
-
-                <!-- WhatsApp -->
-                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
-                    <div class="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M20.52 3.48A11.91 11.91 0 0012.02 0C5.38 0 .02 5.36.02 12c0 2.12.56 4.18 1.63 6L0 24l6.19-1.62A11.96 11.96 0 0012.02 24c6.64 0 12-5.36 12-12 0-3.19-1.24-6.18-3.5-8.52z"/>
-                        </svg>
-                    </div>
-
-                    <h3 class="text-2xl font-bold text-navy mb-4">
-                        WhatsApp & Digital Bills
-                    </h3>
-
-                    <p class="text-gray-600 mb-5">
-                        Send invoices, payment links and order updates directly
-                        to customers digitally without paper bills.
-                    </p>
-
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li>✓ WhatsApp invoices</li>
-                        <li>✓ Digital receipts</li>
-                        <li>✓ Payment links</li>
-                        <li>✓ Paperless operations</li>
-                        <li>✓ Better customer experience</li>
-                    </ul>
-                </div>
-
-                <!-- Multi Business -->
-                <div class="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
-                    <div class="w-16 h-16 app-gradient rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 7h18M5 7v13m14-13v13M9 11h6"/>
-                        </svg>
-                    </div>
-
-                    <h3 class="text-2xl font-bold text-navy mb-4">
-                        Cloud Based Access
-                    </h3>
-
-                    <p class="text-gray-600 mb-5">
-                        Access your business from anywhere. Manage multiple counters,
-                        staff members and even multiple outlets from one dashboard.
-                    </p>
-
-                    <ul class="space-y-2 text-sm text-gray-500">
-                        <li>✓ Multi-device support</li>
-                        <li>✓ Cloud sync</li>
-                        <li>✓ Staff permissions</li>
-                        <li>✓ Outlet management</li>
-                        <li>✓ Secure backups</li>
-                    </ul>
-                </div>
-
-            </div>
-
             <!-- Bottom Highlight -->
             <div class="mt-16 bg-indigo-50 border border-indigo-100 rounded-3xl p-10 text-center">
 
@@ -542,167 +364,7 @@
         </div>
     </section>
 
-    <!-- Customer Journey Flow -->
-    <section class="py-16 lg:py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">How PayChat Works</h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Simple, seamless customer journey from order to payment</p>
-            </div>
-            
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <!-- Step 1 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">1</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Setup Products</h3>
-                    <p class="text-gray-600 text-sm">Merchant sets up products and inventory in the dashboard</p>
-                </div>
-                
-                <!-- Step 2 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 gradient-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">2</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Customer Orders</h3>
-                    <p class="text-gray-600 text-sm">Customer scans QR, visits outlet, or orders via mobile app</p>
-                </div>
-                
-                <!-- Step 3 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">3</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Invoice & Payment</h3>
-                    <p class="text-gray-600 text-sm">Receives invoice digitally and pays through the app</p>
-                </div>
-                
-                <!-- Step 4 -->
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span class="text-white font-bold text-xl">4</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-navy mb-2">Real-time Updates</h3>
-                    <p class="text-gray-600 text-sm">Merchant sees updates, receipt delivered automatically</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Benefits Section -->
-    <section id="benefits" class="py-16 lg:py-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl lg:text-4xl font-bold text-navy mb-6">Why Choose PayChat?</h2>
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto">All-in-one solution designed for modern businesses</p>
-            </div>
-            
-            <div class="grid lg:grid-cols-2 gap-16 items-center">
-                <!-- Benefits List -->
-                <div class="space-y-8">
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">All-in-One Platform</h3>
-                            <p class="text-gray-600">Sales, inventory, invoicing, payments, token systems—everything under one roof. No need for multiple apps or systems.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 app-gradient rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">Native Mobile Experience</h3>
-                            <p class="text-gray-600">Purpose-built mobile app with seamless user experience. Fast, reliable, and designed specifically for business operations.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 bg-accent rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">Real-Time Control</h3>
-                            <p class="text-gray-600">Inventory, tokens, orders, and analytics update instantly as your business flows throughout the day.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 h-12 gradient-secondary rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-navy mb-2">Scalable for Small Businesses</h3>
-                            <p class="text-gray-600">Perfect for retail, F&B, services, and appointment-based businesses across all industries.</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Visual Element -->
-                <div class="flex justify-center">
-                    <div class="relative">
-                        <div class="w-80 h-80 lg:w-96 lg:h-96 bg-white rounded-3xl shadow-custom-lg flex items-center justify-center">
-                            <div class="text-center">
-                                <div class="w-24 h-24 gradient-primary rounded-3xl flex items-center justify-center mx-auto mb-6">
-                                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                    </svg>
-                                </div>
-                                <h3 class="text-2xl font-bold text-navy mb-2">Complete Solution</h3>
-                                <p class="text-gray-600">Everything your business needs in one platform</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Floating Elements -->
-                        <div class="absolute -top-4 -right-4 bg-accent text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-                            Mobile Ready
-                        </div>
-                        <div class="absolute -bottom-4 -left-4 bg-secondary text-white px-4 py-2 rounded-xl font-bold shadow-lg">
-                            Real-Time
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- CTA Section -->
-    <section class="py-16 lg:py-20 gradient-primary text-white">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl lg:text-4xl font-bold mb-6">Ready to Transform Your Business?</h2>
-            <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">Join our waitlist and be among the first to experience the future of business management. Early adopters get exclusive benefits.</p>
-            
-            <!-- Enhanced Waitlist Form -->
-           
-            
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-                <div>
-                    <div class="text-2xl font-bold text-secondary mb-2">✓ Early Access</div>
-                    <div class="text-blue-100">Beta testing invitation</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-secondary mb-2">✓ Priority Support</div>
-                    <div class="text-blue-100">Direct line to founders</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-secondary mb-2">✓ Exclusive Features</div>
-                    <div class="text-blue-100">First access to new features</div>
-                </div>
-            </div>
-        </div>
-    </section>
     <section class="py-16 bg-gray-50">
         <div class="max-w-7xl mx-auto px-6">
 
@@ -720,10 +382,215 @@
             </div>
 
             <!-- Tenant Grid -->
-            <div id="tenantsGrid" class="grid md:grid-cols-3 gap-6">
-                <div id="tenantsGrid">
-                    <p>Loading partner businesses...</p>
-                </div>
+            <div class="grid md:grid-cols-3 gap-6">
+
+                @forelse($tenants as $tenant)
+
+                    @php
+                        $branding = $tenant->branding;
+
+                        $name = $tenant->name ?? 'Unnamed Business';
+
+                        $industry = $tenant->industry ?? 'Business';
+
+                        $address = $branding->address ?? 'Partner Store';
+
+                        $logo = $branding && $branding->logo
+                            ? $branding->logo
+                            : 'https://dummyimage.com/200x60/ddd/000&text=' . urlencode($name);
+
+                        $shopUrl = url('/store/' . $tenant->slug);
+                    @endphp
+
+                    <div class="group bg-white rounded-[28px] border border-gray-100 overflow-hidden shadow-[0_10px_40px_rgba(99,102,241,0.08)] hover:shadow-[0_20px_60px_rgba(99,102,241,0.14)] hover:-translate-y-1 transition-all duration-500">
+
+                        <!-- TOP -->
+                        <div class="relative h-24 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500">
+
+                            <!-- Glow -->
+                            <div class="absolute inset-0 bg-white/5"></div>
+
+                            <!-- Live -->
+                            <div class="absolute top-4 right-4">
+
+                                <div class="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full">
+
+                                    <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+
+                                    <span class="text-white text-xs font-semibold">
+                                        Live
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                            <!-- Logo -->
+                            <div class="absolute -bottom-7 left-6">
+
+                                <div class="w-14 h-14 rounded-2xl bg-white shadow-lg p-1.5">
+
+                                    <img
+                                        src="{{ $logo }}"
+                                        alt="{{ $name }} logo"
+                                        class="w-full h-full object-cover rounded-xl"
+                                        loading="lazy"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- BODY -->
+                        <div class="pt-10 px-6 pb-6">
+
+                            <!-- NAME -->
+                            <div>
+
+                                <h3 class="text-xl font-bold text-slate-900 leading-tight">
+                                    {{ $name }}
+                                </h3>
+
+                                <p class="text-sm text-indigo-600 font-medium mt-1">
+                                    {{ $industry }}
+                                </p>
+
+                            </div>
+
+                            <!-- ADDRESS -->
+                            <p class="text-gray-500 text-sm leading-relaxed mt-4 min-h-[44px]">
+                                {{ $address }}
+                            </p>
+
+                            <!-- REVIEW SECTION -->
+                            <div class="mt-5 flex items-center justify-between">
+
+                                <!-- LEFT -->
+                                <div class="flex items-center gap-3">
+
+                                    <!-- Stars -->
+                                    <div class="flex items-center text-amber-400 text-sm tracking-tight">
+
+                                        @php
+                                            $avg = round($tenant->reviews_avg_rating ?? 0);
+                                        @endphp
+
+                                        @for($i = 1; $i <= 5; $i++)
+
+                                            @if($i <= $avg)
+                                                ★
+                                            @else
+                                                <span class="text-gray-200">★</span>
+                                            @endif
+
+                                        @endfor
+
+                                    </div>
+
+                                    <!-- Rating -->
+                                    <div class="flex items-center gap-1">
+
+                                        <span class="text-sm font-bold text-slate-800">
+
+                                            {{ $tenant->reviews_avg_rating ?: 'New' }}
+
+                                        </span>
+
+                                        <span class="text-xs text-gray-400">
+
+                                            / 5
+
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                                <!-- COUNT -->
+                                <div class="text-sm text-gray-400">
+
+                                    {{ $tenant->reviews_count ?? 0 }} reviews
+
+                                </div>
+
+                            </div>
+
+                            <!-- OPTIONAL REVIEW PREVIEW -->
+                            <div class="mt-4 bg-gray-50 rounded-2xl p-4">
+
+                                <p class="text-sm text-gray-600 italic leading-relaxed line-clamp-2">
+                                    “Fast service, smooth ordering experience and clean UI.”
+                                </p>
+
+                            </div>
+
+                            <!-- FEATURES -->
+                            <div class="flex flex-wrap gap-2 mt-5">
+
+                                <span class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
+                                    QR Ordering
+                                </span>
+
+                                <span class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
+                                    POS
+                                </span>
+
+                                <span class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
+                                    Billing
+                                </span>
+
+                            </div>
+
+                            <!-- CTA -->
+                            <a
+                                href="{{ $shopUrl }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="mt-6 flex items-center justify-between bg-indigo-50 hover:bg-indigo-600 px-5 py-4 rounded-2xl transition-all duration-300 group/button"
+                            >
+
+                                <div>
+
+                                    <p class="text-xs text-indigo-500 group-hover/button:text-indigo-100">
+                                        Powered by PayChat
+                                    </p>
+
+                                    <p class="font-semibold text-slate-800 group-hover/button:text-white mt-1">
+                                        Visit Store
+                                    </p>
+
+                                </div>
+
+                                <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-indigo-600 font-bold transition-all duration-300 group-hover/button:translate-x-1">
+
+                                    →
+
+                                </div>
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                @empty
+
+                    <div class="col-span-full text-center py-10">
+
+                        <h3 class="text-xl font-semibold text-gray-700">
+                            No partner businesses yet
+                        </h3>
+
+                        <p class="text-gray-500 mt-2">
+                            PayChat is onboarding early merchants. Stay tuned!
+                        </p>
+
+                    </div>
+
+                @endforelse
+
             </div>
         </div>
     </section>
@@ -981,98 +848,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById('demoDate').min = now.toISOString().slice(0,16);
 }); 
-async function loadTenants() {
-    try {
-        const baseUrl = window.location.origin;
-
-        const res = await fetch(`${baseUrl}/api/tenant/list`);
-        const json = await res.json();
-
-        const tenants = json?.data?.tenants || [];
-        renderTenants(tenants);
-
-    } catch (err) {
-        console.error("Failed to load tenants:", err);
-    }
-}
 
 
-function renderTenants(tenants) {
-    const container = document.getElementById("tenantsGrid");
-
-    if (!container) return;
-
-    // If no tenants, show fallback UI (IMPORTANT for SEO + UX)
-    if (!tenants || tenants.length === 0) {
-        container.innerHTML = `
-            <div class="col-span-full text-center py-10">
-                <h3 class="text-xl font-semibold text-gray-700">No partner businesses yet</h3>
-                <p class="text-gray-500 mt-2">
-                    PayChat is onboarding early merchants. Stay tuned!
-                </p>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = tenants.map(t => {
-
-        const branding = t?.branding || {};
-
-        const name = t?.name || "Unnamed Business";
-        const industry = t?.industry || "Business";
-        const address = branding?.address || "Partner Store";
-
-        const logo = branding?.logo
-            ? branding.logo
-            : `https://dummyimage.com/200x60/ddd/000&text=${encodeURIComponent(name)}`;
-
-        // safer API key handling
-        const apiKey = t?.api_key || "";
-        const baseUrl = window.location.origin || "http://localhost:8000";
-
-        const shopUrl = `${baseUrl}/pos#/self-pos/${encodeURIComponent(apiKey)}`;
-
-        return `
-            <div class="bg-white p-6 rounded-2xl shadow hover:shadow-lg transition border border-gray-100">
-
-                <!-- Header -->
-                <div class="flex items-center gap-3 mb-3">
-                    <img 
-                        src="${logo}" 
-                        alt="${name} logo"
-                        class="h-10 w-10 object-cover rounded"
-                        loading="lazy"
-                    />
-
-                    <div>
-                        <h3 class="font-bold text-lg text-gray-900">${name}</h3>
-                        <p class="text-gray-500 text-sm">${industry}</p>
-                    </div>
-                </div>
-
-                <!-- Address -->
-                <p class="text-gray-500 text-sm mb-4 line-clamp-2">
-                    ${address}
-                </p>
-
-                <!-- CTA -->
-                <a 
-                    href="${shopUrl}" 
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl font-semibold transition"
-                >
-                    Visit Shop →
-                </a>
-            </div>
-        `;
-    }).join("");
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-    loadTenants();
-});
         let waitlistCount = 10;
         let detectedLink = null;
 

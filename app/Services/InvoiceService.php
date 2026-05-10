@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\Tenant;
+use App\Models\ReviewSession;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use SimpleSoftwareIO\QrCode\Generator;
 
 class InvoiceService
@@ -23,9 +25,11 @@ class InvoiceService
             throw new \Exception("Template not found");
         }
 
-        $uuid = Str::uuid();
+        $uuid = $this->generateInvoiceNumber();
+        $reviewToken = 'PCRV-' . strtoupper(Str::uuid()->toString());
 
         $orderData = $this->normalizeOrder($order);
+        $orderData['review_token'] =  $reviewToken;
 
         Invoice::create([
             'tenant_id'=>$tenant->id,
@@ -65,6 +69,24 @@ class InvoiceService
         
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
 
+        // Now create a review token 
+        $name = !empty(trim($order['data']['data']['customer']['name'] ?? ''))
+                ? $order['data']['data']['customer']['name']
+                : null;
+        $phone = !empty(trim($order['data']['data']['customer']['phone'] ?? ''))
+                ? $order['data']['data']['customer']['phone']
+                : null;
+        ReviewSession::create([
+            'tenant_id' => $tenant->id,
+            'tenant_slug' => $tenant->slug,
+            'tenant_api_key' => $tenant->api_key,
+            'invoice_number' => $uuid,
+            'order_id' => $order['data']['data']['id'],
+            'customer_name' => $name,
+            'customer_phone' => $phone,
+            'review_token' => $reviewToken,
+            'expires_at' => now()->addMonths(6),
+        ]);
         return [
             'html'=>view($template,[
                 'order'=>$orderData,
@@ -79,7 +101,7 @@ class InvoiceService
             'qr'=> base64_encode($qr),
             'kitchenQr'=> base64_encode($kitchenQr),
             'tokenQr'=> base64_encode($tokenQr),
-            'tokenUrl' => $tokenUrl
+            'tokenUrl' => $tokenUrl,
         ];
     }
 
@@ -187,5 +209,28 @@ class InvoiceService
             'sgst'=>$sgst,
             'total'=>$subtotal + $gst
         ];
+    }
+
+    public static function generateInvoiceNumber(): string
+    {
+        $characters = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+        do {
+
+            $random = '';
+
+            for ($i = 0; $i < 8; $i++) {
+                $random .= $characters[random_int(0, strlen($characters) - 1)];
+            }
+
+            $invoice = 'PC' . now()->format('y') . '-' . $random;
+
+        } while (
+            DB::table('invoices')
+                ->where('uuid', $invoice)
+                ->exists()
+        );
+
+        return $invoice;
     }
 }

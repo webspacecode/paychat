@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\InventoryController;
 use App\Http\Controllers\Api\Tenant\InfoController;
 use App\Http\Controllers\Api\DemoLeadController;
+use App\Http\Controllers\Api\ReviewController;
 
 
 Route::post('/demo-leads', [DemoLeadController::class, 'store']);
@@ -162,3 +163,14 @@ Route::get('/token/{uuid}',[InvoiceController::class,'viewToken']);
 
 Route::post('/phonepe/callback', [PhonePeController::class, 'callback'])
     ->name('phonepe.callback');
+
+
+Route::post('/reviews', [
+    ReviewController::class,
+    'submit'
+]);
+
+Route::get('/reviews/{slug}', [
+    ReviewController::class,
+    'tenantReviews'
+]);

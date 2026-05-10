@@ -14,6 +14,7 @@
         "laravel/sanctum": "^4.1",
         "laravel/tinker": "^2.10.1",
         "simplesoftwareio/simple-qrcode": "^4.2",
+        "spatie/laravel-sitemap": "^8.0",
         "stancl/tenancy": "^3.9",
         "tenancy/tenancy": "^2.4"
     },
