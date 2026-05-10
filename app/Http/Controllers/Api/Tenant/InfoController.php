@@ -126,29 +126,54 @@ class InfoController extends Controller
                 return Str::slug($t->name) === $slug;
             });
 
+        /*
+        |--------------------------------------------------------------------------
+        | Tenant Not Found
+        |--------------------------------------------------------------------------
+        */
+
         if (!$tenant) {
             abort(404);
         }
 
         /*
         |--------------------------------------------------------------------------
-        | Reviews
+        | Reviews Base Query (Central DB)
         |--------------------------------------------------------------------------
         */
 
-        $reviewsQuery = Review::where('tenant_id', $tenant->id)
+        $reviewsQuery = Review::on('mysql')
+            ->where('tenant_id', $tenant->id)
             ->where('is_approved', true);
 
-        $reviews = $reviewsQuery
+        /*
+        |--------------------------------------------------------------------------
+        | Paginated Reviews
+        |--------------------------------------------------------------------------
+        */
+
+        $reviews = (clone $reviewsQuery)
             ->latest()
             ->paginate(10);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Average Rating
+        |--------------------------------------------------------------------------
+        */
+
         $avgRating = round(
-            (float) $reviewsQuery->avg('rating'),
+            (float) (clone $reviewsQuery)->avg('rating'),
             1
         );
 
-        $totalReviews = $reviewsQuery->count();
+        /*
+        |--------------------------------------------------------------------------
+        | Total Reviews
+        |--------------------------------------------------------------------------
+        */
+
+        $totalReviews = (clone $reviewsQuery)->count();
 
         /*
         |--------------------------------------------------------------------------
@@ -156,18 +181,60 @@ class InfoController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $ratingBreakdown = [];
-
-        for ($i = 5; $i >= 1; $i--) {
-
-            $ratingBreakdown[$i] = Review::where(
-                'tenant_id',
-                $tenant->id
-            )
-            ->where('rating', $i)
+        $ratingBreakdown = Review::on('mysql')
+            ->where('tenant_id', $tenant->id)
             ->where('is_approved', true)
-            ->count();
+            ->selectRaw('rating, COUNT(*) as total')
+            ->groupBy('rating')
+            ->pluck('total', 'rating')
+            ->toArray();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ensure All Star Ratings Exist
+        |--------------------------------------------------------------------------
+        */
+
+        for ($i = 1; $i <= 5; $i++) {
+
+            $ratingBreakdown[$i] = $ratingBreakdown[$i] ?? 0;
         }
+
+        krsort($ratingBreakdown);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Latest Review Snippet (SEO)
+        |--------------------------------------------------------------------------
+        */
+
+        $latestReviewSnippet = Review::on('mysql')
+            ->where('tenant_id', $tenant->id)
+            ->where('is_approved', true)
+            ->whereNotNull('review_text')
+            ->latest()
+            ->value('review_text');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Review Percentages
+        |--------------------------------------------------------------------------
+        */
+
+        $ratingPercentages = [];
+
+        foreach ($ratingBreakdown as $star => $count) {
+
+            $ratingPercentages[$star] = $totalReviews > 0
+                ? round(($count / $totalReviews) * 100)
+                : 0;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Return View
+        |--------------------------------------------------------------------------
+        */
 
         return view('store', [
 
@@ -180,6 +247,10 @@ class InfoController extends Controller
             'totalReviews' => $totalReviews,
 
             'ratingBreakdown' => $ratingBreakdown,
+
+            'ratingPercentages' => $ratingPercentages,
+
+            'latestReviewSnippet' => $latestReviewSnippet,
         ]);
     }
 }

@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\Tenant\InventoryController;
 use App\Http\Controllers\Api\Tenant\InfoController;
 use App\Http\Controllers\Api\DemoLeadController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\Tenant\ReportController;
+
 
 
 Route::post('/demo-leads', [DemoLeadController::class, 'store']);
@@ -144,6 +146,14 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     });
 
     Route::get('/kitchen/orders', [KitchenController::class, 'index']);
+
+
+    Route::prefix('reports')->group(function () {
+        Route::get('/summary', [ReportController::class, 'summary']);
+        Route::get('/payments', [ReportController::class, 'payments']);
+        Route::get('/top-products', [ReportController::class, 'topProducts']);
+        Route::get('/hourly', [ReportController::class, 'hourly']);
+    });
 
 });
 
