@@ -125,19 +125,19 @@
                 <a href="{{ url('/') }}" class="flex items-center space-x-3">
                     <img src="color-paychat-logo-main.svg" alt="PayChat Logo" class="h-10 lg:h-12 w-auto">
                     <div class="flex items-center space-x-2">
-                        <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
+                        <!-- <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
                             Early Customers Only
-                        </span>                    
+                        </span>                     -->
                     </div>
                 </a>
                 
                 <!-- Desktop Navigation -->
                 <!-- Desktop Navigation -->
                 <div class="hidden lg:flex items-center space-x-8">
-                    <a href="features.html" class="text-navy hover:text-primary font-medium">Features</a>
-                    <a href="pricing.html" class="text-navy hover:text-primary font-medium">Pricing</a>
-                    <a href="about.html" class="text-navy hover:text-primary font-medium">About</a>
-                    <a href="contact.html" class="text-navy hover:text-primary font-medium">Contact</a>
+                    <a href="{{ url('/features') }}" class="text-navy hover:text-primary font-medium">Features</a>
+                    <a href="{{ url('/pricing') }}" class="text-navy hover:text-primary font-medium">Pricing</a>
+                    <a href="{{ url('/about') }}" class="text-navy hover:text-primary font-medium">About</a>
+                    <a href="{{ url('/contact') }}" class="text-navy hover:text-primary font-medium">Contact</a>
                 </div>
                 
                 <!-- CTA Buttons -->
@@ -154,12 +154,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
-                    <a 
-                    href="#book-demo" 
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm lg:text-base"
-                    >
-                    Book Demo
-                    </a>
+                    <button onclick="openDemoModal()" 
+                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                            Book Free Demo
+                        </button>
                 </div>
             </div>
             

@@ -178,50 +178,75 @@
     <!-- Hero Section -->
     <section class="gradient-primary text-white py-16 lg:py-24">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <div class="flex items-center justify-center mb-6">
-                    <span class="bg-white bg-opacity-20 text-white px-4 py-2 rounded-full font-semibold text-sm flex items-center">
-                        ⭐ Early Customer Access
-                    </span>
-                </div>
-                
-                <h1 class="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
-                    PayChat: Revolutionary POS & 
-                    <span class="text-secondary">Business Management</span> 
-                    Platform
-                </h1>
-                <p class="text-xl lg:text-2xl text-blue-100 mb-8 leading-relaxed max-w-4xl mx-auto">
-                    A unified solution that processes real-time orders, manages inventory, and handles payments—all from the point of sale or through our mobile app. Designed for small outlets like retail stores, restaurants, salons, and appointment-based businesses.
-                </p>
-                
-                <!-- Waitlist Form -->
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 mb-8 max-w-md mx-auto border border-white border-opacity-20">
-                    <h3 class="text-xl font-semibold mb-6">Join the Waitlist</h3>
-                    <div class="space-y-4">
-                        <a href="#book-demo"
-                        class="gradient-secondary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300">
-                            Book A Demo
+
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+
+                <!-- LEFT -->
+                <div>
+
+                    <div class="inline-flex items-center bg-white/10 px-4 py-2 rounded-full mb-6">
+                        <span class="text-sm font-semibold">
+                            Free 30-Day Trial • Setup Support Included
+                        </span>
+                    </div>
+
+                    <h1 class="text-4xl lg:text-6xl font-bold leading-tight mb-6">
+                        Smart POS Features
+                        <span class="text-secondary">
+                            Cafes, Restaurants & Retail Stores
+                        </span>
+                    </h1>
+
+                    <p class="text-xl text-blue-100 mb-8 leading-relaxed">
+                        Billing, KOT, QR ordering, inventory, token system,
+                        reports, online orders and customer management —
+                        all in one easy-to-use POS platform.
+                    </p>
+
+                    <!-- CTA -->
+                    <div class="flex flex-col sm:flex-row gap-4">
+
+                        <button onclick="openDemoModal()" 
+                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                            Book Free Demo
+                        </button>
+
+                        <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more"
+                        target="_blank"
+                        class="bg-green-500 hover:bg-green-600 px-8 py-4 rounded-xl font-semibold text-center">
+                            Chat on WhatsApp
                         </a>
+
                     </div>
-                    <p class="text-blue-200 text-sm mt-4">Be the first to know when we launch. No spam, ever.</p>
+
+                    <!-- TRUST -->
+                    <div class="mt-8 flex flex-wrap gap-6 text-sm text-blue-100">
+
+                        <div>✓ No setup fees</div>
+                        <div>✓ Runs on laptop/tablet</div>
+                        <div>✓ Free onboarding</div>
+                        <div>✓ GST-ready billing</div>
+
+                    </div>
+
                 </div>
-                
-                <!-- Launch Stats -->
-                <div class="grid grid-cols-3 gap-8 pt-8 border-t border-blue-300 border-opacity-30 max-w-2xl mx-auto">
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary" id="waitlistCount">10+</div>
-                        <div class="text-blue-100 text-sm lg:text-base">On Waitlist</div>
+
+                <!-- RIGHT -->
+                <div class="relative">
+
+                    <div class="bg-white rounded-3xl shadow-2xl p-6">
+
+                        <img
+                            src="YOUR_POS_SCREENSHOT.png"
+                            class="rounded-2xl w-full"
+                        >
+
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Live Soon</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Early Access Phase</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Founding</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Early Customers</div>
-                    </div>
+
                 </div>
+
             </div>
+
         </div>
     </section>
     <section class="py-16 bg-white">

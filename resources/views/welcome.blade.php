@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PayChat - Revolutionary POS & Business Management Platform. Unified solution for real-time orders, inventory management, and payments.">
+    <meta name="description" content="PayChat - Smart POS for Cafes, Restaurants & Retail Stores">
     <meta name="robots" content="index, follow">
     <meta property="og:title" content="PayChat POS">
     <meta property="og:description" content="POS & QR Ordering Platform">

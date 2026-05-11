@@ -125,9 +125,9 @@
                 <a href="{{ url('/') }}" class="flex items-center space-x-3">
                     <img src="color-paychat-logo-main.svg" alt="PayChat Logo" class="h-10 lg:h-12 w-auto">
                     <div class="flex items-center space-x-2">
-                        <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
+                        <!-- <span class="coming-soon-badge text-white text-xs px-3 py-1 rounded-full font-semibold">
                             Early Customers Only
-                        </span>                    
+                        </span>                     -->
                     </div>
                 </a>
                 
@@ -154,12 +154,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
-                    <a 
-                    href="#book-demo" 
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm lg:text-base"
-                    >
-                    Book Demo
-                    </a>
+                    <button onclick="openDemoModal()" 
+                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                            Book Free Demo
+                        </button>
                 </div>
             </div>
             
@@ -178,50 +176,75 @@
     <!-- Hero Section -->
     <section class="gradient-primary text-white py-16 lg:py-24">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <div class="flex items-center justify-center mb-6">
-                    <span class="bg-white bg-opacity-20 text-white px-4 py-2 rounded-full font-semibold text-sm flex items-center">
-                        ⭐ Early Customer Access
-                    </span>
-                </div>
-                
-                <h1 class="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
-                    PayChat: Revolutionary POS & 
-                    <span class="text-secondary">Business Management</span> 
-                    Platform
-                </h1>
-                <p class="text-xl lg:text-2xl text-blue-100 mb-8 leading-relaxed max-w-4xl mx-auto">
-                    A unified solution that processes real-time orders, manages inventory, and handles payments—all from the point of sale or through our mobile app. Designed for small outlets like retail stores, restaurants, salons, and appointment-based businesses.
-                </p>
-                
-                <!-- Waitlist Form -->
-                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 mb-8 max-w-md mx-auto border border-white border-opacity-20">
-                    <h3 class="text-xl font-semibold mb-6">Join the Waitlist</h3>
-                    <div class="space-y-4">
-                        <a href="#book-demo"
-                        class="gradient-secondary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300">
-                            Book A Demo
+
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+
+                <!-- LEFT -->
+                <div>
+
+                    <div class="inline-flex items-center bg-white/10 px-4 py-2 rounded-full mb-6">
+                        <span class="text-sm font-semibold">
+                            Free 30-Day Trial • Setup Support Included
+                        </span>
+                    </div>
+
+                    <h1 class="text-4xl lg:text-6xl font-bold leading-tight mb-6">
+                        Smart POS Features for
+                        <span class="text-secondary">
+                            Cafes, Restaurants & Retail Stores
+                        </span>
+                    </h1>
+
+                    <p class="text-xl text-blue-100 mb-8 leading-relaxed">
+                        Billing, KOT, QR ordering, inventory, token system,
+                        reports, online orders and customer management —
+                        all in one easy-to-use POS platform.
+                    </p>
+
+                    <!-- CTA -->
+                    <div class="flex flex-col sm:flex-row gap-4">
+
+                        <button onclick="openDemoModal()" 
+                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                            Book Free Demo
+                        </button>
+
+                        <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more"
+                        target="_blank"
+                        class="bg-green-500 hover:bg-green-600 px-8 py-4 rounded-xl font-semibold text-center">
+                            Chat on WhatsApp
                         </a>
+
                     </div>
-                    <p class="text-blue-200 text-sm mt-4">Be the first to know when we launch. No spam, ever.</p>
+
+                    <!-- TRUST -->
+                    <div class="mt-8 flex flex-wrap gap-6 text-sm text-blue-100">
+
+                        <div>✓ No setup fees</div>
+                        <div>✓ Runs on laptop/tablet</div>
+                        <div>✓ Free onboarding</div>
+                        <div>✓ GST-ready billing</div>
+
+                    </div>
+
                 </div>
-                
-                <!-- Launch Stats -->
-                <div class="grid grid-cols-3 gap-8 pt-8 border-t border-blue-300 border-opacity-30 max-w-2xl mx-auto">
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary" id="waitlistCount">10+</div>
-                        <div class="text-blue-100 text-sm lg:text-base">On Waitlist</div>
+
+                <!-- RIGHT -->
+                <div class="relative">
+
+                    <div class="bg-white rounded-3xl shadow-2xl p-6">
+
+                        <img
+                            src="YOUR_POS_SCREENSHOT.png"
+                            class="rounded-2xl w-full"
+                        >
+
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Live Soon</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Early Access Phase</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl lg:text-3xl font-bold text-secondary">Founding</div>
-                        <div class="text-blue-100 text-sm lg:text-base">Early Customers</div>
-                    </div>
+
                 </div>
+
             </div>
+
         </div>
     </section>
     <section class="py-16 bg-white">
@@ -928,5 +951,366 @@ function submitForm() {
     <path d="M20.52 3.48A11.91 11.91 0 0012.02 0C5.38 0 .02 5.36.02 12c0 2.12.56 4.18 1.63 6L0 24l6.19-1.62A11.96 11.96 0 0012.02 24c6.64 0 12-5.36 12-12 0-3.19-1.24-6.18-3.5-8.52zM12 22c-1.9 0-3.75-.5-5.38-1.45l-.38-.23-3.67.96.98-3.58-.25-.37A9.94 9.94 0 012 12C2 6.48 6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm5.17-7.36c-.28-.14-1.65-.82-1.9-.91-.25-.09-.43-.14-.61.14-.18.28-.7.91-.86 1.1-.16.18-.32.21-.6.07-.28-.14-1.18-.43-2.25-1.36-.83-.74-1.4-1.65-1.57-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.32.42-.48.14-.16.18-.28.28-.46.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.83-2.01-.22-.53-.44-.46-.61-.47-.16-.01-.34-.01-.52-.01-.18 0-.48.07-.73.34-.25.28-.96.94-.96 2.29s.99 2.66 1.13 2.85c.14.18 1.96 2.99 4.75 4.19.66.28 1.18.44 1.58.56.66.21 1.26.18 1.73.11.53-.08 1.65-.67 1.88-1.32.23-.65.23-1.2.16-1.32-.07-.11-.25-.18-.53-.32z"/>
   </svg>
 </a>
+
+<script>
+
+async function submitDemo() {
+
+    const button = event.target;
+
+    const originalText = button.innerHTML;
+
+    const payload = {
+
+        name: document.getElementById('demoName').value,
+
+        email: document.getElementById('demoEmail').value,
+
+        phone: document.getElementById('demoPhone').value,
+
+        business_name: document.getElementById('demoBusiness').value,
+
+        business_type: document.getElementById('demoBusinessType').value,
+
+        counters: document.getElementById('demoCounters').value,
+
+        preferred_demo_time: document.getElementById('demoDate').value,
+
+    };
+
+    // Validation
+    if (
+        !payload.name ||
+        !payload.phone ||
+        !payload.business_name ||
+        !payload.preferred_demo_time
+    ) {
+
+        alert("Please fill all required fields");
+
+        return;
+    }
+
+    try {
+
+        button.disabled = true;
+
+        button.innerHTML = `
+            <div class="flex items-center justify-center gap-2">
+                <div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Scheduling...
+            </div>
+        `;
+
+        const response = await fetch('/api/demo-leads', {
+
+            method: 'POST',
+
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+
+            body: JSON.stringify(payload)
+
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(result.message || 'Something went wrong');
+
+        }
+
+        // Success UI
+        document.getElementById('demoModal').innerHTML = `
+
+            <div class="h-screen w-full bg-white flex flex-col items-center justify-center text-center p-10">
+
+                <div class="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-8">
+                    <span class="text-5xl">✓</span>
+                </div>
+
+                <h2 class="text-4xl font-bold text-navy mb-4">
+                    Demo Scheduled
+                </h2>
+
+                <p class="text-gray-600 text-lg max-w-md leading-relaxed">
+                    Our team will contact you shortly to confirm your demo timing.
+                </p>
+
+                <button
+                    onclick="closeDemoModal()"
+                    class="mt-10 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-semibold"
+                >
+                    Close
+                </button>
+
+            </div>
+
+        `;
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(error.message || 'Failed to submit demo request');
+
+        button.disabled = false;
+
+        button.innerHTML = originalText;
+
+    }
+}
+
+function openDemoModal() {
+
+    document
+        .getElementById('demoModal')
+        .classList.remove('hidden');
+
+    document
+        .getElementById('demoModal')
+        .classList.add('flex');
+}
+
+function closeDemoModal() {
+
+    document
+        .getElementById('demoModal')
+        .classList.add('hidden');
+
+    document
+        .getElementById('demoModal')
+        .classList.remove('flex');
+
+    location.reload();
+}
+
+// Set minimum datetime
+document.addEventListener("DOMContentLoaded", () => {
+
+    const now = new Date();
+
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+
+    const input = document.getElementById('demoDate');
+
+    if (input) {
+
+        input.min = now.toISOString().slice(0,16);
+
+    }
+});
+
+</script>
+<!-- DEMO MODAL -->
+<div
+    id="demoModal"
+    class="fixed inset-0 bg-white z-[9999] hidden"
+>
+
+    <!-- SCROLLABLE AREA -->
+    <div class="w-full h-full overflow-y-auto">
+
+        <!-- CLOSE -->
+        <button
+            onclick="closeDemoModal()"
+            class="fixed top-6 right-6 w-12 h-12 rounded-2xl hover:bg-gray-100 flex items-center justify-center text-gray-500 z-50 transition"
+        >
+            ✕
+        </button>
+
+        <!-- CENTER WRAPPER -->
+        <div class="min-h-screen w-full flex items-center justify-center px-6 py-16">
+
+            <!-- CONTENT -->
+            <div class="w-full max-w-2xl mx-auto">
+
+                <!-- HEADER -->
+                <div class="text-center mb-10">
+
+                    <div class="inline-flex items-center bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+                        Free Personalized Walkthrough
+                    </div>
+
+                    <h2 class="text-5xl font-bold text-navy leading-tight">
+                        See PayChat Live
+                    </h2>
+
+                    <p class="text-gray-500 text-lg mt-5 max-w-xl mx-auto leading-relaxed">
+                        Tell us about your business and we'll schedule
+                        a quick live demo of billing, QR ordering,
+                        reports and setup process.
+                    </p>
+
+                </div>
+
+                <!-- TRUST -->
+                <div class="bg-indigo-50 border border-indigo-100 rounded-3xl p-5 mb-8">
+
+                    <div class="flex gap-4 items-start">
+
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+                            ✓
+                        </div>
+
+                        <div>
+                            <h3 class="font-semibold text-indigo-700 text-lg">
+                                Quick & Founder-Led Demo
+                            </h3>
+
+                            <p class="text-gray-600 mt-1 leading-relaxed">
+                                We usually respond within a few hours via WhatsApp or phone.
+                                No complicated setup or sales pressure.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- FORM -->
+                <div class="space-y-6">
+
+                    <!-- NAME -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Name *
+                        </label>
+
+                        <input
+                            id="demoName"
+                            type="text"
+                            placeholder="Your name"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- BUSINESS -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Business Name *
+                        </label>
+
+                        <input
+                            id="demoBusiness"
+                            type="text"
+                            placeholder="Cafe Mocha"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- PHONE -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Phone Number *
+                        </label>
+
+                        <input
+                            id="demoPhone"
+                            type="tel"
+                            placeholder="+91 XXXXX XXXXX"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- EMAIL -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Email
+                        </label>
+
+                        <input
+                            id="demoEmail"
+                            type="email"
+                            placeholder="you@example.com"
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        >
+                    </div>
+
+                    <!-- GRID -->
+                    <div class="grid md:grid-cols-2 gap-5">
+
+                        <!-- TYPE -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Business Type
+                            </label>
+
+                            <select
+                                id="demoBusinessType"
+                                class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                            >
+                                <option value="">Select</option>
+                                <option>Cafe</option>
+                                <option>Restaurant</option>
+                                <option>Retail Store</option>
+                                <option>Salon</option>
+                                <option>Bakery</option>
+                                <option>Food Court</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+
+                        <!-- COUNTERS -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Number of Counters
+                            </label>
+
+                            <select
+                                id="demoCounters"
+                                class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                            >
+                                <option value="">Select</option>
+                                <option>1 Counter</option>
+                                <option>2-3 Counters</option>
+                                <option>4-6 Counters</option>
+                                <option>7+ Counters</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <!-- DEMO TIME -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Preferred Demo Time *
+                        </label>
+
+                        <input
+                            type="datetime-local"
+                            id="demoDate"
+                            min=""
+                            class="w-full border border-gray-200 rounded-2xl px-5 py-5 text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition"
+                        />
+                    </div>
+
+                    <!-- BUTTON -->
+                    <button
+                        id="demoSubmitBtn"
+                        onclick="submitDemo()"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-semibold text-xl transition-all duration-300"
+                    >
+                        Get Free Demo →
+                    </button>
+
+                    <!-- FOOTER -->
+                    <p class="text-center text-sm text-gray-400 leading-relaxed">
+                        No spam. No commitment required.
+                        We'll contact you shortly after submission.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 </body>
 </html>
