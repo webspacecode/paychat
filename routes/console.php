@@ -8,7 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('reports:generate')
+Schedule::command('app:generate-reports')
     ->hourly()
     ->withoutOverlapping()
     ->runInBackground();
