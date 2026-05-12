@@ -31,6 +31,15 @@ class InvoiceController extends Controller
         
     }
 
+    public function generatedView($uuid, InvoiceService $service)
+    {
+        
+        return $service->generatedView(
+            $uuid
+        );
+        
+    }
+
     public function viewToken($uuid, InvoiceService $service)
     {
         

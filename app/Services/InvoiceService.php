@@ -76,6 +76,9 @@ class InvoiceService
         $phone = !empty(trim($order['data']['data']['customer']['phone'] ?? ''))
                 ? $order['data']['data']['customer']['phone']
                 : null;
+
+        // We will add condition here based on settings
+        // It runs only if customer review is on
         ReviewSession::create([
             'tenant_id' => $tenant->id,
             'tenant_slug' => $tenant->slug,
@@ -87,6 +90,13 @@ class InvoiceService
             'review_token' => $reviewToken,
             'expires_at' => now()->addMonths(6),
         ]);
+
+        // We will add condition here based on settings 
+        // It runs only if customer display is on
+        event(new \App\Events\CustomerDisplayUpdated([
+            'uuid' => $uuid,
+        ]));
+        
         return [
             'html'=>view($template,[
                 'order'=>$orderData,
@@ -177,6 +187,80 @@ class InvoiceService
             'token' => $inv->order_data['token'],
             'qr'=> base64_encode($qr),
             'kitchenQr'=> base64_encode($kitchenQr),
+        ];
+    }
+
+    public function generatedView($uuid)
+    {   
+        $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
+
+        $config = config("invoice.industries.$inv->industry");
+
+    
+        if(!$config){
+            throw new \Exception("Invalid industry");
+        }
+
+        $template = $config['templates'][$inv->paper_size] ?? null;
+
+        $tenant = Tenant::where('id', $inv->tenant_id)->first();
+
+        if(!$template){
+            throw new \Exception("Template not found");
+        }
+
+        $order = $inv->order_data;
+        $orderData = $this->normalizeOrder($order);
+
+        
+        $url = url("/pos#/invoices/$uuid");
+        
+        $token = $order['token']['token_code'] ?? null;
+
+
+        // dd($order, $token);
+        $qrCode = new Generator();
+
+        $qr = null;
+        $kitchenQr = null;
+        $tokenQr = null;
+        $tokenUrl = null;
+
+        try {
+            $qr = $qrCode->format('svg')->size(120)->generate($url);
+            if ($token) {
+                $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
+                $tokenUrl = url("/pos#/tokens/$uuid");
+
+                $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
+                $tokenQr = $qrCode->format('svg')->size(120)->generate($tokenUrl);
+
+            }
+        } catch (\Exception $e) {
+            $qr = null; // fallback (important for production)
+            $kitchenQr = null; // fallback (important for production)
+            $tokenQr = null;
+        }
+        
+        $totals = $this->calculateGST($orderData,$tenant->taxConfig);
+        
+        return [
+            'html'=>view($template,[
+                'order'=>$orderData,
+                'branding'=>$tenant->branding,
+                'tax'=>$tenant->taxConfig,
+                'totals'=>$totals,
+                'qr'=>$qr,
+                'url'=>$url,
+                'config'=>$config
+            ])->render(),
+            'url'=>$url,
+            'qr'=> base64_encode($qr),
+            'kitchenQr'=> base64_encode($kitchenQr),
+            'tokenQr'=> base64_encode($tokenQr),
+            'tokenUrl' => $tokenUrl,
+            'orderData' => $orderData,
+            'tokenData' => $orderData['token']
         ];
     }
 

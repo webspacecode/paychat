@@ -163,6 +163,8 @@ Route::middleware(['api-protected-untenant'])->prefix('{tenant_slug}')->group(fu
 });
 
 Route::middleware('apikey')->post('/invoice/generate',[InvoiceController::class,'generate']);
+Route::middleware('apikey')->get('/invoice/view/{uuid}',[InvoiceController::class,'generatedView']);
+
 Route::middleware('apikey')->get('/tenant/info',[InfoController::class,'index']);
 Route::get('/tenant/list',[InfoController::class,'list']);
 
