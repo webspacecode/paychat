@@ -213,15 +213,36 @@
             </div>
         @endif
         @if(isset($qr))
-            <div class="qr-box">
-                {!! $qr !!}
-            </div>
 
-            <div class="qr-text">Scan for invoice</div>
-            <div style="text-align:center; margin-top:8px;">
-                <a href="{!! $url !!}" target="_blank" style="font-size:12px; text-decoration:underline; color:#000;">
-                    View Invoice
-                </a>
+            <div style="text-align:center; margin-top:12px;">
+
+                <!-- QR WRAPPER -->
+                <div style="
+                    width: 160px;
+                    height: 160px;
+                    margin: 0 auto;
+                    padding: 10px;
+                    background: #fff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    {!! $qr !!}
+                </div>
+
+                <!-- LABEL -->
+                <div style="font-size:12px; margin-top:6px;">
+                    Scan for invoice
+                </div>
+
+                <!-- LINK -->
+                <div style="margin-top:6px;">
+                    <a href="{!! $url !!}" target="_blank"
+                    style="font-size:12px; color:#000; text-decoration:underline;">
+                        View Invoice
+                    </a>
+                </div>
+
             </div>
 
         @endif
