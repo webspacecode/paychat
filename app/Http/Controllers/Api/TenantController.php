@@ -26,6 +26,14 @@ class TenantController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
             'industry' => 'required|string',
+
+            // NEW
+            'phone' => 'nullable|string',
+            'address' => 'nullable|string',
+            'gst_number' => 'nullable|string',
+            'is_gst_enabled' => 'nullable|boolean',
+            'upi_id' => 'nullable|string',
+            'enable_token_system' => 'nullable|boolean',
         ]);
 
         $sanitizedSlug = trim(strtolower($request->slug), '-');
@@ -54,7 +62,14 @@ class TenantController extends Controller
         ]);
 
         // 🔥 Dispatch background job
-        SetupTenantJob::dispatch($tenant, $dbName);
+        SetupTenantJob::dispatch($tenant, $dbName, [
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'gst_number' => $request->gst_number,
+            'is_gst_enabled' => $request->is_gst_enabled,
+            'upi_id' => $request->upi_id,
+            'enable_token_system' => $request->enable_token_system,
+        ]);
 
         return response()->json([
             'message' => 'Tenant created. Setup is in progress...',
