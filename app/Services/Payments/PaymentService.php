@@ -2,6 +2,7 @@
 
 namespace App\Services\Payments;
 
+use App\Events\PaymentQrGenerated;
 use Illuminate\Support\Str;
 use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
@@ -11,6 +12,7 @@ use App\Services\Orders\OrderService;
 use App\Services\Payments\Strategies\CashPaymentStrategy;
 use App\Services\Payments\Strategies\UpiPaymentStrategy;
 use App\Services\Payments\Strategies\PhonePePaymentStrategy;
+use SimpleSoftwareIO\QrCode\Generator;
 
 class PaymentService
 {       
@@ -137,6 +139,8 @@ class PaymentService
             ]
         ]);
 
+        $this->broadcastPaymentQr($order, $payment, $upiQr);
+
         return $payment;
     }
 
@@ -190,6 +194,8 @@ class PaymentService
             throw new \Exception("QR not returned from PhonePe");
         }
 
+        $qr = $res['data']['instrumentResponse']['qrCode'];
+
         $payment = Payment::create([
             'order_id' => $order->id,
             'payment_method' => 'upi',
@@ -201,10 +207,34 @@ class PaymentService
             'meta' => $res
         ]);
 
+        $this->broadcastPaymentQr($order, $payment, $qr);
+
         return [
             'payment' => $payment,
-            'qr' => $res['data']['instrumentResponse']['qrCode']
+            'qr' => $qr
         ];
+    }
+
+    private function broadcastPaymentQr(Order $order, Payment $payment, string $upiQr): void
+    {
+        $qr = null;
+
+        try {
+            $qr = (new Generator())->format('svg')->size(240)->generate($upiQr);
+        } catch (\Exception $e) {
+            $qr = null;
+        }
+
+        event(new PaymentQrGenerated([
+            'type' => 'payment_qr',
+            'payment_method' => 'upi',
+            'order_id' => $order->id,
+            'order_no' => $order->order_no,
+            'payment_id' => $payment->id,
+            'amount' => $payment->amount,
+            'qr' => $qr ? base64_encode($qr) : null,
+            'qr_payload' => $upiQr,
+        ]));
     }
 
     public function updateOrderPaymentStatus(Order $order)
