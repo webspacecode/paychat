@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Tenant\Payment;
 use App\Services\Payments\PaymentService;

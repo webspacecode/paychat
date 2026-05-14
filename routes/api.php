@@ -12,7 +12,11 @@ use App\Http\Controllers\Api\Tenant\PaymentController;
 use App\Http\Controllers\Api\Tenant\WebhookController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\InventoryController;
+use App\Http\Controllers\Api\Tenant\CustomerController;
 use App\Http\Controllers\Api\Tenant\InfoController;
+use App\Http\Controllers\Api\Tenant\KitchenController;
+use App\Http\Controllers\Api\Tenant\PhonePeController;
+use App\Http\Controllers\Api\Tenant\TokenController;
 use App\Http\Controllers\Api\DemoLeadController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\Tenant\ReportController;
@@ -51,6 +55,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    Route::get('/customers', [CustomerController::class, 'index']);
 
     // Category Management
     Route::prefix('categories')->group(function () {
