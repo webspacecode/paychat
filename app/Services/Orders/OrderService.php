@@ -3,12 +3,15 @@
 namespace App\Services\Orders;
 
 use App\Models\Tenant\Order;
+use App\Models\Tenant\Setting;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\OrderItem;
 use App\Models\Tenant\Customer;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Services\Payments\TaxService;
 use App\Services\Orders\Strategies\StockStrategyResolver;
 use App\Http\Resources\Tenant\OrderResource;
@@ -17,6 +20,8 @@ use App\Events\OrderStatusUpdated;
 
 class OrderService
 {
+    private const ACTIVE_KITCHEN_STATUSES = ['waiting', 'preparing', 'ready'];
+
     protected TaxService $taxService;
 
     public function __construct(TaxService $taxService)
@@ -40,21 +45,81 @@ class OrderService
 
     public function listKitchenOrders(array $filters = [], int $perPage = 20)
     {
+        $perPage = max(1, min($perPage, 100));
+        $businessDate = $this->resolveKitchenBusinessDate($filters);
+        $orderBusinessDateColumn = $this->getOrderBusinessDateColumn();
+        $tokenStatuses = $filters['status'] ?? self::ACTIVE_KITCHEN_STATUSES;
+
         return Order::query()
-            ->whereHas('token', function ($q) use ($filters) {
-                if (isset($filters['status'])) {
-                    $q->where('status', $filters['status']);
-                } else {
-                    // default: only active kitchen orders
-                    $q->whereIn('status', ['waiting', 'preparing', 'ready']);
+            ->whereHas('token', function ($q) use ($tokenStatuses, $businessDate, $orderBusinessDateColumn) {
+                is_array($tokenStatuses)
+                    ? $q->whereIn('status', $tokenStatuses)
+                    : $q->where('status', $tokenStatuses);
+
+                if (!$orderBusinessDateColumn && $businessDate) {
+                    $q->whereDate('token_date', $businessDate);
                 }
+            })
+            ->when($orderBusinessDateColumn && $businessDate, fn ($q) =>
+                $q->whereDate($orderBusinessDateColumn, $businessDate)
+            )
+            ->when($filters['order_type'] ?? null, fn ($q, $orderType) =>
+                $q->where('order_type', $orderType)
+            )
+            ->when($filters['search'] ?? null, function ($q, $search) {
+                $q->where(function ($q) use ($search) {
+                    $q->where('order_no', 'like', "%{$search}%")
+                        ->orWhereHas('token', fn ($q) =>
+                            $q->where('token_code', 'like', "%{$search}%")
+                        );
+                });
             })
             ->with([
                 'items.product:id,name',
-                'token:id,order_id,token_code,status'
+                'token:id,order_id,token_code,status,token_date'
             ])
-            ->latest()
+            ->oldest('created_at')
             ->paginate($perPage);
+    }
+
+    private function resolveKitchenBusinessDate(array $filters): string
+    {
+        $date = $filters['business_date']
+            ?? $filters['shift_date']
+            ?? Setting::get('current_business_date')
+            ?? Setting::get('business_date')
+            ?? Setting::get('shift_date');
+
+        if ($date) {
+            return Carbon::parse($date)->toDateString();
+        }
+
+        $businessDayStart = Setting::get('business_day_start_time')
+            ?? Setting::get('day_start_time');
+
+        if ($businessDayStart) {
+            $now = now();
+            $start = Carbon::parse($now->toDateString().' '.$businessDayStart);
+
+            return $now->lt($start)
+                ? $now->copy()->subDay()->toDateString()
+                : $now->toDateString();
+        }
+
+        return today()->toDateString();
+    }
+
+    private function getOrderBusinessDateColumn(): ?string
+    {
+        if (Schema::hasColumn('pos_orders', 'business_date')) {
+            return 'business_date';
+        }
+
+        if (Schema::hasColumn('pos_orders', 'shift_date')) {
+            return 'shift_date';
+        }
+
+        return null;
     }
     
     public function createOrder(array $data, ?int $customerId = null): Order
@@ -78,11 +143,17 @@ class OrderService
                 ];
             }
 
-            $order = Order::create(array_merge($customerData, [
+            $orderData = array_merge($customerData, [
                 'order_no'=>'ORD-'.date('Ymd').'-'.Str::upper(Str::random(4)),
                 'status'=>'draft',
                 'payment_status'=>'unpaid',
-            ]));
+            ]);
+
+            if ($this->getOrderBusinessDateColumn()) {
+                $orderData['business_date'] = $this->resolveKitchenBusinessDate([]);
+            }
+
+            $order = Order::create($orderData);
 
             $subtotal = 0;
             foreach($data['items'] as $item){
@@ -141,7 +212,7 @@ class OrderService
 
     public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null)
     {
-        return Order::create([
+        $orderData = [
             'order_no' => strtoupper('ORD-' . Str::uuid()),
             'location_id' => $locationId,
             'customer_id' => $customerId,
@@ -149,7 +220,13 @@ class OrderService
             'table_id' => $tableId,
             'status' => 'draft',
             'payment_status' => 'unpaid'
-        ]);
+        ];
+
+        if ($this->getOrderBusinessDateColumn()) {
+            $orderData['business_date'] = $this->resolveKitchenBusinessDate([]);
+        }
+
+        return Order::create($orderData);
     }
 
     public function addItem(Order $order, $productId, $qty)

@@ -12,3 +12,13 @@ Schedule::command('app:generate-reports')
     ->hourly()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Schedule::command('app:generate-reports --period=yesterday')
+//     ->hourlyAt(10)
+//     ->withoutOverlapping()
+//     ->runInBackground();
+
+// Schedule::command('app:generate-reports --period=week')
+//     ->dailyAt('03:00')
+//     ->withoutOverlapping()
+//     ->runInBackground();

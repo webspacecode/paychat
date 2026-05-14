@@ -91,9 +91,9 @@ class OrderController extends Controller
 
     public function attachCustomer(String $tenantSlug, Request $request, Order $order)
     {
-        if ($order->status === 'completed') {
-            return response()->json(['message' => 'Completed order cannot be modified'], 422);
-        }
+        // if ($order->status === 'completed') {
+        //     return response()->json(['message' => 'Completed order cannot be modified'], 422);
+        // }
 
         if ($request->customer_id) {
             $customer = Customer::find($request->customer_id);

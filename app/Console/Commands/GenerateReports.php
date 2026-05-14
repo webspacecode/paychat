@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use App\Services\ReportEngineService;
 use Illuminate\Support\Facades\Config;
+use Carbon\Carbon;
 
 
 class GenerateReports extends Command
@@ -15,7 +16,11 @@ class GenerateReports extends Command
      *
      * @var string
      */
-    protected $signature = 'app:generate-reports';
+    protected $signature = 'app:generate-reports
+        {--date= : Generate one business date}
+        {--period=today : today, yesterday, week, month, custom}
+        {--start_date= : Custom/report start date}
+        {--end_date= : Custom/report end date}';
 
     /**
      * The console command description.
@@ -43,10 +48,52 @@ class GenerateReports extends Command
             DB::setDefaultConnection('tenant');
             DB::reconnect('tenant');
 
+            [$start, $end] = $this->dateRange();
+
             app(ReportEngineService::class)
-                ->generateDailyReports($tenant->id, now()->toDateString());
+                ->generateReportsForRange($tenant->id, $start, $end);
         }
 
         DB::setDefaultConnection('mysql'); // reset
+    }
+
+    private function dateRange(): array
+    {
+        if ($this->option('date')) {
+            $date = Carbon::parse($this->option('date'))->toDateString();
+            return [$date, $date];
+        }
+
+        return match ($this->option('period')) {
+            'yesterday' => [
+                now()->subDay()->toDateString(),
+                now()->subDay()->toDateString(),
+            ],
+            'week' => [
+                now()->startOfWeek()->toDateString(),
+                now()->endOfWeek()->toDateString(),
+            ],
+            'month' => [
+                now()->startOfMonth()->toDateString(),
+                now()->endOfMonth()->toDateString(),
+            ],
+            'custom' => [
+                Carbon::parse($this->requiredDateOption('start_date'))->toDateString(),
+                Carbon::parse($this->requiredDateOption('end_date'))->toDateString(),
+            ],
+            default => [
+                now()->toDateString(),
+                now()->toDateString(),
+            ],
+        };
+    }
+
+    private function requiredDateOption(string $option): string
+    {
+        if (!$this->option($option)) {
+            throw new \InvalidArgumentException("--{$option} is required for custom report generation.");
+        }
+
+        return $this->option($option);
     }
 }

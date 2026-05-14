@@ -121,6 +121,9 @@ return new class extends Migration
             */
             $table->unsignedBigInteger('token_id')->nullable();
             
+
+            $table->date('business_date')->nullable();
+           
             /*
             |--------------------------------------------------------------------------
             | Indexing
@@ -134,6 +137,8 @@ return new class extends Migration
             $table->index('payment_status');
             $table->index(['location_id', 'status']);
             $table->index(['status', 'payment_status']);
+            $table->index(['business_date', 'status']);
+            $table->index(['business_date', 'order_type']);
             $table->index('created_at');
         });
     }

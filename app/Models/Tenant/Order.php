@@ -28,6 +28,7 @@ class Order extends Model
         'customer_phone',
 
         // Order Classification
+        'business_date',
         'order_type',      // dine_in, takeaway, delivery, walk_in
         'source',          // pos, web, app
         'notes',
