@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\Tenant\TokenController;
 use App\Http\Controllers\Api\DemoLeadController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\Tenant\ReportController;
+use App\Http\Controllers\Api\Tenant\OfflineOrderSyncController;
 
 
 
@@ -125,6 +126,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
     Route::get('/inventory', [InventoryController::class, 'index']);
+    Route::post('/offline-orders/sync', [OfflineOrderSyncController::class, 'sync']);
 
     /*
     |--------------------------------------------------------------------------
