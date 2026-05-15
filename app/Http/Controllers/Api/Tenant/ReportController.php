@@ -110,7 +110,7 @@ class ReportController extends Controller
 
     private function dateRange(Request $request): array
     {
-        $period = $request->get('period', 'today');
+        $period = strtolower(trim((string) $request->get('period', $request->get('filter', 'today'))));
 
         return match ($period) {
             'yesterday' => [
@@ -141,8 +141,11 @@ class ReportController extends Controller
 
     private function applyLocationFilter($query, Request $request): void
     {
-        if ($request->filled('location_id')) {
-            $query->where('location_id', $request->location_id);
+        $locationId = $request->get('location_id');
+        $allLocations = in_array(strtolower(trim((string) $locationId)), ['all', '*'], true);
+
+        if ($request->filled('location_id') && ! $allLocations) {
+            $query->where('location_id', $locationId);
             return;
         }
 
