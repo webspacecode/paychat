@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use App\Services\ReportEngineService;
 use Illuminate\Support\Facades\Config;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 
 class GenerateReports extends Command
@@ -18,7 +20,7 @@ class GenerateReports extends Command
      */
     protected $signature = 'app:generate-reports
         {--date= : Generate one business date}
-        {--period=today : today, yesterday, week, month, custom}
+        {--period=today : today, yesterday, last_7_days, week, month, custom, all}
         {--start_date= : Custom/report start date}
         {--end_date= : Custom/report end date}';
 
@@ -27,7 +29,9 @@ class GenerateReports extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Generate tenant daily reporting rows';
+
+    private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded'];
 
     /**
      * Execute the console command.
@@ -49,6 +53,17 @@ class GenerateReports extends Command
             DB::reconnect('tenant');
 
             [$start, $end] = $this->dateRange();
+            $dateCount = Carbon::parse($start)->diffInDays(Carbon::parse($end)) + 1;
+
+            $message = "Generating reports for tenant database {$tenant->database} from {$start} to {$end} ({$dateCount} dates)";
+            $this->info($message);
+            Log::info($message, [
+                'tenant_id' => $tenant->id,
+                'tenant_database' => $tenant->database,
+                'start_date' => $start,
+                'end_date' => $end,
+                'date_count' => $dateCount,
+            ]);
 
             app(ReportEngineService::class)
                 ->generateReportsForRange($tenant->id, $start, $end);
@@ -64,22 +79,32 @@ class GenerateReports extends Command
             return [$date, $date];
         }
 
-        return match ($this->option('period')) {
+        $period = strtolower(trim((string) $this->option('period')));
+
+        return match ($period) {
             'yesterday' => [
                 now()->subDay()->toDateString(),
                 now()->subDay()->toDateString(),
             ],
+            'last_7_days' => [
+                now()->subDays(6)->toDateString(),
+                now()->toDateString(),
+            ],
             'week' => [
                 now()->startOfWeek()->toDateString(),
-                now()->endOfWeek()->toDateString(),
+                now()->toDateString(),
             ],
             'month' => [
                 now()->startOfMonth()->toDateString(),
-                now()->endOfMonth()->toDateString(),
+                now()->toDateString(),
             ],
             'custom' => [
-                Carbon::parse($this->requiredDateOption('start_date'))->toDateString(),
-                Carbon::parse($this->requiredDateOption('end_date'))->toDateString(),
+                $this->customStartDate(),
+                $this->customEndDate(),
+            ],
+            'all' => [
+                $this->firstOrderDate(),
+                now()->toDateString(),
             ],
             default => [
                 now()->toDateString(),
@@ -95,5 +120,42 @@ class GenerateReports extends Command
         }
 
         return $this->option($option);
+    }
+
+    private function customStartDate(): string
+    {
+        return Carbon::parse($this->requiredDateOption('start_date'))->toDateString();
+    }
+
+    private function customEndDate(): string
+    {
+        $start = Carbon::parse($this->requiredDateOption('start_date'));
+        $end = Carbon::parse($this->requiredDateOption('end_date'));
+
+        if ($end->lt($start)) {
+            throw new \InvalidArgumentException('--end_date must be after or equal to --start_date.');
+        }
+
+        return $end->toDateString();
+    }
+
+    private function firstOrderDate(): string
+    {
+        $dateColumn = Schema::hasColumn('pos_orders', 'business_date')
+            ? 'business_date'
+            : 'created_at';
+
+        $query = DB::table('pos_orders')
+            ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES);
+
+        if ($dateColumn === 'business_date') {
+            $query->whereNotNull('business_date');
+        }
+
+        $firstDate = $query->min(DB::raw("DATE({$dateColumn})"));
+
+        return $firstDate
+            ? Carbon::parse($firstDate)->toDateString()
+            : now()->toDateString();
     }
 }

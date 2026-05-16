@@ -3,127 +3,94 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Services\ReportEngineService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ReportController extends Controller
 {
-    public function summary(Request $request)
+    public function summary(Request $request, ReportEngineService $reports)
     {
-        [$start, $end] = $this->dateRange($request);
+        $tenantId = $this->tenantId();
+        $locationId = $this->locationId($request);
+        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $this->logAggregationRange('summary', $tenantId, $start, $end, $locationId);
 
-        $query = DB::table('report_kpi_summaries')
-            ->whereBetween('date', [$start, $end]);
-
-        $this->applyLocationFilter($query, $request);
-
-        $totals = $query
-            ->selectRaw('SUM(sales) as sales')
-            ->selectRaw('SUM(orders) as orders')
-            ->selectRaw('AVG(upi_percent) as upi_percent')
-            ->selectRaw('AVG(cash_percent) as cash_percent')
-            ->selectRaw('AVG(card_percent) as card_percent')
-            ->first();
+        $totals = $reports->rangeSummary($tenantId, $start, $end, $locationId);
 
         return response()->json([
             'date_from' => $start,
             'date_to' => $end,
             'location_id' => $request->get('location_id'),
-            'sales' => (float) ($totals->sales ?? 0),
-            'orders' => (int) ($totals->orders ?? 0),
-            'avg_order' => ($totals->orders ?? 0) > 0
-                ? round($totals->sales / $totals->orders, 2)
-                : 0,
-            'upi_percent' => (float) ($totals->upi_percent ?? 0),
-            'cash_percent' => (float) ($totals->cash_percent ?? 0),
-            'card_percent' => (float) ($totals->card_percent ?? 0),
+            'sales' => $totals['total_sales'],
+            'orders' => $totals['total_orders'],
+            'avg_order' => $totals['avg_order_value'],
+            'upi_percent' => $totals['upi_percent'],
+            'cash_percent' => $totals['cash_percent'],
+            'card_percent' => $totals['card_percent'],
         ]);
     }
 
-    public function payments(Request $request)
+    public function payments(Request $request, ReportEngineService $reports)
     {
-        [$start, $end] = $this->dateRange($request);
+        $tenantId = $this->tenantId();
+        $locationId = $this->locationId($request);
+        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $this->logAggregationRange('payments', $tenantId, $start, $end, $locationId);
 
-        $query = DB::table('report_payment_breakdowns')
-            ->select(
-                'payment_method',
-                DB::raw('SUM(total_amount) as total_amount'),
-                DB::raw('SUM(transaction_count) as transaction_count')
-            )
-            ->whereBetween('date', [$start, $end]);
-
-        $this->applyLocationFilter($query, $request);
-
-        $rows = $query->groupBy('payment_method')->get();
-        $total = $rows->sum('total_amount');
-
-        return $rows->map(fn ($row) => [
-            'payment_method' => $row->payment_method,
-            'total_amount' => (float) $row->total_amount,
-            'transaction_count' => (int) $row->transaction_count,
-            'percentage' => $total > 0 ? round(($row->total_amount / $total) * 100, 2) : 0,
-        ]);
+        return $reports->rangePayments($tenantId, $start, $end, $locationId);
     }
 
-    public function topProducts(Request $request)
+    public function topProducts(Request $request, ReportEngineService $reports)
     {
-        [$start, $end] = $this->dateRange($request);
+        $tenantId = $this->tenantId();
+        $locationId = $this->locationId($request);
+        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $this->logAggregationRange('top_products', $tenantId, $start, $end, $locationId);
 
-        $query = DB::table('report_top_products_daily')
-            ->select(
-                'product_id',
-                'product_name',
-                DB::raw('SUM(quantity_sold) as quantity_sold'),
-                DB::raw('SUM(revenue) as revenue')
-            )
-            ->whereBetween('date', [$start, $end]);
-
-        $this->applyLocationFilter($query, $request);
-
-        return $query
-            ->groupBy('product_id', 'product_name')
-            ->orderByDesc('revenue')
-            ->limit((int) $request->get('limit', 10))
-            ->get();
+        return $reports->rangeTopProducts(
+            $tenantId,
+            $start,
+            $end,
+            $locationId,
+            (int) $request->get('limit', 10)
+        );
     }
 
-    public function hourly(Request $request)
+    public function hourly(Request $request, ReportEngineService $reports)
     {
-        [$start, $end] = $this->dateRange($request);
+        $tenantId = $this->tenantId();
+        $locationId = $this->locationId($request);
+        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $this->logAggregationRange('hourly', $tenantId, $start, $end, $locationId);
 
-        $query = DB::table('report_hourly_sales')
-            ->select(
-                'hour',
-                DB::raw('SUM(orders_count) as orders_count'),
-                DB::raw('SUM(revenue) as revenue')
-            )
-            ->whereBetween('date', [$start, $end]);
-
-        $this->applyLocationFilter($query, $request);
-
-        return $query
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
+        return $reports->rangeHourly($tenantId, $start, $end, $locationId);
     }
 
-    private function dateRange(Request $request): array
+    private function dateRange(Request $request, $tenantId, ?int $locationId): array
     {
-        $period = strtolower(trim((string) $request->get('period', $request->get('filter', 'today'))));
+        $period = $this->normalizePeriod(
+            $request->get('period', $request->get('filter', 'today'))
+        );
 
         return match ($period) {
             'yesterday' => [
                 now()->subDay()->toDateString(),
                 now()->subDay()->toDateString(),
             ],
-            'week' => [
-                now()->startOfWeek()->toDateString(),
-                now()->endOfWeek()->toDateString(),
+            'last_7_days', 'week' => [
+                now()->subDays(6)->toDateString(),
+                now()->toDateString(),
             ],
             'month' => [
                 now()->startOfMonth()->toDateString(),
-                now()->endOfMonth()->toDateString(),
+                now()->toDateString(),
+            ],
+            'all' => [
+                $this->firstReportDate($tenantId, $locationId),
+                now()->toDateString(),
             ],
             'custom' => [
                 Carbon::parse($request->validate([
@@ -139,16 +106,61 @@ class ReportController extends Controller
         };
     }
 
-    private function applyLocationFilter($query, Request $request): void
+    private function normalizePeriod($period): string
+    {
+        $period = strtolower(trim((string) $period));
+        $period = str_replace(['-', ' '], '_', $period);
+
+        return match ($period) {
+            '7_days', 'last_7_day', 'last_7_days' => 'last_7_days',
+            'this_month', 'current_month' => 'month',
+            default => $period,
+        };
+    }
+
+    private function locationId(Request $request): ?int
     {
         $locationId = $request->get('location_id');
         $allLocations = in_array(strtolower(trim((string) $locationId)), ['all', '*'], true);
 
-        if ($request->filled('location_id') && ! $allLocations) {
-            $query->where('location_id', $locationId);
-            return;
+        if ($request->filled('location_id') && !$allLocations) {
+            return (int) $locationId;
         }
 
-        $query->whereNull('location_id');
+        return null;
+    }
+
+    private function tenantId()
+    {
+        return app('currentTenant')->id;
+    }
+
+    private function firstReportDate($tenantId, ?int $locationId): string
+    {
+        $query = DB::table('report_daily_sales')
+            ->where('tenant_id', $tenantId);
+
+        if ($locationId === null) {
+            $query->whereNull('location_id');
+        } else {
+            $query->where('location_id', $locationId);
+        }
+
+        $firstDate = $query->min('date');
+
+        return $firstDate
+            ? Carbon::parse($firstDate)->toDateString()
+            : now()->toDateString();
+    }
+
+    private function logAggregationRange(string $report, $tenantId, string $startDate, string $endDate, ?int $locationId): void
+    {
+        Log::debug('Dashboard report aggregation range resolved', [
+            'report' => $report,
+            'tenant_id' => $tenantId,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'location_filter' => $locationId === null ? 'all_locations' : "location:{$locationId}",
+        ]);
     }
 }

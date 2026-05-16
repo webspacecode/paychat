@@ -13,7 +13,7 @@ class ReportEngineService
     {
         $date = Carbon::parse($date)->toDateString();
 
-        foreach ($this->reportLocationIds($date) as $locationId) {
+        foreach ($this->reportLocationIds($tenantId, $date) as $locationId) {
             $this->generateSales($tenantId, $date, $locationId);
             $this->generatePayments($tenantId, $date, $locationId);
             $this->generateTopProducts($tenantId, $date, $locationId);
@@ -30,6 +30,111 @@ class ReportEngineService
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
             $this->generateDailyReports($tenantId, $date->toDateString());
         }
+    }
+
+    public function rangeSummary($tenantId, string $startDate, string $endDate, ?int $locationId = null): array
+    {
+        $totals = DB::table('report_daily_sales')
+            ->where('tenant_id', $tenantId)
+            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('
+                COALESCE(SUM(total_orders), 0) as total_orders,
+                COALESCE(SUM(total_sales), 0) as total_sales,
+                COALESCE(SUM(total_tax), 0) as total_tax,
+                COALESCE(SUM(total_discount), 0) as total_discount,
+                COALESCE(SUM(net_sales), 0) as net_sales
+            ')
+            ->first();
+
+        $payments = $this->rangePayments($tenantId, $startDate, $endDate, $locationId);
+
+        return [
+            'total_orders' => (int) ($totals->total_orders ?? 0),
+            'total_sales' => (float) ($totals->total_sales ?? 0),
+            'total_tax' => (float) ($totals->total_tax ?? 0),
+            'total_discount' => (float) ($totals->total_discount ?? 0),
+            'net_sales' => (float) ($totals->net_sales ?? 0),
+            'avg_order_value' => ($totals->total_orders ?? 0) > 0
+                ? round($totals->total_sales / $totals->total_orders, 2)
+                : 0,
+            'upi_percent' => $this->paymentPercentage($payments, 'upi'),
+            'cash_percent' => $this->paymentPercentage($payments, 'cash'),
+            'card_percent' => $this->paymentPercentage($payments, 'card'),
+        ];
+    }
+
+    public function rangePayments($tenantId, string $startDate, string $endDate, ?int $locationId = null)
+    {
+        $rows = DB::table('report_payment_breakdowns')
+            ->where('tenant_id', $tenantId)
+            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->select(
+                'payment_method',
+                DB::raw('COALESCE(SUM(total_amount), 0) as total_amount'),
+                DB::raw('COALESCE(SUM(transaction_count), 0) as transaction_count')
+            )
+            ->groupBy('payment_method')
+            ->get();
+
+        $total = $rows->sum('total_amount');
+
+        return $rows->map(fn ($row) => [
+            'payment_method' => $row->payment_method,
+            'total_amount' => (float) $row->total_amount,
+            'transaction_count' => (int) $row->transaction_count,
+            'percentage' => $total > 0 ? round(($row->total_amount / $total) * 100, 2) : 0,
+        ]);
+    }
+
+    public function rangeTopProducts($tenantId, string $startDate, string $endDate, ?int $locationId = null, int $limit = 10)
+    {
+        $rows = DB::table('report_top_products_daily')
+            ->where('tenant_id', $tenantId)
+            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->select(
+                'product_id',
+                'product_name',
+                DB::raw('COALESCE(SUM(quantity_sold), 0) as quantity_sold'),
+                DB::raw('COALESCE(SUM(revenue), 0) as revenue')
+            )
+            ->groupBy('product_id', 'product_name')
+            ->orderByDesc('revenue')
+            ->limit($limit)
+            ->get();
+
+        return $rows->values()->map(function ($row, $index) {
+            return [
+                'product_id' => $row->product_id,
+                'product_name' => $row->product_name,
+                'quantity_sold' => (int) $row->quantity_sold,
+                'revenue' => (float) $row->revenue,
+                'rank' => $index + 1,
+            ];
+        });
+    }
+
+    public function rangeHourly($tenantId, string $startDate, string $endDate, ?int $locationId = null)
+    {
+        return DB::table('report_hourly_sales')
+            ->where('tenant_id', $tenantId)
+            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->select(
+                'hour',
+                DB::raw('COALESCE(SUM(orders_count), 0) as orders_count'),
+                DB::raw('COALESCE(SUM(revenue), 0) as revenue')
+            )
+            ->groupBy('hour')
+            ->orderBy('hour')
+            ->get()
+            ->map(fn ($row) => [
+                'hour' => (int) $row->hour,
+                'orders_count' => (int) $row->orders_count,
+                'revenue' => (float) $row->revenue,
+            ]);
     }
 
     private function generateSales($tenantId, string $date, ?int $locationId): void
@@ -57,6 +162,10 @@ class ReportEngineService
 
     private function generatePayments($tenantId, string $date, ?int $locationId): void
     {
+        DB::table('report_payment_breakdowns')
+            ->where($this->identity($tenantId, $date, $locationId))
+            ->delete();
+
         $data = DB::table('pos_payments')
             ->join('pos_orders', 'pos_orders.id', '=', 'pos_payments.order_id')
             ->select(
@@ -66,7 +175,7 @@ class ReportEngineService
             )
             ->where('pos_payments.status', 'success')
             ->whereNotIn('pos_orders.status', ['draft', 'cancelled', 'void', 'refunded'])
-            ->when($locationId, fn ($q) => $q->where('pos_orders.location_id', $locationId))
+            ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
             ->tap(fn ($q) => $this->applyOrderDateFilter($q, $date))
             ->groupBy('pos_payments.payment_method')
             ->get();
@@ -90,6 +199,10 @@ class ReportEngineService
 
     private function generateTopProducts($tenantId, string $date, ?int $locationId): void
     {
+        DB::table('report_top_products_daily')
+            ->where($this->identity($tenantId, $date, $locationId))
+            ->delete();
+
         $data = DB::table('pos_order_items')
             ->join('pos_orders', 'pos_orders.id', '=', 'pos_order_items.order_id')
             ->join('products', 'products.id', '=', 'pos_order_items.product_id')
@@ -100,7 +213,7 @@ class ReportEngineService
                 DB::raw('SUM(pos_order_items.total) as revenue')
             )
             ->whereNotIn('pos_orders.status', ['draft', 'cancelled', 'void', 'refunded'])
-            ->when($locationId, fn ($q) => $q->where('pos_orders.location_id', $locationId))
+            ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
             ->tap(fn ($q) => $this->applyOrderDateFilter($q, $date))
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('revenue')
@@ -126,6 +239,10 @@ class ReportEngineService
 
     private function generateHourly($tenantId, string $date, ?int $locationId): void
     {
+        DB::table('report_hourly_sales')
+            ->where($this->identity($tenantId, $date, $locationId))
+            ->delete();
+
         $data = $this->ordersForDate($date, $locationId)
             ->select(
                 DB::raw('HOUR(created_at) as hour'),
@@ -173,7 +290,7 @@ class ReportEngineService
         );
     }
 
-    private function reportLocationIds(string $date): array
+    private function reportLocationIds($tenantId, string $date): array
     {
         $locations = $this->ordersForDate($date)
             ->whereNotNull('location_id')
@@ -182,13 +299,22 @@ class ReportEngineService
             ->map(fn ($locationId) => (int) $locationId)
             ->all();
 
-        return array_merge([null], $locations);
+        $existingReportLocations = DB::table('report_daily_sales')
+            ->where('tenant_id', $tenantId)
+            ->where('date', $date)
+            ->whereNotNull('location_id')
+            ->distinct()
+            ->pluck('location_id')
+            ->map(fn ($locationId) => (int) $locationId)
+            ->all();
+
+        return array_merge([null], array_values(array_unique(array_merge($locations, $existingReportLocations))));
     }
 
     private function ordersForDate(string $date, ?int $locationId = null)
     {
         return Order::query()
-            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->when($locationId !== null, fn ($q) => $q->where('location_id', $locationId))
             ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded'])
             ->tap(fn ($q) => $this->applyOrderDateFilter($q, $date));
     }
@@ -210,5 +336,20 @@ class ReportEngineService
             'location_id' => $locationId,
             'date' => $date,
         ];
+    }
+
+    private function applyReportLocationFilter($query, ?int $locationId): void
+    {
+        if ($locationId === null) {
+            $query->whereNull('location_id');
+            return;
+        }
+
+        $query->where('location_id', $locationId);
+    }
+
+    private function paymentPercentage($payments, string $paymentMethod): float
+    {
+        return (float) ($payments->firstWhere('payment_method', $paymentMethod)['percentage'] ?? 0);
     }
 }
