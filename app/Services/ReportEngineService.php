@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Schema;
 
 class ReportEngineService
 {
+    private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded'];
+    private const PAID_PAYMENT_STATUS = 'paid';
+
     public function generateDailyReports($tenantId, $date)
     {
         $date = Carbon::parse($date)->toDateString();
@@ -174,7 +177,8 @@ class ReportEngineService
                 DB::raw('COUNT(*) as count')
             )
             ->where('pos_payments.status', 'success')
-            ->whereNotIn('pos_orders.status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
             ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
             ->tap(fn ($q) => $this->applyOrderDateFilter($q, $date))
             ->groupBy('pos_payments.payment_method')
@@ -212,7 +216,8 @@ class ReportEngineService
                 DB::raw('SUM(pos_order_items.quantity) as qty'),
                 DB::raw('SUM(pos_order_items.total) as revenue')
             )
-            ->whereNotIn('pos_orders.status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
             ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
             ->tap(fn ($q) => $this->applyOrderDateFilter($q, $date))
             ->groupBy('products.id', 'products.name')
@@ -315,7 +320,8 @@ class ReportEngineService
     {
         return Order::query()
             ->when($locationId !== null, fn ($q) => $q->where('location_id', $locationId))
-            ->whereNotIn('status', ['draft', 'cancelled', 'void', 'refunded'])
+            ->where('payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES)
             ->tap(fn ($q) => $this->applyOrderDateFilter($q, $date));
     }
 

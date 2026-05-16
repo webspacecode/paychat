@@ -13,15 +13,17 @@ class StockAvailabilityService
     {
         $requirements = [];
 
-        foreach ($items as $item) {
+        foreach ($this->normalizeOrderItems($items) as $item) {
             $productId = (int) $item['product_id'];
             $quantity = (float) $item['quantity'];
+            $productName = $this->getProductDisplayName($productId);
             $recipe = $this->findRecipeForLocation($productId, $locationId);
 
             if ($recipe) {
                 foreach ($recipe->items as $recipeItem) {
                     $rawProductId = (int) $recipeItem->raw_product_id;
                     $requirements[$rawProductId]['type'] = 'raw product';
+                    $requirements[$rawProductId]['orders'][$productId] = $productName;
                     $requirements[$rawProductId]['quantity'] = ($requirements[$rawProductId]['quantity'] ?? 0)
                         + ($recipeItem->quantity * $quantity);
                 }
@@ -30,6 +32,7 @@ class StockAvailabilityService
             }
 
             $requirements[$productId]['type'] = 'product';
+            $requirements[$productId]['orders'][$productId] = $productName;
             $requirements[$productId]['quantity'] = ($requirements[$productId]['quantity'] ?? 0) + $quantity;
         }
 
@@ -38,7 +41,8 @@ class StockAvailabilityService
                 (int) $productId,
                 (float) $requirement['quantity'],
                 $locationId,
-                $requirement['type']
+                $requirement['type'],
+                $this->formatOrderProductContext($requirement['orders'] ?? [])
             );
         }
     }
@@ -53,17 +57,24 @@ class StockAvailabilityService
                     (int) $recipeItem->raw_product_id,
                     (float) ($recipeItem->quantity * $quantity),
                     $locationId,
-                    'raw product'
+                    'raw product',
+                    $this->formatOrderProductContext([$productId => $this->getProductDisplayName($productId)])
                 );
             }
 
             return;
         }
 
-        $this->checkInventoryQuantity($productId, $quantity, $locationId, 'product');
+        $this->checkInventoryQuantity(
+            $productId,
+            $quantity,
+            $locationId,
+            'product',
+            $this->formatOrderProductContext([$productId => $this->getProductDisplayName($productId)])
+        );
     }
 
-    private function checkInventoryQuantity(int $productId, float $requiredQty, int $locationId, string $label): void
+    private function checkInventoryQuantity(int $productId, float $requiredQty, int $locationId, string $label, string $orderContext = ''): void
     {
         $productName = $this->getProductDisplayName($productId);
 
@@ -72,12 +83,12 @@ class StockAvailabilityService
             ->first();
 
         if (!$inventory) {
-            $this->fail("Inventory not found for {$label} {$productName}");
+            $this->fail("Inventory not found for {$label} {$productName}{$orderContext}");
         }
 
         if ($inventory->quantity < $requiredQty) {
             $this->fail(
-                "Insufficient stock for {$label} {$productName}. Required: {$this->formatQuantity($requiredQty)}, Available: {$this->formatQuantity($inventory->quantity)}"
+                "Insufficient stock for {$label} {$productName}{$orderContext}. Required: {$this->formatQuantity($requiredQty)}, Available: {$this->formatQuantity($inventory->quantity)}"
             );
         }
     }
@@ -104,6 +115,29 @@ class StockAvailabilityService
     private function getProductDisplayName(int $productId): string
     {
         return Product::whereKey($productId)->value('name') ?? "ID {$productId}";
+    }
+
+    private function normalizeOrderItems(array $items): array
+    {
+        return collect($items)
+            ->filter(fn ($item) => isset($item['product_id'], $item['quantity']) && (float) $item['quantity'] > 0)
+            ->map(fn ($item) => [
+                'product_id' => (int) $item['product_id'],
+                'quantity' => (float) $item['quantity'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function formatOrderProductContext(array $orderProducts): string
+    {
+        $names = array_values(array_unique(array_filter($orderProducts)));
+
+        if (empty($names)) {
+            return '';
+        }
+
+        return ' for order item '.implode(', ', $names);
     }
 
     private function formatQuantity(float $quantity): string

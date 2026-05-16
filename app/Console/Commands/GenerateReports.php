@@ -31,7 +31,8 @@ class GenerateReports extends Command
      */
     protected $description = 'Generate tenant daily reporting rows';
 
-    private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded', 'unpaid', 'pending_payment'];
+    private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded'];
+    private const PAID_PAYMENT_STATUS = 'paid';
 
     /**
      * Execute the console command.
@@ -146,6 +147,7 @@ class GenerateReports extends Command
             : 'created_at';
 
         $query = DB::table('pos_orders')
+            ->where('payment_status', self::PAID_PAYMENT_STATUS)
             ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES);
 
         if ($dateColumn === 'business_date') {
