@@ -3,6 +3,7 @@
 namespace App\Services\Inventory;
 
 use App\Models\Tenant\ProductInventory;
+use App\Models\Tenant\Product;
 use App\Models\Tenant\Recipe;
 use Illuminate\Validation\ValidationException;
 
@@ -64,17 +65,19 @@ class StockAvailabilityService
 
     private function checkInventoryQuantity(int $productId, float $requiredQty, int $locationId, string $label): void
     {
+        $productName = $this->getProductDisplayName($productId);
+
         $inventory = ProductInventory::where('product_id', $productId)
             ->where('location_id', $locationId)
             ->first();
 
         if (!$inventory) {
-            $this->fail("Inventory not found for {$label} {$productId}");
+            $this->fail("Inventory not found for {$label} {$productName}");
         }
 
         if ($inventory->quantity < $requiredQty) {
             $this->fail(
-                "Insufficient stock for {$label} {$productId}. Required: {$this->formatQuantity($requiredQty)}, Available: {$this->formatQuantity($inventory->quantity)}"
+                "Insufficient stock for {$label} {$productName}. Required: {$this->formatQuantity($requiredQty)}, Available: {$this->formatQuantity($inventory->quantity)}"
             );
         }
     }
@@ -96,6 +99,11 @@ class StockAvailabilityService
         throw ValidationException::withMessages([
             'stock' => $message,
         ]);
+    }
+
+    private function getProductDisplayName(int $productId): string
+    {
+        return Product::whereKey($productId)->value('name') ?? "ID {$productId}";
     }
 
     private function formatQuantity(float $quantity): string
