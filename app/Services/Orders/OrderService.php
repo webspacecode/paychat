@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Services\Payments\TaxService;
+use App\Services\Inventory\StockAvailabilityService;
 use App\Services\Orders\Strategies\StockStrategyResolver;
 use App\Http\Resources\Tenant\OrderResource;
 use App\Models\Tenant\Token;
@@ -23,10 +24,12 @@ class OrderService
     private const ACTIVE_KITCHEN_STATUSES = ['waiting', 'preparing', 'ready'];
 
     protected TaxService $taxService;
+    protected StockAvailabilityService $stockAvailabilityService;
 
-    public function __construct(TaxService $taxService)
+    public function __construct(TaxService $taxService, StockAvailabilityService $stockAvailabilityService)
     {
         $this->taxService = $taxService;
+        $this->stockAvailabilityService = $stockAvailabilityService;
     }
 
     public function listOrders(array $filters = [], int $perPage = 20)
@@ -232,10 +235,16 @@ class OrderService
     public function addItem(Order $order, $productId, $qty)
     {
         if ($order->status !== 'draft') {
-            throw new Exception("Order not editable");
+            throw new \Exception("Order not editable");
         }
 
         $product = Product::findOrFail($productId);
+
+        $this->stockAvailabilityService->checkProductStock(
+            (int) $productId,
+            (float) $qty,
+            (int) $order->location_id
+        );
 
         $total = $product->price * $qty;
 
@@ -254,6 +263,17 @@ class OrderService
         if ($order->status === 'completed') {
             throw new \Exception('Completed order cannot be modified');
         }
+
+        foreach ($request->items as $item) {
+            if (!Product::whereKey($item['product_id'])->exists()) {
+                abort(422, "Product not found with id: ".$item['product_id']);
+            }
+        }
+
+        $this->stockAvailabilityService->checkProductsStock(
+            (array) $request->items,
+            (int) $order->location_id
+        );
         
         DB::transaction(function () use ($order, $request) {
 

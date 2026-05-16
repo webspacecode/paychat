@@ -14,9 +14,10 @@ class RecipeProductStrategy implements StockDeductionStrategy
     {
         $recipe = Recipe::where('product_id', $item->product_id)
             ->where(function ($q) use ($locationId) {
-                $q->whereNull('location_id')
-                  ->orWhere('location_id', $locationId);
+                $q->where('location_id', $locationId)
+                  ->orWhereNull('location_id');
             })
+            ->orderByRaw('CASE WHEN location_id = ? THEN 0 ELSE 1 END', [$locationId])
             ->first();
         
         if (!$recipe) {
