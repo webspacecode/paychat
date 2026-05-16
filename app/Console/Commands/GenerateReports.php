@@ -31,7 +31,7 @@ class GenerateReports extends Command
      */
     protected $description = 'Generate tenant daily reporting rows';
 
-    private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded'];
+    private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded', 'unpaid', 'pending_payment'];
 
     /**
      * Execute the console command.
