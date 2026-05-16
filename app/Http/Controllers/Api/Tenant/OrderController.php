@@ -94,7 +94,8 @@ class OrderController extends Controller
         // if ($order->status === 'completed') {
         //     return response()->json(['message' => 'Completed order cannot be modified'], 422);
         // }
-
+        $customer = null;
+        
         if ($request->customer_id) {
             $customer = Customer::find($request->customer_id);
         }
