@@ -17,6 +17,7 @@ class OrderResource extends JsonResource
             */
             'id' => $this->id,
             'order_no' => $this->order_no,
+            'invoice_id' => $this->invoice_id,
             'invoice_no' => $this->invoice_no,
             'reference_no' => $this->reference_no,
 
@@ -131,6 +132,8 @@ class OrderResource extends JsonResource
             'created_by' => $this->created_by,
             'completed_by' => $this->completed_by,
             'cancelled_by' => $this->cancelled_by,
+            'cancel_reason_type' => $this->cancel_reason_type,
+            'cancel_reason' => $this->cancel_reason,
 
             /*
             |--------------------------------------------------------------------------

@@ -69,7 +69,7 @@ class SetupTenantJob implements ShouldQueue
         DB::connection('mysql')->table('brandings')->insert([
             'tenant_id' => $this->tenant->id,
             'company_name' => $this->tenant->name,
-            'logo' => null,
+            'logo' => $this->setupData['logo'] ?? null,
             'primary_color' => '#4F46E5',
             'phone' => $this->setupData['phone'] ?? null,
             'address' => $this->setupData['address'] ?? null,

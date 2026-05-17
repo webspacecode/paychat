@@ -32,7 +32,7 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'user' => $user,
-            'tenant' => $user->tenant()->with('taxConfig')->first()
+            'tenant' => $user->tenant()->with(['taxConfig', 'branding'])->first()
         ]);
     }
 

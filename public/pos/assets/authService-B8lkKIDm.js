@@ -1,0 +1,1 @@
+import{a as t}from"./api-C9Mz32KQ.js";const a={async registerTenant(r){try{return{success:!0,data:(await t.post("/register-tenant",r)).data}}catch(e){return{success:!1,error:e.response?.data||e}}},async loginVendor(r){return t.post("/login",r)}};export{a};

@@ -13,7 +13,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Jobs\SetupTenantJob;
+use Intervention\Image\Laravel\Facades\Image;
 
 
 class TenantController extends Controller
@@ -34,6 +37,7 @@ class TenantController extends Controller
             'is_gst_enabled' => 'nullable|boolean',
             'upi_id' => 'nullable|string',
             'enable_token_system' => 'nullable|boolean',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $sanitizedSlug = trim(strtolower($request->slug), '-');
@@ -61,15 +65,32 @@ class TenantController extends Controller
             'tenant_id' => $tenant->id,
         ]);
 
-        // 🔥 Dispatch background job
-        SetupTenantJob::dispatch($tenant, $dbName, [
+        $setupData = [
             'phone' => $request->phone,
             'address' => $request->address,
             'gst_number' => $request->gst_number,
             'is_gst_enabled' => $request->is_gst_enabled,
             'upi_id' => $request->upi_id,
             'enable_token_system' => $request->enable_token_system,
-        ]);
+        ];
+
+        if ($request->hasFile('logo')) {
+            try {
+                $setupData['logo'] = $this->storeTenantLogo($request, $tenant);
+            } catch (\Throwable $e) {
+                Log::error('Tenant logo processing failed', [
+                    'tenant_id' => $tenant->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Logo could not be processed. Please upload a valid JPG, PNG, or WEBP image.',
+                ], 422);
+            }
+        }
+
+        // 🔥 Dispatch background job
+        SetupTenantJob::dispatch($tenant, $dbName, $setupData);
 
         return response()->json([
             'message' => 'Tenant created. Setup is in progress...',
@@ -85,5 +106,20 @@ class TenantController extends Controller
         } while (Tenant::where('api_key', $key)->exists());
 
         return $key;
+    }
+
+    private function storeTenantLogo(Request $request, Tenant $tenant): string
+    {
+        $timestamp = now()->timestamp;
+        $filename = "{$tenant->slug}-{$timestamp}.webp";
+        $path = "tenants/{$tenant->id}/logos/{$filename}";
+
+        $imageContent = (string) Image::read($request->file('logo')->getRealPath())
+            ->scaleDown(width: 512)
+            ->toWebp(82);
+
+        Storage::disk('public')->put($path, $imageContent);
+
+        return "/storage/{$path}";
     }
 }

@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Invoice;
 use App\Models\Tenant;
+use App\Models\Tenant\Order;
 use App\Models\ReviewSession;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use SimpleSoftwareIO\QrCode\Generator;
 
@@ -25,23 +27,88 @@ class InvoiceService
             throw new \Exception("Template not found");
         }
 
+        $orderData = $this->normalizeOrder($order);
+        $orderId = $this->extractOrderId($orderData);
+
+        if (!$orderId) {
+            throw new \Exception("Order id missing");
+        }
+
+        $this->configureTenantConnection($tenant);
+
+        $tenantOrder = Order::find($orderId);
+
+        if (!$tenantOrder) {
+            throw new \Exception("Order not found");
+        }
+
+        if ($tenantOrder->status === 'cancelled') {
+            throw new \Exception("Cancelled order cannot generate invoice");
+        }
+
+        $existingInvoice = $this->findExistingInvoice($tenant->id, $orderId);
+
+        if ($existingInvoice) {
+            $this->attachExistingInvoiceToOrder($orderId, $existingInvoice);
+
+            return $this->generatedView($existingInvoice->uuid);
+        }
+
         $uuid = $this->generateInvoiceNumber();
         $reviewToken = 'PCRV-' . strtoupper(Str::uuid()->toString());
 
-        $orderData = $this->normalizeOrder($order);
         $orderData['review_token'] =  $reviewToken;
 
-        Invoice::create([
-            'tenant_id'=>$tenant->id,
-            'uuid'=>$uuid,
-            'industry'=>$industry,
-            'paper_size'=>$paper,
-            'order_data'=>$orderData
-        ]);
-        
         $url = url("/pos#/invoices/$uuid");
-        
-        $token = $order['data']['data']['token']['token_code'] ?? null;
+
+        DB::connection('mysql')->beginTransaction();
+        DB::connection('tenant')->beginTransaction();
+
+        try {
+            $invoice = Invoice::create([
+                'tenant_id'=>$tenant->id,
+                'order_id'=>$orderId,
+                'uuid'=>$uuid,
+                'industry'=>$industry,
+                'paper_size'=>$paper,
+                'order_data'=>$orderData
+            ]);
+
+            $this->updateOrderInvoiceData($orderId, $invoice, $url);
+
+            // Now create a review token
+            // We will add condition here based on settings
+            // It runs only if customer review is on
+            ReviewSession::create([
+                'tenant_id' => $tenant->id,
+                'tenant_slug' => $tenant->slug,
+                'tenant_api_key' => $tenant->api_key,
+                'invoice_number' => $uuid,
+                'order_id' => $orderId,
+                'customer_name' => $this->nullableTrim(data_get($orderData, 'customer.name')),
+                'customer_phone' => $this->nullableTrim(data_get($orderData, 'customer.phone')),
+                'review_token' => $reviewToken,
+                'expires_at' => now()->addMonths(6),
+            ]);
+
+            DB::connection('tenant')->commit();
+            DB::connection('mysql')->commit();
+        } catch (\Throwable $e) {
+            DB::connection('tenant')->rollBack();
+            DB::connection('mysql')->rollBack();
+
+            $existingInvoice = $this->findExistingInvoice($tenant->id, $orderId);
+
+            if ($existingInvoice) {
+                $this->attachExistingInvoiceToOrder($orderId, $existingInvoice);
+
+                return $this->generatedView($existingInvoice->uuid);
+            }
+
+            throw $e;
+        }
+
+        $token = data_get($orderData, 'token.token_code');
 
 
         $qrCode = new Generator();
@@ -68,28 +135,6 @@ class InvoiceService
         }
         
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
-
-        // Now create a review token 
-        $name = !empty(trim($order['data']['data']['customer']['name'] ?? ''))
-                ? $order['data']['data']['customer']['name']
-                : null;
-        $phone = !empty(trim($order['data']['data']['customer']['phone'] ?? ''))
-                ? $order['data']['data']['customer']['phone']
-                : null;
-
-        // We will add condition here based on settings
-        // It runs only if customer review is on
-        ReviewSession::create([
-            'tenant_id' => $tenant->id,
-            'tenant_slug' => $tenant->slug,
-            'tenant_api_key' => $tenant->api_key,
-            'invoice_number' => $uuid,
-            'order_id' => $order['data']['data']['id'],
-            'customer_name' => $name,
-            'customer_phone' => $phone,
-            'review_token' => $reviewToken,
-            'expires_at' => now()->addMonths(6),
-        ]);
 
         // We will add condition here based on settings 
         // It runs only if customer display is on
@@ -118,6 +163,90 @@ class InvoiceService
     private function normalizeOrder($order)
     {
         return data_get($order, 'data.data', $order);
+    }
+
+    private function extractOrderId(array $order): ?int
+    {
+        $id = data_get($order, 'id');
+
+        return is_numeric($id) ? (int) $id : null;
+    }
+
+    private function findExistingInvoice(int $tenantId, int $orderId): ?Invoice
+    {
+        $invoice = Invoice::where('tenant_id', $tenantId)
+            ->where('order_id', $orderId)
+            ->first();
+
+        if ($invoice) {
+            return $invoice;
+        }
+
+        return Invoice::where('tenant_id', $tenantId)
+            ->where(function ($query) use ($orderId) {
+                $query->where('order_data->id', $orderId)
+                    ->orWhere('order_data->id', (string) $orderId);
+            })
+            ->oldest()
+            ->first();
+    }
+
+    private function configureTenantConnection(Tenant $tenant): void
+    {
+        $base = config('database.connections.mysql');
+
+        Config::set('database.connections.tenant', array_merge($base, [
+            'database' => $tenant->database,
+        ]));
+
+        DB::purge('tenant');
+        DB::reconnect('tenant');
+    }
+
+    private function updateOrderInvoiceData(int $orderId, Invoice $invoice, string $url): void
+    {
+        $order = Order::whereKey($orderId)->lockForUpdate()->first();
+
+        if (!$order) {
+            throw new \Exception("Order not found");
+        }
+
+        $meta = $order->meta ?? [];
+        $meta['invoice'] = [
+            'id' => $invoice->id,
+            'number' => $invoice->uuid,
+            'url' => $url,
+        ];
+
+        $order->update([
+            'invoice_id' => $invoice->id,
+            'invoice_no' => $invoice->uuid,
+            'meta' => $meta,
+        ]);
+    }
+
+    private function attachExistingInvoiceToOrder(int $orderId, Invoice $invoice): void
+    {
+        DB::connection('mysql')->transaction(function () use ($orderId, $invoice) {
+            if (!$invoice->order_id) {
+                $invoice->update(['order_id' => $orderId]);
+            }
+        });
+
+        DB::connection('tenant')->transaction(function () use ($orderId, $invoice) {
+            $this->updateOrderInvoiceData(
+                $orderId,
+                $invoice,
+                url("/pos#/invoices/{$invoice->uuid}")
+            );
+        });
+    }
+
+    private function nullableTrim($value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
 
@@ -169,10 +298,12 @@ class InvoiceService
         $qrCode = new Generator();
 
         $url = url("/pos#/invoices/$uuid");
+        $qr = null;
+        $kitchenQr = null;
 
         try {
             $qr = $qrCode->format('svg')->size(120)->generate($url);
-            $token = $inv->order_data['token']['token_code'];
+            $token = $inv->order_data['token']['token_code'] ?? null;
             if ($token) {
                 $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
                 $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
@@ -184,7 +315,7 @@ class InvoiceService
 
         return [
             'orderData' => $inv->order_data,
-            'token' => $inv->order_data['token'],
+            'token' => $inv->order_data['token'] ?? null,
             'qr'=> base64_encode($qr),
             'kitchenQr'=> base64_encode($kitchenQr),
         ];
@@ -260,7 +391,7 @@ class InvoiceService
             'tokenQr'=> base64_encode($tokenQr),
             'tokenUrl' => $tokenUrl,
             'orderData' => $orderData,
-            'tokenData' => $orderData['token']
+            'tokenData' => $orderData['token'] ?? null
         ];
     }
 

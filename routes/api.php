@@ -62,6 +62,8 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     // Category Management
     Route::prefix('categories')->group(function () {
         Route::post('/', [CategoryController::class, 'store']);
+        Route::post('/bulk', [CategoryController::class, 'bulkUpload']);
+        Route::get('/bulk/template', [CategoryController::class, 'bulkTemplate']);
         Route::put('/{category}', [CategoryController::class, 'update']);
         Route::delete('/{category}', [CategoryController::class, 'destroy']);
         Route::get('/search', [CategoryController::class, 'search']);
@@ -114,6 +116,9 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
 
     // Attach Customer
     Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer']);
+
+    // Cancel Order
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->whereNumber('order');
 
     // 3️⃣ Move To Pending Payment
     Route::post('/orders/{order}/pending-payment', [OrderController::class, 'moveToPayment']);

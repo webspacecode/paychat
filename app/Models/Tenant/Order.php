@@ -6,12 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
+    protected $connection = 'tenant';
+
     protected $table = 'pos_orders';
 
     protected $fillable = [
 
         // Identification
         'order_no',
+        'invoice_id',
         'invoice_no',
 
         // Location & Terminal
@@ -55,6 +58,16 @@ class Order extends Model
         'paid_at',
         'completed_at',
         'cancelled_at',
+        'cancelled_by',
+        'cancel_reason',
+        'cancel_reason_type',
+
+        // Extra Metadata
+        'meta',
+    ];
+
+    protected $casts = [
+        'meta' => 'array',
     ];
 
     public function items()

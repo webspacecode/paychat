@@ -18,6 +18,10 @@ class PaymentService
 {       
     public function initiatePayment(Order $order, string $method, array $data = [])
     {
+        if ($order->status === 'cancelled') {
+            throw new \Exception('Cancelled order cannot accept payment');
+        }
+
         return match($method){
             'cash' => (new CashPaymentStrategy())->pay($order,$data),
             'upi' => (new UpiPaymentStrategy())->pay($order,$data),
@@ -28,6 +32,14 @@ class PaymentService
 
     public function createPayment(Order $order, $method, $amount)
     {
+        if (!$order) {
+            throw new \Exception('Order not found');
+        }
+
+        if ($order->status === 'cancelled') {
+            throw new \Exception('Cancelled order cannot accept payment');
+        }
+
         if ($order->status !== 'pending_payment') {
             throw new \Exception('Order not ready for payment');
         }
@@ -272,9 +284,13 @@ class PaymentService
 
     public function markSuccess(Payment $payment)
     {
-        $payment->update(['status' => 'success']);
-
         $order = $payment->order;
+
+        if ($order->status === 'cancelled') {
+            throw new \Exception('Cancelled order cannot accept payment');
+        }
+
+        $payment->update(['status' => 'success']);
 
         $paid = $order->payments()
             ->where('status', 'success')
@@ -298,6 +314,10 @@ class PaymentService
             }
 
             $order = $payment->order;
+
+            if ($order->status === 'cancelled') {
+                throw new \Exception('Cancelled order cannot accept payment');
+            }
 
             $paidAmount = $order->payments()
                 ->where('status','success')

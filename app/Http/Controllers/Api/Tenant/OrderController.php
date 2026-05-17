@@ -78,6 +78,22 @@ class OrderController extends Controller
         );
     }
 
+    public function cancel(String $tenantSlug, Order $order, Request $request, OrderService $service)
+    {
+        $validated = $request->validate([
+            'cancel_reason_type' => 'required|in:customer_changed_mind,wrong_order,duplicate_order,item_unavailable,long_wait_time,test_order,other',
+            'cancel_reason' => 'nullable|string|max:1000',
+        ]);
+
+        try {
+            return $service->cancelOrder($order, $validated);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
     public function complete($id, CheckoutService $service)
     {
         $order = Order::with('items.product')->findOrFail($id);

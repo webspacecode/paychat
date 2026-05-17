@@ -22,6 +22,15 @@ use App\Events\OrderStatusUpdated;
 class OrderService
 {
     private const ACTIVE_KITCHEN_STATUSES = ['waiting', 'preparing', 'ready'];
+    private const CANCEL_REASON_TYPES = [
+        'customer_changed_mind',
+        'wrong_order',
+        'duplicate_order',
+        'item_unavailable',
+        'long_wait_time',
+        'test_order',
+        'other',
+    ];
 
     protected TaxService $taxService;
     protected StockAvailabilityService $stockAvailabilityService;
@@ -54,6 +63,7 @@ class OrderService
         $tokenStatuses = $filters['status'] ?? self::ACTIVE_KITCHEN_STATUSES;
 
         return Order::query()
+            ->where('status', '!=', 'cancelled')
             ->whereHas('token', function ($q) use ($tokenStatuses, $businessDate, $orderBusinessDateColumn) {
                 is_array($tokenStatuses)
                     ? $q->whereIn('status', $tokenStatuses)
@@ -260,8 +270,8 @@ class OrderService
 
     public function syncItems(Order $order, Request $request): void
     {
-        if ($order->status === 'completed') {
-            throw new \Exception('Completed order cannot be modified');
+        if (in_array($order->status, ['completed', 'cancelled'], true)) {
+            throw new \Exception('Completed or cancelled order cannot be modified');
         }
 
         foreach ($request->items as $item) {
@@ -365,6 +375,10 @@ class OrderService
 
     public function completeOrder(Order $order)
     {
+        if ($order->status === 'cancelled') {
+            throw new \Exception('Cancelled order cannot be completed');
+        }
+
         if ($order->status !== 'pending_payment') {
             throw new \Exception('Invalid state');
         }
@@ -398,6 +412,10 @@ class OrderService
     {
         return DB::transaction(function () use ($order, $status) {
 
+            if ($order->status === 'cancelled') {
+                throw new \Exception('Cancelled order cannot be updated');
+            }
+
             $token = $order->token;
 
             if (!$token) {
@@ -427,5 +445,55 @@ class OrderService
 
             return $order;
         });
+    }
+
+    public function cancelOrder(Order $order, array $data = []): OrderResource
+    {
+        $reasonType = $data['cancel_reason_type'] ?? null;
+
+        if ($reasonType && !in_array($reasonType, self::CANCEL_REASON_TYPES, true)) {
+            throw new \Exception('Invalid cancellation reason type');
+        }
+
+        DB::transaction(function () use ($order, $data, $reasonType) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedOrder->status === 'cancelled') {
+                throw new \Exception('Order is already cancelled');
+            }
+
+            if (
+                $lockedOrder->status === 'completed' ||
+                $lockedOrder->payment_status === 'paid' ||
+                $lockedOrder->invoice_id !== null ||
+                $lockedOrder->invoice_no !== null
+            ) {
+                throw new \Exception('Order cannot be cancelled');
+            }
+
+            $cancelledAt = now();
+            $cancelledBy = auth()->id();
+            $reason = $data['cancel_reason'] ?? null;
+            $meta = $lockedOrder->meta ?? [];
+            $meta['cancellation'] = [
+                'reason_type' => $reasonType,
+                'reason' => $reason,
+                'cancelled_by' => $cancelledBy,
+                'cancelled_at' => $cancelledAt->toISOString(),
+            ];
+
+            $lockedOrder->update([
+                'status' => 'cancelled',
+                'cancelled_at' => $cancelledAt,
+                'cancelled_by' => $cancelledBy,
+                'cancel_reason' => $reason,
+                'cancel_reason_type' => $reasonType,
+                'meta' => $meta,
+            ]);
+        });
+
+        return new OrderResource(
+            $order->fresh()->load('items.product', 'customer', 'location', 'payments')
+        );
     }
 }
