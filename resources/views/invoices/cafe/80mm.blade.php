@@ -288,13 +288,13 @@
 
 </div>
 
-@if(!($isPdf ?? false) && !empty($pdfUrl))
+{{-- @if(!($isPdf ?? false) && !empty($pdfUrl))
     <div class="invoice-actions">
         <a href="{{ $pdfUrl }}" class="pdf-download">
             Download PDF
         </a>
     </div>
-@endif
+@endif --}}
 
 </body>
 </html>
