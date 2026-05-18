@@ -9,15 +9,30 @@ if (!window.Echo) {
     const wsScheme = import.meta.env.VITE_REVERB_SCHEME || window.location.protocol.replace(':', '');
     const forceTLS = wsScheme === 'https';
 
+    // window.Echo = new Echo({
+    //     broadcaster: 'reverb',
+    //     key: import.meta.env.VITE_REVERB_APP_KEY || import.meta.env.VITE_REVERB_KEY || 'local',
+    //     wsHost,
+    //     wsPort,
+    //     wssPort: wsPort,
+    //     forceTLS,
+    //     enabledTransports: forceTLS ? ['wss'] : ['ws'],
+    // });
+
     window.Echo = new Echo({
         broadcaster: 'reverb',
-        key: import.meta.env.VITE_REVERB_APP_KEY || import.meta.env.VITE_REVERB_KEY || 'local',
-        wsHost,
-        wsPort,
-        wssPort: wsPort,
-        forceTLS,
-        enabledTransports: forceTLS ? ['wss'] : ['ws'],
-    });
+
+        key: 'pc_live_8f3k29x',
+
+        wsHost: 'paychat.shop',
+
+        wsPort: 443,
+        wssPort: 443,
+
+        forceTLS: true,
+
+        enabledTransports: ['ws', 'wss'],
+    })
 
     window.Echo.connector.pusher.connection.bind('connected', () => {
         console.log('Billing WebSocket connected');
