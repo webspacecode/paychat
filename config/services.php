@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'browsershot' => [
+        'node_binary' => env('BROWSERSHOT_NODE_BINARY', '/Users/archit/.nvm/versions/node/v17.2.0/bin/node'),
+        'npm_binary' => env('BROWSERSHOT_NPM_BINARY', '/Users/archit/.nvm/versions/node/v17.2.0/bin/npm'),
+        'chrome_path' => env('BROWSERSHOT_CHROME_PATH', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+    ],
+
 ];

@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use SimpleSoftwareIO\QrCode\Generator;
+use Spatie\Browsershot\Browsershot;
 
 class InvoiceService
 {
@@ -274,9 +275,60 @@ class InvoiceService
                 'tax'=>$inv->tenant->taxConfig,
                 'totals'=>$totals,
                 'qr'=>null,
-                'url'=>request()->url()
+                'url'=>request()->url(),
+                'pdfUrl'=>route('invoice.pdf', ['uuid' => $uuid]),
+                'logoSrc'=>$this->invoiceLogoSrc($inv->tenant->branding),
+                'isPdf'=>false
             ]
         );
+    }
+
+    public function downloadPdf($uuid)
+    {
+        $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
+
+        $config = config("invoice.industries.$inv->industry");
+
+        if(!$config){
+            throw new \Exception("Invalid industry");
+        }
+
+        $template = $config['templates'][$inv->paper_size] ?? null;
+
+        if(!$template){
+            throw new \Exception("Template not found");
+        }
+
+        $tenant = Tenant::where('id', $inv->tenant_id)->first();
+        $orderData = $this->normalizeOrder($inv->order_data);
+        $totals = $this->calculateGST($orderData,$tenant->taxConfig);
+
+        $html = view($template, [
+            'order'=>$orderData,
+            'branding'=>$inv->tenant->branding,
+            'tax'=>$inv->tenant->taxConfig,
+            'totals'=>$totals,
+            'qr'=>null,
+            'url'=>url("/api/invoice/$uuid"),
+            'pdfUrl'=>null,
+            'logoSrc'=>$this->invoiceLogoSrc($inv->tenant->branding, true),
+            'isPdf'=>true
+        ])->render();
+
+        $receiptHeightPx = (float) $this->configuredBrowsershot($html)
+            ->evaluate('document.querySelector(".receipt").getBoundingClientRect().height');
+        $receiptHeightMm = max(40, (int) ceil(($receiptHeightPx * 25.4 / 96) + 2));
+
+        $pdf = $this->configuredBrowsershot($html)
+            ->paperSize(80, $receiptHeightMm)
+            ->margins(0, 0, 0, 0)
+            ->showBackground()
+            ->pdf();
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="invoice-'.$uuid.'.pdf"',
+        ]);
     }
 
     public function viewToken($uuid)
@@ -383,6 +435,9 @@ class InvoiceService
                 'totals'=>$totals,
                 'qr'=>$qr,
                 'url'=>$url,
+                'pdfUrl'=>route('invoice.pdf', ['uuid' => $uuid]),
+                'logoSrc'=>$this->invoiceLogoSrc($tenant->branding),
+                'isPdf'=>false,
                 'config'=>$config
             ])->render(),
             'url'=>$url,
@@ -424,6 +479,49 @@ class InvoiceService
             'sgst'=>$sgst,
             'total'=>$subtotal + $gst
         ];
+    }
+
+    private function invoiceLogoSrc($branding, bool $inline = false): ?string
+    {
+        $logo = $branding->logo ?? null;
+
+        if (!$logo) {
+            return null;
+        }
+
+        if (str_starts_with($logo, 'data:') || preg_match('/^https?:\/\//', $logo)) {
+            return $logo;
+        }
+
+        $relativePath = ltrim($logo, '/');
+        $publicPath = public_path($relativePath);
+
+        if ($inline && is_file($publicPath)) {
+            $mime = mime_content_type($publicPath) ?: 'image/png';
+
+            return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($publicPath));
+        }
+
+        return asset($relativePath);
+    }
+
+    private function configuredBrowsershot(string $html): Browsershot
+    {
+        $browser = Browsershot::html($html);
+
+        if ($nodeBinary = config('services.browsershot.node_binary')) {
+            $browser->setNodeBinary($nodeBinary);
+        }
+
+        if ($npmBinary = config('services.browsershot.npm_binary')) {
+            $browser->setNpmBinary($npmBinary);
+        }
+
+        if ($chromePath = config('services.browsershot.chrome_path')) {
+            $browser->setChromePath($chromePath);
+        }
+
+        return $browser->noSandbox();
     }
 
     public static function generateInvoiceNumber(): string

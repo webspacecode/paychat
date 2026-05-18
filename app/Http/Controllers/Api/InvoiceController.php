@@ -31,6 +31,11 @@ class InvoiceController extends Controller
         
     }
 
+    public function downloadPdf($uuid, InvoiceService $service)
+    {
+        return $service->downloadPdf($uuid);
+    }
+
     public function generatedView($uuid, InvoiceService $service)
     {
         

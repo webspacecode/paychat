@@ -142,6 +142,36 @@
         .invoice-link:hover {
             background: #333;
         }
+
+        .invoice-actions {
+            width: 80mm;
+            margin: 10px auto 0;
+            padding: 0 8px;
+            box-sizing: border-box;
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .pdf-download {
+            display: inline-block;
+            padding: 7px 12px;
+            background: #111;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1;
+            text-decoration: none;
+        }
+
+        .pdf-download:hover {
+            background: #333;
+        }
+
+        @media print {
+            .invoice-actions {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
@@ -151,9 +181,9 @@
 
     <!-- HEADER -->
     <div class="header">
-        @if($branding && $branding->logo)
+        @if(!empty($logoSrc))
         <div class="logo-wrap">
-            <img src="{{ $branding->logo }}" class="logo">
+            <img src="{{ $logoSrc }}" class="logo">
         </div>
         @endif
 
@@ -257,6 +287,14 @@
     </div>
 
 </div>
+
+@if(!($isPdf ?? false) && !empty($pdfUrl))
+    <div class="invoice-actions">
+        <a href="{{ $pdfUrl }}" class="pdf-download">
+            Download PDF
+        </a>
+    </div>
+@endif
 
 </body>
 </html>

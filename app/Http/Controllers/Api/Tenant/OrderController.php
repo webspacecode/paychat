@@ -121,17 +121,17 @@ class OrderController extends Controller
             $customer = Customer::where('phone', $request->phone)->first();
         }
 
-        if (!$customer) {
+        if (!$customer && !empty($request->phone)) {
             $customer = Customer::create([
                 'name'  => $request->name ?? null,
                 'phone' => $request->phone ?? null,
                 'email' => $request->email ?? null,
             ]);
+        
+            $order->update([
+                'customer_id' => $customer->id,
+            ]);
         }
-
-        $order->update([
-            'customer_id' => $customer->id,
-        ]);
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments')
