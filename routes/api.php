@@ -196,6 +196,11 @@ Route::post('/reviews', [
     'submit'
 ]);
 
+Route::post('/feedback', [
+    ReviewController::class,
+    'submit'
+]);
+
 Route::get('/reviews/{slug}', [
     ReviewController::class,
     'tenantReviews'

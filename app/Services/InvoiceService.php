@@ -60,7 +60,7 @@ class InvoiceService
 
         $orderData['review_token'] =  $reviewToken;
 
-        $url = url("/pos#/invoices/$uuid");
+        $url = url("/billing/invoices/$uuid");
 
         DB::connection('mysql')->beginTransaction();
         DB::connection('tenant')->beginTransaction();
@@ -123,7 +123,7 @@ class InvoiceService
             $qr = $qrCode->format('svg')->size(120)->generate($url);
             if ($token) {
                 $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
-                $tokenUrl = url("/pos#/tokens/$uuid");
+                $tokenUrl = url("/billing/tokens/$uuid");
 
                 $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
                 $tokenQr = $qrCode->format('svg')->size(120)->generate($tokenUrl);
@@ -238,7 +238,7 @@ class InvoiceService
             $this->updateOrderInvoiceData(
                 $orderId,
                 $invoice,
-                url("/pos#/invoices/{$invoice->uuid}")
+                url("/billing/invoices/{$invoice->uuid}")
             );
         });
     }
@@ -349,7 +349,7 @@ class InvoiceService
 
         $qrCode = new Generator();
 
-        $url = url("/pos#/invoices/$uuid");
+        $url = url("/billing/invoices/$uuid");
         $qr = null;
         $kitchenQr = null;
 
@@ -396,7 +396,7 @@ class InvoiceService
         $orderData = $this->normalizeOrder($order);
 
         
-        $url = url("/pos#/invoices/$uuid");
+        $url = url("/billing/invoices/$uuid");
         
         $token = $order['token']['token_code'] ?? null;
 
@@ -413,7 +413,7 @@ class InvoiceService
             $qr = $qrCode->format('svg')->size(120)->generate($url);
             if ($token) {
                 $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
-                $tokenUrl = url("/pos#/tokens/$uuid");
+                $tokenUrl = url("/billing/tokens/$uuid");
 
                 $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
                 $tokenQr = $qrCode->format('svg')->size(120)->generate($tokenUrl);
