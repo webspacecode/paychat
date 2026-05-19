@@ -33,10 +33,14 @@ class OrderResource extends JsonResource
                 'name' => optional($this->location)->name,
             ],
 
-            'table' => $this->resource ? [
-                'id' => $this->resource->id,
-                'name' => $this->resource->name,
+            'table' => $this->table ? [
+                'id' => $this->table->id,
+                'name' => $this->table->name,
+                'code' => $this->table->code,
             ] : null,
+            'table_session_id' => $this->table_session_id,
+            'guest_count' => $this->guest_count,
+            'dining_flow' => $this->dining_flow,
 
             'warehouse_id' => $this->warehouse_id,
 
@@ -105,6 +109,10 @@ class OrderResource extends JsonResource
                     'tax' => $item->tax ?? 0,
                     'subtotal' => $item->subtotal,
                     'total' => $item->total ?? $item->subtotal,
+                    'kitchen_status' => $item->kitchen_status,
+                    'kitchen_batch_id' => $item->kitchen_batch_id,
+                    'sent_to_kitchen_at' => $item->sent_to_kitchen_at,
+                    'item_status' => $item->item_status,
                 ];
             }),
 

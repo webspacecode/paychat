@@ -6,6 +6,8 @@ use App\Models\Tenant\Order;
 use App\Models\Tenant\Customer;
 use Illuminate\Http\Request;
 use App\Services\Orders\OrderService;
+use App\Services\TableSessionService;
+use App\Services\KitchenBatchService;
 use App\Services\Payments\TaxService;
 use App\Http\Requests\Tenant\CreateOrderRequest;
 use App\Http\Requests\Tenant\UpdateOrderRequest;
@@ -48,7 +50,10 @@ class OrderController extends Controller
             $request->location_id,
             $request->customer_id,
             $request->order_type,
-            $request->table_id
+            $request->table_id,
+            $request->dining_flow,
+            $request->guest_count,
+            $request->table_session_id
         );
 
         return new OrderResource(
@@ -194,5 +199,34 @@ class OrderController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function assignTable(String $tenantSlug, Order $order, Request $request, TableSessionService $service)
+    {
+        $validated = $request->validate([
+            'table_id' => 'required|integer|exists:resources,id',
+            'guest_count' => 'nullable|integer|min:1',
+            'dining_flow' => 'nullable|in:table_service',
+        ]);
+
+        $service->assignOrder(
+            $order,
+            (int) $validated['table_id'],
+            $validated['guest_count'] ?? null
+        );
+
+        return new OrderResource(
+            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession')
+        );
+    }
+
+    public function sendToKitchen(String $tenantSlug, Order $order, KitchenBatchService $service)
+    {
+        $batch = $service->sendFreshItems($order);
+
+        return response()->json([
+            'message' => 'Kitchen batch created',
+            'batch' => $batch,
+        ], 201);
     }
 }

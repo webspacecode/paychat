@@ -8,6 +8,7 @@ use App\Models\Tenant\PaymentMethod;
 use Illuminate\Http\Request;
 use App\Services\Payments\PaymentService;
 use App\Services\TokenService;
+use App\Services\TableSessionService;
 use App\Http\Requests\Tenant\InitiatePaymentRequest;
 use App\Http\Controllers\Controller;
 use App\Events\OrderCreated;
@@ -61,9 +62,16 @@ class PaymentController extends Controller
 
         $service->markPaymentSuccess($payment);
 
-        $tokenService = new TokenService();
+        $order = $order->fresh(['tableSession', 'token']);
 
-        $token = $tokenService->generate($order);
+        $token = null;
+
+        if ($order->dining_flow === 'table_service') {
+            app(TableSessionService::class)->closeForOrder($order);
+        } else {
+            $tokenService = new TokenService();
+            $token = $tokenService->generate($order);
+        }
         
         // 🔥 BROADCAST REAL-TIME
         if ($token) {

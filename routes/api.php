@@ -15,6 +15,10 @@ use App\Http\Controllers\Api\Tenant\InventoryController;
 use App\Http\Controllers\Api\Tenant\CustomerController;
 use App\Http\Controllers\Api\Tenant\InfoController;
 use App\Http\Controllers\Api\Tenant\KitchenController;
+use App\Http\Controllers\Api\Tenant\KitchenBatchController;
+use App\Http\Controllers\Api\Tenant\KitchenQueueController;
+use App\Http\Controllers\Api\Tenant\TableController;
+use App\Http\Controllers\Api\Tenant\TableSessionController;
 use App\Http\Controllers\Api\Tenant\PhonePeController;
 use App\Http\Controllers\Api\Tenant\TokenController;
 use App\Http\Controllers\Api\DemoLeadController;
@@ -97,6 +101,20 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::delete('/{id}', [LocationController::class, 'destroy']); // Delete location
     });
 
+    Route::prefix('tables')->group(function () {
+        Route::get('/', [TableController::class, 'index']);
+        Route::post('/', [TableController::class, 'store']);
+        Route::match(['put', 'patch'], '/{table}', [TableController::class, 'update'])->whereNumber('table');
+        Route::patch('/{table}/status', [TableController::class, 'updateStatus'])->whereNumber('table');
+        Route::post('/{table}/release', [TableController::class, 'release'])->whereNumber('table');
+    });
+
+    Route::prefix('table-sessions')->group(function () {
+        Route::post('/', [TableSessionController::class, 'store']);
+        Route::get('/open', [TableSessionController::class, 'open']);
+        Route::post('/{session}/close', [TableSessionController::class, 'close'])->whereNumber('session');
+    });
+
     // pos orders
     // Route::prefix('orders')->group(function(){
     //     Route::post('/', [OrderController::class,'create']);
@@ -116,6 +134,9 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
 
     // Attach Customer
     Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer']);
+
+    Route::patch('/orders/{order}/table', [OrderController::class, 'assignTable'])->whereNumber('order');
+    Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen'])->whereNumber('order');
 
     // Cancel Order
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->whereNumber('order');
@@ -159,6 +180,8 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     });
 
     Route::get('/kitchen/orders', [KitchenController::class, 'index']);
+    Route::get('/kitchen/queue', [KitchenQueueController::class, 'index']);
+    Route::patch('/kitchen-batches/{batch}/status', [KitchenBatchController::class, 'updateStatus'])->whereNumber('batch');
 
 
     Route::prefix('reports')->group(function () {

@@ -223,7 +223,7 @@ class OrderService
         });
     }
 
-    public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null)
+    public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null, $diningFlow = null, $guestCount = null, $tableSessionId = null)
     {
         $orderData = [
             'order_no' => strtoupper('ORD-' . Str::uuid()),
@@ -231,6 +231,9 @@ class OrderService
             'customer_id' => $customerId,
             'order_type' => $orderType,
             'table_id' => $tableId,
+            'table_session_id' => $tableSessionId,
+            'guest_count' => $guestCount,
+            'dining_flow' => $diningFlow,
             'status' => 'draft',
             'payment_status' => 'unpaid'
         ];
@@ -280,6 +283,11 @@ class OrderService
             }
         }
 
+        if ($order->dining_flow === 'table_service') {
+            $this->syncTableServiceItems($order, $request);
+            return;
+        }
+
         $this->stockAvailabilityService->checkProductsStock(
             (array) $request->items,
             (int) $order->location_id
@@ -318,6 +326,83 @@ class OrderService
                 'subtotal' => $request->subtotal,
                 'tax' => $request->tax,
                 'discount' => $request->discount
+            ]);
+        });
+    }
+
+    private function syncTableServiceItems(Order $order, Request $request): void
+    {
+        DB::transaction(function () use ($order, $request) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $desiredItems = collect((array) $request->items)
+                ->groupBy(fn ($item) => (int) $item['product_id'])
+                ->map(fn ($items) => (float) $items->sum('quantity'))
+                ->filter(fn ($quantity) => $quantity > 0);
+
+            $existingItems = $lockedOrder->items()
+                ->where(function ($query) {
+                    $query->whereNull('item_status')
+                        ->orWhereNotIn('item_status', ['cancelled', 'voided']);
+                })
+                ->lockForUpdate()
+                ->get();
+
+            $sentQuantities = $existingItems
+                ->filter(fn ($item) => $item->kitchen_batch_id || $item->sent_to_kitchen_at)
+                ->groupBy('product_id')
+                ->map(fn ($items) => (float) $items->sum('quantity'));
+
+            $pendingDeltas = [];
+
+            foreach ($desiredItems as $productId => $desiredQuantity) {
+                $sentQuantity = (float) ($sentQuantities[$productId] ?? 0);
+                $pendingQuantity = max($desiredQuantity - $sentQuantity, 0);
+
+                if ($pendingQuantity > 0) {
+                    $pendingDeltas[] = [
+                        'product_id' => (int) $productId,
+                        'quantity' => $pendingQuantity,
+                    ];
+                }
+            }
+
+            if (!empty($pendingDeltas)) {
+                $this->stockAvailabilityService->checkProductsStock(
+                    $pendingDeltas,
+                    (int) $lockedOrder->location_id
+                );
+            }
+
+            $lockedOrder->items()
+                ->whereNull('kitchen_batch_id')
+                ->whereNull('sent_to_kitchen_at')
+                ->where(function ($query) {
+                    $query->whereNull('item_status')
+                        ->orWhereNotIn('item_status', ['cancelled', 'voided']);
+                })
+                ->delete();
+
+            foreach ($pendingDeltas as $item) {
+                $product = Product::find($item['product_id']);
+
+                if (!$product) {
+                    abort(422, "Product not found with id: ".$item['product_id']);
+                }
+
+                $lineTotal = $product->price * $item['quantity'];
+
+                $lockedOrder->items()->create([
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'price' => $product->price,
+                    'total' => $lineTotal,
+                    'kitchen_status' => 'pending',
+                    'item_status' => 'active',
+                ]);
+            }
+
+            $this->recalculate($lockedOrder->fresh('items'), [
+                'discount' => $request->discount,
             ]);
         });
     }

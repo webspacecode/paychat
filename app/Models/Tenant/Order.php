@@ -20,6 +20,9 @@ class Order extends Model
         // Location & Terminal
         'location_id',
         'terminal_id',
+        'table_id',
+        'table_session_id',
+        'guest_count',
 
         // User
         'created_by',
@@ -33,6 +36,7 @@ class Order extends Model
         // Order Classification
         'business_date',
         'order_type',      // dine_in, takeaway, delivery, walk_in
+        'dining_flow',     // qsr, table_service
         'source',          // pos, web, app
         'notes',
 
@@ -93,6 +97,26 @@ class Order extends Model
     public function resource()
     {
         return $this->belongsTo(Resource::class);
+    }
+
+    public function table()
+    {
+        return $this->belongsTo(Resource::class, 'table_id');
+    }
+
+    public function resourceTable()
+    {
+        return $this->belongsTo(Resource::class, 'table_id');
+    }
+
+    public function tableSession()
+    {
+        return $this->belongsTo(TableSession::class);
+    }
+
+    public function kitchenBatches()
+    {
+        return $this->hasMany(KitchenBatch::class);
     }
 
     public function token()
