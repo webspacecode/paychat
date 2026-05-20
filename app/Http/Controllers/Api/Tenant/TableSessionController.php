@@ -34,7 +34,12 @@ class TableSessionController extends Controller
             ->when($request->filled('location_id'), fn ($q) =>
                 $q->where('location_id', $request->location_id)
             )
-            ->with(['table', 'order.items.product'])
+            ->with([
+                'table',
+                'order.items.product',
+                'order.kitchenBatches.items.product',
+                'order.table',
+            ])
             ->latest('opened_at')
             ->get();
 

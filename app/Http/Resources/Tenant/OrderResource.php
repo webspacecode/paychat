@@ -116,6 +116,37 @@ class OrderResource extends JsonResource
                 ];
             }),
 
+            'kitchen_batches' => $this->kitchenBatches->map(function ($batch) {
+                return [
+                    'id' => $batch->id,
+                    'location_id' => $batch->location_id,
+                    'order_id' => $batch->order_id,
+                    'table_session_id' => $batch->table_session_id,
+                    'table_id' => $batch->table_id,
+                    'batch_number' => $batch->batch_number,
+                    'batch_code' => $batch->batch_code,
+                    'business_date' => $batch->business_date,
+                    'status' => $batch->status,
+                    'sent_at' => $batch->sent_at,
+                    'created_at' => $batch->created_at,
+                    'updated_at' => $batch->updated_at,
+                    'items' => $batch->items->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'product_id' => $item->product_id,
+                            'product_name' => optional($item->product)->name,
+                            'quantity' => $item->quantity,
+                            'price' => $item->price,
+                            'total' => $item->total,
+                            'kitchen_status' => $item->kitchen_status,
+                            'kitchen_batch_id' => $item->kitchen_batch_id,
+                            'sent_to_kitchen_at' => $item->sent_to_kitchen_at,
+                            'item_status' => $item->item_status,
+                        ];
+                    }),
+                ];
+            }),
+
             /*
             |--------------------------------------------------------------------------
             | Payments

@@ -102,6 +102,10 @@ class KitchenQueueController extends Controller
             'token_code' => null,
             'batch_code' => $batch->batch_code,
             'location_id' => $batch->location_id,
+            'table_session_id' => $batch->table_session_id,
+            'table_id' => $batch->table_id,
+            'batch_number' => $batch->batch_number,
+            'business_date' => $batch->business_date,
             'table' => $batch->table ? [
                 'id' => $batch->table->id,
                 'name' => $batch->table->name,
@@ -127,6 +131,8 @@ class KitchenQueueController extends Controller
             'price' => $item->price,
             'total' => $item->total,
             'kitchen_status' => $item->kitchen_status,
+            'kitchen_batch_id' => $item->kitchen_batch_id,
+            'sent_to_kitchen_at' => $item->sent_to_kitchen_at,
             'item_status' => $item->item_status,
         ])->values()->all();
     }

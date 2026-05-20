@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Tenant\WebhookController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\InventoryController;
 use App\Http\Controllers\Api\Tenant\CustomerController;
+use App\Http\Controllers\Api\Tenant\DiningStructureController;
 use App\Http\Controllers\Api\Tenant\InfoController;
 use App\Http\Controllers\Api\Tenant\KitchenController;
 use App\Http\Controllers\Api\Tenant\KitchenBatchController;
@@ -50,7 +51,7 @@ Route::middleware(['api-public'])->prefix('kiosk/{tenant_slug}')->group(function
     Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment']);
     Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer'])->whereNumber('order');
     Route::post('/payments/{payment}/success', [PaymentController::class, 'markSuccess']);
-    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->whereNumber('order');
 });
 
 Route::post('/register-tenant', [TenantController::class, 'register']);
@@ -107,6 +108,12 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::match(['put', 'patch'], '/{table}', [TableController::class, 'update'])->whereNumber('table');
         Route::patch('/{table}/status', [TableController::class, 'updateStatus'])->whereNumber('table');
         Route::post('/{table}/release', [TableController::class, 'release'])->whereNumber('table');
+    });
+
+    Route::prefix('dining-structure')->group(function () {
+        Route::get('/', [DiningStructureController::class, 'index']);
+        Route::post('/tables/bulk', [DiningStructureController::class, 'bulkUpsert']);
+        Route::patch('/tables/{table}/position', [DiningStructureController::class, 'updatePosition'])->whereNumber('table');
     });
 
     Route::prefix('table-sessions')->group(function () {
@@ -170,7 +177,8 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::get('/orders/kitchen', [OrderController::class, 'kitchenIndex']);
 
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
-    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::get('/orders/{order}/kitchen-batches', [OrderController::class, 'kitchenBatches'])->whereNumber('order');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->whereNumber('order');
 
 
 

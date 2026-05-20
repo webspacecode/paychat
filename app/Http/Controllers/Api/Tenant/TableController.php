@@ -16,7 +16,19 @@ class TableController extends Controller
             ->when($request->filled('location_id'), fn ($q) =>
                 $q->where('location_id', $request->location_id)
             )
+            ->when($request->filled('area'), fn ($q) =>
+                $q->where('area', $request->area)
+            )
+            ->when($request->filled('floor'), fn ($q) =>
+                $q->where('floor', $request->floor)
+            )
+            ->when($request->filled('status'), fn ($q) =>
+                $q->where('status', $request->status)
+            )
             ->with('activeTableSession.order')
+            ->orderBy('floor')
+            ->orderBy('area')
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 
@@ -29,8 +41,17 @@ class TableController extends Controller
             'location_id' => 'required|integer|exists:locations,id',
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:100',
+            'area' => 'nullable|string|max:255',
+            'floor' => 'nullable|string|max:255',
             'capacity' => 'nullable|integer|min:1',
             'status' => 'nullable|string|max:50',
+            'pos_x' => 'nullable|integer',
+            'pos_y' => 'nullable|integer',
+            'width' => 'nullable|integer|min:1',
+            'height' => 'nullable|integer|min:1',
+            'shape' => 'nullable|string|in:rectangle,square,circle,booth,custom',
+            'rotation' => 'nullable|integer',
+            'sort_order' => 'nullable|integer',
             'meta' => 'nullable|array',
         ]);
 
@@ -46,16 +67,25 @@ class TableController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, Resource $table)
+    public function update(String $tenantSlug, String $tableId, Request $request)
     {
-        abort_unless($table->type === 'table', 404);
+        $table = Resource::whereKey($tableId)->where('type', 'table')->firstOrFail();
 
         $validated = $request->validate([
             'location_id' => 'sometimes|integer|exists:locations,id',
             'name' => 'sometimes|string|max:255',
             'code' => 'nullable|string|max:100',
+            'area' => 'nullable|string|max:255',
+            'floor' => 'nullable|string|max:255',
             'capacity' => 'sometimes|integer|min:1',
             'status' => 'sometimes|string|max:50',
+            'pos_x' => 'nullable|integer',
+            'pos_y' => 'nullable|integer',
+            'width' => 'nullable|integer|min:1',
+            'height' => 'nullable|integer|min:1',
+            'shape' => 'nullable|string|in:rectangle,square,circle,booth,custom',
+            'rotation' => 'nullable|integer',
+            'sort_order' => 'nullable|integer',
             'meta' => 'nullable|array',
         ]);
 
@@ -67,9 +97,9 @@ class TableController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, Resource $table)
+    public function updateStatus(String $tenantSlug, String $tableId, Request $request)
     {
-        abort_unless($table->type === 'table', 404);
+        $table = Resource::whereKey($tableId)->where('type', 'table')->firstOrFail();
 
         $validated = $request->validate([
             'status' => 'required|string|max:50',
@@ -83,9 +113,9 @@ class TableController extends Controller
         ]);
     }
 
-    public function release(Request $request, Resource $table, TableSessionService $service)
+    public function release(String $tenantSlug, String $tableId, Request $request, TableSessionService $service)
     {
-        abort_unless($table->type === 'table', 404);
+        $table = Resource::whereKey($tableId)->where('type', 'table')->firstOrFail();
 
         $released = $service->release($table, $request->boolean('force'));
 

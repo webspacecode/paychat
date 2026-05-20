@@ -1,0 +1,1 @@
+import{a as t}from"./api-C9Mz32KQ.js";const c={queue(e={}){return t.get("/kitchen/queue",{params:e})},updateBatchStatus(e,u){return t.patch(`/kitchen-batches/${e}/status`,{status:u})}};export{c as k};

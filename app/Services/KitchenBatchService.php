@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class KitchenBatchService
 {
-    private const STATUSES = ['waiting', 'preparing', 'ready', 'served', 'cancelled'];
+    private const STATUSES = ['waiting', 'pending', 'preparing', 'ready', 'served', 'cancelled'];
 
     public function sendFreshItems(Order $order): KitchenBatch
     {
@@ -94,7 +94,17 @@ class KitchenBatchService
             ]);
         }
 
-        $batch->update(['status' => $status]);
+        DB::transaction(function () use ($batch, $status) {
+            $lockedBatch = KitchenBatch::whereKey($batch->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $lockedBatch->update(['status' => $status]);
+
+            $lockedBatch->items()->update([
+                'kitchen_status' => $status,
+            ]);
+        });
 
         return $batch->fresh(['order.table', 'table', 'tableSession', 'items.product']);
     }

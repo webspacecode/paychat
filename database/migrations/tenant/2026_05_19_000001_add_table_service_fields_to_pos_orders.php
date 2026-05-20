@@ -10,15 +10,15 @@ return new class extends Migration
     {
         Schema::table('pos_orders', function (Blueprint $table) {
             if (!Schema::hasColumn('pos_orders', 'dining_flow')) {
-                $table->string('dining_flow', 50)->nullable()->after('order_type');
+                $table->string('dining_flow', 50)->nullable();
             }
 
             if (!Schema::hasColumn('pos_orders', 'table_session_id')) {
-                $table->unsignedBigInteger('table_session_id')->nullable()->after('table_id');
+                $table->unsignedBigInteger('table_session_id')->nullable();
             }
 
             if (!Schema::hasColumn('pos_orders', 'guest_count')) {
-                $table->unsignedInteger('guest_count')->nullable()->after('table_session_id');
+                $table->unsignedInteger('guest_count')->nullable();
             }
         });
 

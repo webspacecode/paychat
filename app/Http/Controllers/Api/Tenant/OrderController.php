@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Models\Tenant\Order;
 use App\Models\Tenant\Customer;
+use App\Events\KitchenBatchCreated;
 use Illuminate\Http\Request;
 use App\Services\Orders\OrderService;
 use App\Services\TableSessionService;
@@ -57,7 +58,7 @@ class OrderController extends Controller
         );
 
         return new OrderResource(
-            $order->load('items.product', 'customer', 'location', 'payments')
+            $order->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
     }
 
@@ -68,18 +69,18 @@ class OrderController extends Controller
         $service->syncItems($order, $request);
 
         return new OrderResource(
-            $order->fresh()->load('items.product', 'customer', 'location', 'payments')
+            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
     }
 
     public function moveToPayment(String $tenantSlug, String $orderId, OrderService $service)
     {
-        $order = Order::find($orderId);
+        $order = Order::findOrFail($orderId);
 
         $service->moveToPendingPayment($order);
 
         return new OrderResource(
-            $order->fresh()->load('items.product', 'customer', 'location', 'payments')
+            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
     }
 
@@ -106,7 +107,7 @@ class OrderController extends Controller
         $service->complete($order);
 
         return new OrderResource(
-            $order->fresh()->load('items.product', 'customer', 'location', 'payments')
+            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
     }
 
@@ -139,7 +140,7 @@ class OrderController extends Controller
         }
 
         return new OrderResource(
-            $order->fresh()->load('items.product', 'customer', 'location', 'payments')
+            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
     }
 
@@ -150,16 +151,61 @@ class OrderController extends Controller
 
     public function show(String $tenantSlug, String $orderId)
     {
-        $order = Order::find($orderId);
+        $order = Order::findOrFail($orderId);
 
         $order->load([
             'items.product',
             'customer',
             'location',
-            'payments'
+            'payments',
+            'table',
+            'tableSession',
+            'kitchenBatches.items.product'
         ]);
 
         return new OrderResource($order);
+    }
+
+    public function kitchenBatches(String $tenantSlug, String $orderId)
+    {
+        $order = Order::with([
+            'kitchenBatches.items.product',
+        ])->findOrFail($orderId);
+
+        return response()->json([
+            'order_id' => $order->id,
+            'data' => $order->kitchenBatches->map(function ($batch) {
+                return [
+                    'id' => $batch->id,
+                    'location_id' => $batch->location_id,
+                    'order_id' => $batch->order_id,
+                    'table_session_id' => $batch->table_session_id,
+                    'table_id' => $batch->table_id,
+                    'batch_number' => $batch->batch_number,
+                    'batch_code' => $batch->batch_code,
+                    'business_date' => $batch->business_date,
+                    'status' => $batch->status,
+                    'sent_at' => $batch->sent_at,
+                    'created_at' => $batch->created_at,
+                    'updated_at' => $batch->updated_at,
+                    'items' => $batch->items->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'product_id' => $item->product_id,
+                            'product_name' => optional($item->product)->name,
+                            'sku' => optional($item->product)->sku,
+                            'quantity' => $item->quantity,
+                            'price' => $item->price,
+                            'total' => $item->total,
+                            'kitchen_status' => $item->kitchen_status,
+                            'kitchen_batch_id' => $item->kitchen_batch_id,
+                            'sent_to_kitchen_at' => $item->sent_to_kitchen_at,
+                            'item_status' => $item->item_status,
+                        ];
+                    })->values(),
+                ];
+            })->values(),
+        ]);
     }
 
     public function updateStatus(String $tenantSlug, String $order, Request $request, OrderService $service)
@@ -216,13 +262,15 @@ class OrderController extends Controller
         );
 
         return new OrderResource(
-            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession')
+            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
     }
 
     public function sendToKitchen(String $tenantSlug, Order $order, KitchenBatchService $service)
     {
         $batch = $service->sendFreshItems($order);
+
+        event(new KitchenBatchCreated($batch));
 
         return response()->json([
             'message' => 'Kitchen batch created',

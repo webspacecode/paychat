@@ -11,8 +11,17 @@ class Resource extends Model
         'name',
         'code',
         'type',
+        'area',
+        'floor',
         'capacity',
         'status',
+        'pos_x',
+        'pos_y',
+        'width',
+        'height',
+        'shape',
+        'rotation',
+        'sort_order',
         'meta'
     ];
 

@@ -10,19 +10,19 @@ return new class extends Migration
     {
         Schema::table('pos_order_items', function (Blueprint $table) {
             if (!Schema::hasColumn('pos_order_items', 'kitchen_status')) {
-                $table->string('kitchen_status', 30)->nullable()->after('total');
+                $table->string('kitchen_status', 30)->nullable();
             }
 
             if (!Schema::hasColumn('pos_order_items', 'kitchen_batch_id')) {
-                $table->unsignedBigInteger('kitchen_batch_id')->nullable()->after('kitchen_status');
+                $table->unsignedBigInteger('kitchen_batch_id')->nullable();
             }
 
             if (!Schema::hasColumn('pos_order_items', 'sent_to_kitchen_at')) {
-                $table->timestamp('sent_to_kitchen_at')->nullable()->after('kitchen_batch_id');
+                $table->timestamp('sent_to_kitchen_at')->nullable();
             }
 
             if (!Schema::hasColumn('pos_order_items', 'item_status')) {
-                $table->string('item_status', 30)->nullable()->after('sent_to_kitchen_at');
+                $table->string('item_status', 30)->nullable();
             }
         });
 
