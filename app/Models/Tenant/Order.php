@@ -16,6 +16,7 @@ class Order extends Model
         'order_no',
         'invoice_id',
         'invoice_no',
+        'token_id',
 
         // Location & Terminal
         'location_id',

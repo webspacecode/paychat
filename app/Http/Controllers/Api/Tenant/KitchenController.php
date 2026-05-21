@@ -10,7 +10,12 @@ class KitchenController extends Controller
     public function index()
     {
         $tokens = OrderToken::with('order')
-            ->whereHas('order', fn ($query) => $query->where('status', '!=', 'cancelled'))
+            ->whereHas('order', fn ($query) => $query
+                ->where('status', '!=', 'cancelled')
+                ->where(function ($q) {
+                    $q->whereNull('dining_flow')
+                        ->orWhere('dining_flow', '!=', 'table_service');
+                }))
             ->whereDate('created_at', today())
             ->get()
             ->groupBy('status');

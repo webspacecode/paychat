@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Tenant\InventoryController;
 use App\Http\Controllers\Api\Tenant\CustomerController;
 use App\Http\Controllers\Api\Tenant\DiningStructureController;
 use App\Http\Controllers\Api\Tenant\InfoController;
+use App\Http\Controllers\Api\Tenant\InlineTokenController;
 use App\Http\Controllers\Api\Tenant\KitchenController;
 use App\Http\Controllers\Api\Tenant\KitchenBatchController;
 use App\Http\Controllers\Api\Tenant\KitchenQueueController;
@@ -144,6 +145,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
 
     Route::patch('/orders/{order}/table', [OrderController::class, 'assignTable'])->whereNumber('order');
     Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen'])->whereNumber('order');
+    Route::post('/orders/{order}/inline-token', [InlineTokenController::class, 'store'])->whereNumber('order');
 
     // Cancel Order
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->whereNumber('order');
