@@ -115,13 +115,30 @@ class OrderKitchenDispatchService
             DB::afterCommit(function () use ($dispatchOrder, $dispatchToken, $reason) {
                 event(new OrderCreated($dispatchOrder, $dispatchToken));
 
-                Log::info('Kitchen token event fired', [
+                Log::info('token.generation.dispatched', [
+                    'request_id' => $this->requestId(),
                     'order_id' => $dispatchOrder->id,
+                    'order_no' => $dispatchOrder->order_no,
+                    'order_type' => $dispatchOrder->order_type,
+                    'dining_flow' => $dispatchOrder->dining_flow,
+                    'item_count' => $dispatchOrder->items->count(),
                     'token_id' => $dispatchToken->id,
                     'token_code' => $dispatchToken->token_code,
                     'reason' => $reason,
                 ]);
             });
         });
+    }
+
+    private function requestId(): ?string
+    {
+        if (! app()->bound('request')) {
+            return null;
+        }
+
+        $request = request();
+
+        return $request->attributes->get('request_id')
+            ?: $request->headers->get('X-Request-ID');
     }
 }

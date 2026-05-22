@@ -11,7 +11,7 @@ class TokenController extends Controller
 {
     public function show($tokenCode)
     {
-        $token = OrderToken::with('order')
+        $token = OrderToken::with(['order.items.product', 'order.table'])
             ->where('token_code', $tokenCode)
             ->firstOrFail();
 

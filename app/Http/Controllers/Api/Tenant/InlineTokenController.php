@@ -4,16 +4,13 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\Order;
-use App\Services\TokenService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use SimpleSoftwareIO\QrCode\Generator;
 
 class InlineTokenController extends Controller
 {
-    public function store(string $tenantSlug, Order $order, TokenService $tokenService)
+    public function store(string $tenantSlug, Order $order)
     {
-        $order->load(['table', 'tableSession', 'token']);
-
         if ($order->order_type !== 'dine_in') {
             throw ValidationException::withMessages([
                 'order' => 'Inline token is only available for dine-in orders.',
@@ -26,62 +23,34 @@ class InlineTokenController extends Controller
             ]);
         }
 
-        if (in_array($order->status, ['completed', 'cancelled'], true)) {
-            throw ValidationException::withMessages([
-                'order' => 'Completed or cancelled order cannot generate an inline token.',
-            ]);
-        }
+        $this->logTableServiceSkip($order);
 
-        if (!$order->table_id || !$order->tableSession || $order->tableSession->status !== 'active') {
-            throw ValidationException::withMessages([
-                'table_session' => 'Order must have an active table session before generating an inline token.',
-            ]);
-        }
-
-        $token = $order->token ?: $tokenService->generateInlineKitchenToken($order);
-        $order = $order->fresh(['table', 'tableSession', 'token']);
-
-        return response()->json([
-            'message' => 'Inline token generated',
-            'token' => $this->tokenPayload($tenantSlug, $token),
-            'order' => [
-                'id' => $order->id,
-                'order_no' => $order->order_no,
-                'dining_flow' => $order->dining_flow,
-                'table' => $order->table ? [
-                    'id' => $order->table->id,
-                    'name' => $order->table->name,
-                    'code' => $order->table->code,
-                ] : null,
-                'guest_count' => $order->guest_count,
-            ],
+        throw ValidationException::withMessages([
+            'order' => 'Table-service dine-in uses kitchen batches from Send to Kitchen instead of QSR tokens.',
         ]);
     }
 
-    private function tokenPayload(string $tenantSlug, $token): array
+    private function logTableServiceSkip(Order $order): void
     {
-        $publicUrl = url('/pos#/kitchen-order-status?'.http_build_query([
-            'tenant' => $tenantSlug,
-            'token' => $token->token_code,
-        ]));
-
-        return [
-            'id' => $token->id,
-            'token_code' => $token->token_code,
-            'status' => $token->status,
-            'public_url' => $publicUrl,
-            'qr_url' => $this->qrDataUri($publicUrl),
-        ];
+        Log::debug('token.generation.skipped_table_service', [
+            'request_id' => $this->requestId(),
+            'order_id' => $order->id,
+            'order_no' => $order->order_no,
+            'order_type' => $order->order_type,
+            'dining_flow' => $order->dining_flow,
+            'item_count' => $order->items()->where('quantity', '>', 0)->count(),
+        ]);
     }
 
-    private function qrDataUri(string $url): ?string
+    private function requestId(): ?string
     {
-        try {
-            $svg = (new Generator())->format('svg')->size(240)->generate($url);
-
-            return 'data:image/svg+xml;base64,'.base64_encode($svg);
-        } catch (\Throwable $e) {
+        if (! app()->bound('request')) {
             return null;
         }
+
+        $request = request();
+
+        return $request->attributes->get('request_id')
+            ?: $request->headers->get('X-Request-ID');
     }
 }

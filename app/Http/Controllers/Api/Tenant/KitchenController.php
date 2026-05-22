@@ -9,7 +9,7 @@ class KitchenController extends Controller
 {
     public function index()
     {
-        $tokens = OrderToken::with('order')
+        $tokens = OrderToken::with(['order.items.product', 'order.table'])
             ->whereHas('order', fn ($query) => $query
                 ->where('status', '!=', 'cancelled')
                 ->where(function ($q) {
