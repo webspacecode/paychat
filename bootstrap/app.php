@@ -3,8 +3,16 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 use App\Http\Middleware\ApiKeyMiddleware;
+use App\Http\Middleware\RequestIdMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,10 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \App\Http\Middleware\IdentifyTenant::class, // 👈 register alias
             'apikey' => ApiKeyMiddleware::class,
+            'request.id' => RequestIdMiddleware::class,
         ]);
 
         $middleware->group('api', [
-            // remove SubstituteBindings from default api group
+            RequestIdMiddleware::class,
         ]);
 
         // Full protected group for tenant
@@ -30,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth:sanctum',
             // 'throttle:api',
             'tenant',
+            RequestIdMiddleware::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
@@ -38,15 +48,53 @@ return Application::configure(basePath: dirname(__DIR__))
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'auth:sanctum',
             // 'throttle:api',
+            RequestIdMiddleware::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
 
         // Public group (NO auth)
         $middleware->group('api-public', [
             'tenant',
+            RequestIdMiddleware::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (! $request->is('api/*') && ! $request->expectsJson()) {
+                return null;
+            }
+
+            $requestId = $request->attributes->get('request_id')
+                ?: $request->headers->get('X-Request-ID')
+                ?: (string) Str::uuid();
+
+            $request->attributes->set('request_id', $requestId);
+
+            $status = match (true) {
+                $e instanceof ValidationException => 422,
+                $e instanceof AuthenticationException => 401,
+                $e instanceof AuthorizationException => 403,
+                $e instanceof ModelNotFoundException => 404,
+                $e instanceof HttpExceptionInterface => $e->getStatusCode(),
+                default => 500,
+            };
+
+            $message = $status >= 500
+                ? 'Server error'
+                : ($e->getMessage() ?: 'Request failed');
+
+            $payload = [
+                'message' => $message,
+                'support_code' => $requestId,
+            ];
+
+            if ($e instanceof ValidationException) {
+                $payload['errors'] = $e->errors();
+            }
+
+            return response()
+                ->json($payload, $status)
+                ->header('X-Request-ID', $requestId);
+        });
     })->create();

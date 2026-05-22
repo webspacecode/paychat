@@ -37,6 +37,9 @@ class Order extends Model
         // Order Classification
         'business_date',
         'order_type',      // dine_in, takeaway, delivery, walk_in
+        'delivery_channel',
+        'delivery_channel_label',
+        'external_order_reference',
         'dining_flow',     // qsr, table_service
         'source',          // pos, web, app
         'notes',

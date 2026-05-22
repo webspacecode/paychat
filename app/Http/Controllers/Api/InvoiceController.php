@@ -6,6 +6,8 @@ use App\Models\Tenant;
 use Illuminate\Http\Request;
 use App\Services\InvoiceService;
 use App\Http\Controllers\Controller;
+use App\Support\Observability;
+use Throwable;
 
 class InvoiceController extends Controller
 {
@@ -14,12 +16,23 @@ class InvoiceController extends Controller
         $apiKey = $req->header('x-api-key');
         $tenant = Tenant::where('api_key', $apiKey)->first();
 
-        return $service->generate(
-            $req->order,
-            $tenant,
-            $req->industry,
-            $req->paper_size
-        );
+        try {
+            return $service->generate(
+                $req->order,
+                $tenant,
+                $req->industry,
+                $req->paper_size
+            );
+        } catch (Throwable $e) {
+            Observability::logFailure('invoice.generate.failed', $e, [
+                'tenant_slug' => $tenant?->slug,
+                'tenant_id' => $tenant?->id,
+                'order_id' => data_get($req->order, 'id') ?? data_get($req->order, 'data.data.id'),
+                'action' => 'invoice.generate',
+            ], $req);
+
+            throw $e;
+        }
     }
 
     public function view($uuid, InvoiceService $service)

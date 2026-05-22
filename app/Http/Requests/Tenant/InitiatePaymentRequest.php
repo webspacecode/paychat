@@ -14,7 +14,9 @@ class InitiatePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'payment_method' => 'required|string|in:cash,upi,phonepe'
+            'payment_method' => 'required|string|in:cash,upi,phonepe',
+            'amount' => 'required|numeric|gt:0',
+            'upi_profile_id' => 'nullable|integer',
         ];
     }
 }

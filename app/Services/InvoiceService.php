@@ -136,6 +136,7 @@ class InvoiceService
         }
         
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
+        $receipt = $this->buildReceiptData($orderData, $tenant, $uuid, $url, $qr);
 
         // We will add condition here based on settings 
         // It runs only if customer display is on
@@ -149,6 +150,7 @@ class InvoiceService
                 'branding'=>$tenant->branding,
                 'tax'=>$tenant->taxConfig,
                 'totals'=>$totals,
+                'receipt'=>$receipt,
                 'qr'=>$qr,
                 'url'=>$url,
                 'config'=>$config
@@ -266,6 +268,16 @@ class InvoiceService
         $tenant = Tenant::where('id', $inv->tenant_id)->first();
 
         $totals = $this->calculateGST($inv->order_data,$tenant->taxConfig);
+        $url = request()->url();
+        $qr = $this->safeQrSvg($url);
+        $receipt = $this->buildReceiptData(
+            $inv->order_data,
+            $tenant,
+            $inv->uuid,
+            $url,
+            $qr,
+            $inv
+        );
 
         return view(
             $template,
@@ -274,8 +286,9 @@ class InvoiceService
                 'branding'=>$inv->tenant->branding,
                 'tax'=>$inv->tenant->taxConfig,
                 'totals'=>$totals,
-                'qr'=>null,
-                'url'=>request()->url(),
+                'receipt'=>$receipt,
+                'qr'=>$qr,
+                'url'=>$url,
                 'pdfUrl'=>route('invoice.pdf', ['uuid' => $uuid]),
                 'logoSrc'=>$this->invoiceLogoSrc($inv->tenant->branding),
                 'isPdf'=>false
@@ -302,14 +315,26 @@ class InvoiceService
         $tenant = Tenant::where('id', $inv->tenant_id)->first();
         $orderData = $this->normalizeOrder($inv->order_data);
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
+        $url = url("/api/invoice/$uuid");
+        $qr = $this->safeQrSvg($url);
+        $receipt = $this->buildReceiptData(
+            $orderData,
+            $tenant,
+            $inv->uuid,
+            $url,
+            $qr,
+            $inv,
+            true
+        );
 
         $html = view($template, [
             'order'=>$orderData,
             'branding'=>$inv->tenant->branding,
             'tax'=>$inv->tenant->taxConfig,
             'totals'=>$totals,
-            'qr'=>null,
-            'url'=>url("/api/invoice/$uuid"),
+            'receipt'=>$receipt,
+            'qr'=>$qr,
+            'url'=>$url,
             'pdfUrl'=>null,
             'logoSrc'=>$this->invoiceLogoSrc($inv->tenant->branding, true),
             'isPdf'=>true
@@ -426,6 +451,7 @@ class InvoiceService
         }
         
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
+        $receipt = $this->buildReceiptData($orderData, $tenant, $uuid, $url, $qr, $inv);
         
         return [
             'html'=>view($template,[
@@ -433,6 +459,7 @@ class InvoiceService
                 'branding'=>$tenant->branding,
                 'tax'=>$tenant->taxConfig,
                 'totals'=>$totals,
+                'receipt'=>$receipt,
                 'qr'=>$qr,
                 'url'=>$url,
                 'pdfUrl'=>route('invoice.pdf', ['uuid' => $uuid]),
@@ -481,6 +508,97 @@ class InvoiceService
         ];
     }
 
+    private function buildReceiptData(
+        array $order,
+        Tenant $tenant,
+        string $invoiceNo,
+        ?string $invoiceUrl,
+        ?string $qrSvg = null,
+        ?Invoice $invoice = null,
+        bool $inlineLogos = false
+    ): array {
+        $branding = $tenant->branding;
+        $taxConfig = $tenant->taxConfig;
+        $payments = collect($order['payments'] ?? [])
+            ->map(fn ($payment) => [
+                'method' => strtoupper((string) ($payment['payment_method'] ?? '')),
+                'amount' => (float) ($payment['amount'] ?? 0),
+                'status' => $payment['status'] ?? null,
+                'paid_at' => $payment['paid_at'] ?? null,
+            ])
+            ->values();
+
+        $successfulPaymentAmount = $payments
+            ->filter(fn ($payment) => ($payment['status'] ?? null) === 'success')
+            ->sum('amount');
+
+        $paidAmount = (float) ($order['paid_amount'] ?? 0);
+
+        if ($paidAmount <= 0 && $successfulPaymentAmount > 0) {
+            $paidAmount = $successfulPaymentAmount;
+        }
+
+        $kotCodes = collect($order['kitchen_batches'] ?? [])
+            ->pluck('batch_code')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return [
+            'merchant' => [
+                'name' => $branding?->company_name ?? $tenant->name ?? 'Cafe',
+                'phone' => $branding?->phone ?? $tenant->phone ?? null,
+                'address' => $branding?->address ?? $tenant->address ?? null,
+                'gstin' => $taxConfig?->gst_number ?? $tenant->gst_number ?? null,
+                'logo_url' => $this->invoiceLogoSrc($branding, $inlineLogos),
+            ],
+            'platform' => [
+                'paychat_logo_url' => $this->paychatLogoSrc($inlineLogos),
+            ],
+            'invoice' => [
+                'invoice_no' => $invoiceNo,
+                'order_no' => $order['order_no'] ?? null,
+                'date_time' => $invoice?->created_at?->format('d M Y h:i A')
+                    ?? data_get($order, 'completed_at')
+                    ?? data_get($order, 'updated_at')
+                    ?? now()->format('d M Y h:i A'),
+            ],
+            'dining' => [
+                'order_type' => $order['order_type'] ?? null,
+                'dining_flow' => $order['dining_flow'] ?? null,
+                'table_name' => data_get($order, 'table.name') ?? data_get($order, 'table.code'),
+                'guest_count' => $order['guest_count'] ?? null,
+                'token_code' => data_get($order, 'token.token_code'),
+                'kot_codes' => $kotCodes,
+            ],
+            'items' => collect($order['items'] ?? [])
+                ->map(fn ($item) => [
+                    'name' => $item['product_name'] ?? $item['name'] ?? 'Item',
+                    'qty' => (float) ($item['quantity'] ?? $item['qty'] ?? 0),
+                    'rate' => (float) ($item['price'] ?? $item['rate'] ?? 0),
+                    'total' => (float) ($item['total'] ?? $item['subtotal'] ?? (($item['quantity'] ?? 0) * ($item['price'] ?? 0))),
+                ])
+                ->values()
+                ->all(),
+            'totals' => [
+                'subtotal' => (float) ($order['subtotal'] ?? 0),
+                'discount' => (float) ($order['discount'] ?? 0),
+                'tax' => (float) ($order['tax'] ?? 0),
+                'service_charge' => (float) ($order['service_charge'] ?? 0),
+                'rounding' => (float) ($order['rounding'] ?? 0),
+                'grand_total' => (float) ($order['total'] ?? 0),
+            ],
+            'payments' => $payments->all(),
+            'paid_amount' => $paidAmount,
+            'qr' => [
+                'invoice_url' => $invoiceUrl,
+                'review_url' => $invoiceUrl,
+                'qr_svg_or_url' => $qrSvg,
+            ],
+        ];
+    }
+
     private function invoiceLogoSrc($branding, bool $inline = false): ?string
     {
         $logo = $branding->logo ?? null;
@@ -503,6 +621,31 @@ class InvoiceService
         }
 
         return asset($relativePath);
+    }
+
+    private function paychatLogoSrc(bool $inline = false): ?string
+    {
+        $relativePath = 'color-paychat-logo-main.svg';
+        $publicPath = public_path($relativePath);
+
+        if (! is_file($publicPath)) {
+            return null;
+        }
+
+        if ($inline) {
+            return 'data:image/svg+xml;base64,'.base64_encode(file_get_contents($publicPath));
+        }
+
+        return asset($relativePath);
+    }
+
+    private function safeQrSvg(string $url): ?string
+    {
+        try {
+            return (new Generator())->format('svg')->size(120)->generate($url);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function configuredBrowsershot(string $html): Browsershot

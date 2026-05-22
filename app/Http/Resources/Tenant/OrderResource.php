@@ -27,6 +27,14 @@ class OrderResource extends JsonResource
             |--------------------------------------------------------------------------
             */
             'order_type' => $this->order_type,
+            'delivery_channel' => $this->delivery_channel,
+            'delivery_channel_label' => $this->delivery_channel_label,
+            'external_order_reference' => $this->external_order_reference,
+            'delivery' => [
+                'channel' => $this->delivery_channel,
+                'label' => $this->delivery_channel_label,
+                'external_reference' => $this->external_order_reference,
+            ],
 
             'location' => [
                 'id' => $this->location_id,
@@ -156,6 +164,8 @@ class OrderResource extends JsonResource
                 return [
                     'id' => $payment->id,
                     'payment_method' => $payment->payment_method,
+                    'upi_profile_id' => $payment->upi_profile_id,
+                    'upi_profile' => $this->paymentUpiProfile($payment),
                     'amount' => $payment->amount,
                     'transaction_id' => $payment->transaction_id ?? null,
                     'status' => $payment->status,
@@ -194,6 +204,21 @@ class OrderResource extends JsonResource
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+        ];
+    }
+
+    private function paymentUpiProfile($payment): ?array
+    {
+        $profile = $payment->meta['upi_profile'] ?? null;
+
+        if (! is_array($profile)) {
+            return null;
+        }
+
+        return [
+            'id' => $profile['id'] ?? null,
+            'label' => $profile['label'] ?? null,
+            'payee_name' => $profile['payee_name'] ?? null,
         ];
     }
 }

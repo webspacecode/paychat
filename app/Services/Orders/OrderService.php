@@ -22,6 +22,14 @@ use App\Events\OrderStatusUpdated;
 class OrderService
 {
     private const ACTIVE_KITCHEN_STATUSES = ['waiting', 'preparing', 'ready'];
+    public const DELIVERY_CHANNELS = [
+        'swiggy',
+        'zomato',
+        'phone_call',
+        'whatsapp',
+        'own_delivery',
+        'other',
+    ];
     private const CANCEL_REASON_TYPES = [
         'customer_changed_mind',
         'wrong_order',
@@ -223,7 +231,7 @@ class OrderService
         });
     }
 
-    public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null, $diningFlow = null, $guestCount = null, $tableSessionId = null)
+    public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null, $diningFlow = null, $guestCount = null, $tableSessionId = null, array $deliverySource = [])
     {
         $orderData = [
             'order_no' => strtoupper('ORD-' . Str::uuid()),
@@ -238,11 +246,45 @@ class OrderService
             'payment_status' => 'unpaid'
         ];
 
+        $orderData = array_merge(
+            $orderData,
+            $this->deliverySourceAttributes($orderType, $deliverySource)
+        );
+
         if ($this->getOrderBusinessDateColumn()) {
             $orderData['business_date'] = $this->resolveKitchenBusinessDate([]);
         }
 
         return Order::create($orderData);
+    }
+
+    public function updateDeliverySource(Order $order, array $deliverySource): Order
+    {
+        $order->update($this->deliverySourceAttributes($order->order_type, $deliverySource));
+
+        return $order->fresh();
+    }
+
+    public static function isDeliveryOrderType(?string $orderType): bool
+    {
+        return strtolower(trim((string) $orderType)) === 'delivery';
+    }
+
+    public function deliverySourceAttributes(?string $orderType, array $deliverySource): array
+    {
+        if (! self::isDeliveryOrderType($orderType)) {
+            return [
+                'delivery_channel' => null,
+                'delivery_channel_label' => null,
+                'external_order_reference' => null,
+            ];
+        }
+
+        return [
+            'delivery_channel' => $deliverySource['delivery_channel'] ?? null,
+            'delivery_channel_label' => $deliverySource['delivery_channel_label'] ?? null,
+            'external_order_reference' => $deliverySource['external_order_reference'] ?? null,
+        ];
     }
 
     public function addItem(Order $order, $productId, $qty)

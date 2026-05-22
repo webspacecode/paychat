@@ -5,88 +5,189 @@
     <title>Invoice</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             padding: 0;
             background: #fff;
-            font-family: monospace;
+            color: #111;
+            font-family: "Courier New", monospace;
+            font-size: 11px;
+            line-height: 1.25;
         }
 
         .receipt {
             width: 80mm;
-            margin: auto;
-            padding: 8px;
-            color: #111;
+            margin: 0 auto;
+            padding: 8px 9px;
         }
 
-        /* HEADER */
-        .header {
+        .center {
             text-align: center;
         }
 
-        .logo {
-            max-height: 50px;
-            margin-bottom: 5px;
+        .merchant-logo {
+            display: block;
+            max-width: 210px;
+            max-height: 70px;
+            margin: 0 auto 5px;
+            object-fit: contain;
         }
 
-        .company {
+        .merchant-name {
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 800;
+            line-height: 1.1;
+            text-transform: uppercase;
+            word-break: break-word;
         }
 
-        .meta {
-            font-size: 11px;
-            color: #555;
+        .muted {
+            color: #333;
+            font-size: 10px;
         }
 
-        /* DIVIDER */
         .divider {
-            border-top: 1px dashed #999;
+            border-top: 1px dashed #111;
             margin: 6px 0;
         }
 
-        /* ITEMS */
-        .item {
-            font-size: 12px;
-            margin-bottom: 4px;
+        .bill-no {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0;
+            margin-top: 3px;
+            word-break: break-word;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px 8px;
+        }
+
+        .meta-grid .right {
+            text-align: right;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-top: 4px;
+        }
+
+        .chip {
+            border: 1px solid #111;
+            border-radius: 2px;
+            padding: 1px 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            border-bottom: 1px dashed #111;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 0;
+            text-align: left;
+        }
+
+        td {
+            padding: 3px 0;
+            vertical-align: top;
+        }
+
+        .col-item {
+            width: 48%;
+        }
+
+        .col-qty,
+        .col-rate,
+        .col-amt {
+            text-align: right;
+            white-space: nowrap;
         }
 
         .item-name {
-            font-weight: 500;
+            padding-right: 5px;
+            overflow-wrap: anywhere;
         }
 
-        .item-row {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        /* TOTALS */
         .row {
             display: flex;
             justify-content: space-between;
-            font-size: 12px;
+            gap: 8px;
+            padding: 1px 0;
         }
 
-        .total {
+        .row span:last-child {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .grand-total {
             font-size: 15px;
-            font-weight: bold;
-            border-top: 1px dashed #000;
+            font-weight: 900;
+            border-top: 1px dashed #111;
+            margin-top: 4px;
             padding-top: 5px;
         }
 
-        /* FOOTER */
-        .footer {
+        .paid {
+            font-weight: 800;
+        }
+
+        .qr-wrap {
             text-align: center;
-            font-size: 11px;
-            margin-top: 10px;
+            margin-top: 8px;
+        }
+
+        .qr-box {
+            width: 112px;
+            height: 112px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-box svg,
+        .qr-box img {
+            width: 112px !important;
+            height: 112px !important;
+            display: block;
+        }
+
+        .paychat-logo {
+            display: block;
+            max-width: 100px;
+            max-height: 28px;
+            margin: 8px auto 2px;
+            object-fit: contain;
+        }
+
+        .powered {
+            text-align: center;
+            font-size: 10px;
+            color: #333;
+            margin-top: 2px;
         }
 
         .thanks {
-            margin-top: 5px;
-            font-weight: bold;
+            text-align: center;
+            font-weight: 800;
+            margin-top: 7px;
         }
 
-        /* PRINT SETTINGS */
         @media print {
             body {
                 margin: 0;
@@ -100,201 +201,195 @@
                 size: 80mm auto;
                 margin: 0;
             }
-        }
-        .qr-box {
-            width: 90px;
-            height: 90px;
-            margin: 10px auto;
-            display: block;
-            position: relative;
-        }
 
-        .qr-box svg,
-        .qr-box img {
-            width: 90px !important;
-            height: 90px !important;
-            display: block;
-        }
-
-        .qr-text {
-            text-align: center;
-            font-size: 11px;
-            margin-top: 6px;
-            clear: both;
-        }
-
-        .logo-wrap {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .invoice-link {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 10px 16px;
-            background: #000;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-
-        .invoice-link:hover {
-            background: #333;
-        }
-
-        .invoice-actions {
-            width: 80mm;
-            margin: 10px auto 0;
-            padding: 0 8px;
-            box-sizing: border-box;
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }
-
-        .pdf-download {
-            display: inline-block;
-            padding: 7px 12px;
-            background: #111;
-            color: #fff;
-            border-radius: 6px;
-            font-size: 12px;
-            line-height: 1;
-            text-decoration: none;
-        }
-
-        .pdf-download:hover {
-            background: #333;
-        }
-
-        @media print {
-            .invoice-actions {
-                display: none !important;
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
     </style>
 </head>
 
 <body>
+@php
+    $receipt = $receipt ?? [];
+    $merchant = $receipt['merchant'] ?? [];
+    $platform = $receipt['platform'] ?? [];
+    $invoice = $receipt['invoice'] ?? [];
+    $dining = $receipt['dining'] ?? [];
+    $items = $receipt['items'] ?? [];
+    $receiptTotals = $receipt['totals'] ?? [];
+    $receiptPayments = collect($receipt['payments'] ?? []);
+    $qrData = $receipt['qr'] ?? [];
+    $merchantName = $merchant['name'] ?? ($branding->company_name ?? 'Cafe Name');
+    $merchantLogo = $merchant['logo_url'] ?? ($logoSrc ?? null);
+    $paychatLogo = $platform['paychat_logo_url'] ?? null;
+    $kotCodes = $dining['kot_codes'] ?? [];
+    $paymentMethods = $receiptPayments
+        ->filter(fn ($payment) => ($payment['status'] ?? null) === 'success')
+        ->pluck('method')
+        ->filter()
+        ->unique()
+        ->implode(' + ');
+@endphp
 
 <div class="receipt">
-
-    <!-- HEADER -->
-    <div class="header">
-        @if(!empty($logoSrc))
-        <div class="logo-wrap">
-            <img src="{{ $logoSrc }}" class="logo">
-        </div>
+    <div class="center">
+        @if(!empty($merchantLogo))
+            <img src="{{ $merchantLogo }}" class="merchant-logo" alt="{{ $merchantName }}">
         @endif
 
-        <div class="company" style="color:{{ $branding->primary_color ?? '#000' }}">
-            {{ $branding->company_name ?? 'Cafe Name' }}
-        </div>
+        <div class="merchant-name">{{ $merchantName }}</div>
 
-        <div class="meta">
-            {{ $branding->phone ?? '' }} <br>
-            Order: {{ $order['order_no'] ?? '---' }} <br>
-            {{ now()->format('d M Y h:i A') }}
-        </div>
+        @if(!empty($merchant['address']))
+            <div class="muted">{{ $merchant['address'] }}</div>
+        @endif
+
+        @if(!empty($merchant['phone']))
+            <div class="muted">Ph: {{ $merchant['phone'] }}</div>
+        @endif
+
+        @if(!empty($merchant['gstin']))
+            <div class="muted">GSTIN: {{ $merchant['gstin'] }}</div>
+        @endif
     </div>
 
     <div class="divider"></div>
 
-    <!-- ITEMS -->
-    @foreach($order['items'] ?? [] as $item)
-        <div class="item">
-            <div class="item-name">
-                {{ $item['product_name'] }}
-            </div>
-            <div class="item-row">
-                <span>{{ $item['quantity'] }} x ₹{{ $item['price'] }}</span>
-                <span>₹{{ $item['quantity'] * $item['price'] }}</span>
-            </div>
-        </div>
-    @endforeach
+    <div class="center">
+        <div class="muted">BILL / INVOICE NO</div>
+        <div class="bill-no">{{ $invoice['invoice_no'] ?? ($order['invoice_no'] ?? '---') }}</div>
+        <div class="muted">Order: {{ $invoice['order_no'] ?? ($order['order_no'] ?? '---') }}</div>
+    </div>
 
     <div class="divider"></div>
 
-    <!-- TOTALS -->
+    <div class="meta-grid">
+        <div>{{ $invoice['date_time'] ?? now()->format('d M Y h:i A') }}</div>
+        <div class="right">{{ strtoupper(str_replace('_', ' ', $dining['order_type'] ?? ($order['order_type'] ?? ''))) }}</div>
+
+        @if(!empty($dining['table_name']))
+            <div>Table: {{ $dining['table_name'] }}</div>
+            <div class="right">
+                @if(!empty($dining['guest_count']))
+                    Guests: {{ $dining['guest_count'] }}
+                @endif
+            </div>
+        @endif
+    </div>
+
+    @if(!empty($dining['token_code']) || !empty($kotCodes))
+        <div class="chips">
+            @if(!empty($dining['token_code']))
+                <span class="chip">Token {{ $dining['token_code'] }}</span>
+            @endif
+
+            @foreach($kotCodes as $kotCode)
+                <span class="chip">KOT {{ $kotCode }}</span>
+            @endforeach
+        </div>
+    @endif
+
+    <div class="divider"></div>
+
+    <table>
+        <thead>
+        <tr>
+            <th class="col-item">Item</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-rate">Rate</th>
+            <th class="col-amt">Amt</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach($items as $item)
+            <tr>
+                <td class="item-name">{{ $item['name'] ?? 'Item' }}</td>
+                <td class="col-qty">{{ rtrim(rtrim(number_format($item['qty'] ?? 0, 2), '0'), '.') }}</td>
+                <td class="col-rate">{{ number_format($item['rate'] ?? 0, 2) }}</td>
+                <td class="col-amt">{{ number_format($item['total'] ?? 0, 2) }}</td>
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
     <div class="row">
         <span>Subtotal</span>
-        <span>₹{{ number_format($totals['subtotal'] ?? 0, 2) }}</span>
+        <span>Rs {{ number_format($receiptTotals['subtotal'] ?? 0, 2) }}</span>
     </div>
 
-    <div class="row">
-        <span>GST</span>
-        <span>₹{{ number_format($totals['gst'] ?? 0, 2) }}</span>
+    @if(($receiptTotals['discount'] ?? 0) > 0)
+        <div class="row">
+            <span>Discount</span>
+            <span>- Rs {{ number_format($receiptTotals['discount'] ?? 0, 2) }}</span>
+        </div>
+    @endif
+
+    @if(($receiptTotals['tax'] ?? 0) > 0)
+        <div class="row">
+            <span>Tax</span>
+            <span>Rs {{ number_format($receiptTotals['tax'] ?? 0, 2) }}</span>
+        </div>
+    @endif
+
+    @if(($receiptTotals['service_charge'] ?? 0) > 0)
+        <div class="row">
+            <span>Service Charge</span>
+            <span>Rs {{ number_format($receiptTotals['service_charge'] ?? 0, 2) }}</span>
+        </div>
+    @endif
+
+    @if(($receiptTotals['rounding'] ?? 0) != 0)
+        <div class="row">
+            <span>Rounding</span>
+            <span>Rs {{ number_format($receiptTotals['rounding'] ?? 0, 2) }}</span>
+        </div>
+    @endif
+
+    <div class="row grand-total">
+        <span>Grand Total</span>
+        <span>Rs {{ number_format($receiptTotals['grand_total'] ?? 0, 2) }}</span>
     </div>
+
     <div class="divider"></div>
 
-    <div class="row total">
-        <span>Total</span>
-        <span>₹{{ number_format($totals['total'] ?? 0, 2) }}</span>
+    <div class="row paid">
+        <span>Paid Amount</span>
+        <span>Rs {{ number_format($receipt['paid_amount'] ?? 0, 2) }}</span>
     </div>
+
+    @if($paymentMethods)
+        <div class="row">
+            <span>Paid Via</span>
+            <span>{{ $paymentMethods }}</span>
+        </div>
+    @endif
+
+    @if(!empty($qrData['qr_svg_or_url']))
+        <div class="divider"></div>
+        <div class="qr-wrap">
+            <div class="qr-box">
+                {!! $qrData['qr_svg_or_url'] !!}
+            </div>
+            <div class="muted">Scan for invoice / feedback</div>
+            @if(!empty($qrData['invoice_url']))
+                <div class="muted">{{ $qrData['invoice_url'] }}</div>
+            @endif
+        </div>
+    @endif
+
+    <div class="thanks">Thank you! Visit again</div>
 
     <div class="divider"></div>
 
-    <!-- FOOTER -->
-    <div class="footer">
-        @if(!empty($order['payments'][0]['payment_method']))
-            <div class="row">
-                <span>Paid via</span>
-                <span>{{ strtoupper($order['payments'][0]['payment_method']) }}</span>
-            </div>
+    <div class="center">
+        @if(!empty($paychatLogo))
+            <img src="{{ $paychatLogo }}" class="paychat-logo" alt="PayChat">
         @endif
-        @if(isset($qr))
-
-            <div style="text-align:center; margin-top:12px;">
-
-                <!-- QR WRAPPER -->
-                <div style="
-                    width: 160px;
-                    height: 160px;
-                    margin: 0 auto;
-                    padding: 10px;
-                    background: #fff;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                ">
-                    {!! $qr !!}
-                </div>
-
-                <!-- LABEL -->
-                <div style="font-size:12px; margin-top:6px;">
-                    Scan for invoice
-                </div>
-
-                <!-- LINK -->
-                <div style="margin-top:6px;">
-                    <a href="{!! $url !!}" target="_blank"
-                    style="font-size:12px; color:#000; text-decoration:underline;">
-                        View Invoice
-                    </a>
-                </div>
-
-            </div>
-
-        @endif
-
-        <div class="thanks">☕ Thank you! Visit again</div>
-        <!-- <div class="thanks">
-            <a href="{{ $url }}" target="_blank" class="invoice-link">
-                🧾 Get your invoice
-            </a>
-        </div> -->
-
+        <div class="powered">Powered by PayChat</div>
     </div>
-
 </div>
-
-{{-- @if(!($isPdf ?? false) && !empty($pdfUrl))
-    <div class="invoice-actions">
-        <a href="{{ $pdfUrl }}" class="pdf-download">
-            Download PDF
-        </a>
-    </div>
-@endif --}}
-
 </body>
 </html>

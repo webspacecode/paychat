@@ -7,14 +7,21 @@ use App\Models\Tenant\OrderToken;
 use App\Models\Tenant\Setting;
 use App\Constants\TokenStatus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TokenService
 {
+    public function isEnabled(): bool
+    {
+        return (bool) Setting::get('token_system_enabled', null, false);
+    }
+
     public function generate($order)
     {
-        $enabled = Setting::get('token_system_enabled', null, false);
-
-        if (!$enabled) {
+        if (!$this->isEnabled()) {
+            Log::debug('Token generation skipped: token management disabled', [
+                'order_id' => $order?->id,
+            ]);
             return null;
         }
 
@@ -44,6 +51,12 @@ class TokenService
                     ]);
                 }
 
+                Log::debug('Token generation skipped: token already exists', [
+                    'order_id' => $lockedOrder->id,
+                    'token_id' => $existingToken->id,
+                    'token_code' => $existingToken->token_code,
+                ]);
+
                 return $existingToken;
             }
 
@@ -71,6 +84,12 @@ class TokenService
 
             $lockedOrder->update([
                 'token_id' => $token->id
+            ]);
+
+            Log::info('Token generated for order', [
+                'order_id' => $lockedOrder->id,
+                'token_id' => $token->id,
+                'token_code' => $token->token_code,
             ]);
 
             return $token;

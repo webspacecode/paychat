@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
 use App\Models\Tenant\PaymentMethod;
+use App\Models\Tenant\UpiProfile;
 use Illuminate\Support\Facades\DB;
 use App\Services\Orders\OrderService;
 use App\Services\Payments\Strategies\CashPaymentStrategy;
@@ -30,7 +31,7 @@ class PaymentService
         };
     }
 
-    public function createPayment(Order $order, $method, $amount)
+    public function createPayment(Order $order, $method, $amount, ?int $upiProfileId = null)
     {
         if (!$order) {
             throw new \Exception('Order not found');
@@ -73,7 +74,7 @@ class PaymentService
 
             'cash' => $this->handleCash($order, $amount),
 
-            'upi' => $this->handleUpi($order, $amount, $config),
+            'upi' => $this->handleUpi($order, $amount, $config, $upiProfileId),
 
             default => throw new \Exception("Unsupported payment method")
         };
@@ -93,8 +94,14 @@ class PaymentService
         return $payment;
     }
 
-    private function handleUpi(Order $order, $amount, $config)
+    private function handleUpi(Order $order, $amount, $config, ?int $upiProfileId = null)
     {
+        $profile = $this->resolveUpiProfile($order, $upiProfileId);
+
+        if ($profile) {
+            return $this->handleProfileUpi($order, $amount, $profile);
+        }
+
         if ($config->mode === 'personal') {
             return $this->handlePersonalUpi($order, $amount, $config);
         }
@@ -104,6 +111,75 @@ class PaymentService
         }
 
         throw new \Exception('Invalid UPI configuration');
+    }
+
+    private function resolveUpiProfile(Order $order, ?int $upiProfileId = null): ?UpiProfile
+    {
+        if ($upiProfileId) {
+            $profile = UpiProfile::whereKey($upiProfileId)
+                ->where('is_active', true)
+                ->first();
+
+            if (! $profile) {
+                throw new \Exception('Selected UPI profile is not active');
+            }
+
+            if ($profile->location_id !== null && (int) $profile->location_id !== (int) $order->location_id) {
+                throw new \Exception('Selected UPI profile is not available for this order location');
+            }
+
+            return $profile;
+        }
+
+        if ($order->location_id) {
+            $locationDefault = UpiProfile::query()
+                ->where('is_active', true)
+                ->where('is_default', true)
+                ->where('location_id', $order->location_id)
+                ->orderBy('sort_order')
+                ->first();
+
+            if ($locationDefault) {
+                return $locationDefault;
+            }
+        }
+
+        return UpiProfile::query()
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->whereNull('location_id')
+            ->orderBy('sort_order')
+            ->first();
+    }
+
+    private function handleProfileUpi(Order $order, $amount, UpiProfile $profile)
+    {
+        $payeeName = $profile->payee_name ?: $profile->label;
+        $ref = "ORD-{$order->id}";
+
+        $upiQr = $this->buildUpiPayload($profile->upi_id, $payeeName, $amount, $ref);
+        $profileSnapshot = $this->upiProfileSnapshot($profile);
+
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'upi',
+            'mode' => 'personal',
+            'provider' => null,
+            'provider_ref' => $ref,
+            'upi_profile_id' => $profile->id,
+            'amount' => $amount,
+            'status' => 'pending',
+            'upi_qr_url' => $upiQr,
+            'meta' => [
+                'upi_id' => $profile->upi_id,
+                'note' => "{$profile->label}#{$order->order_no}",
+                'upi_profile' => $profileSnapshot,
+            ],
+        ]);
+
+        $this->broadcastPaymentQr($order, $payment, $upiQr, $profileSnapshot);
+
+        return $payment->fresh('upiProfile');
     }
 
     private function handlePersonalUpi(Order $order, $amount, $config)
@@ -125,15 +201,7 @@ class PaymentService
         // 🔥 System reference (used later for webhook / tracking)
         $ref = "ORD-{$order->id}";
 
-        // 🔥 Build UPI URL
-        $upiQr = "upi://pay?" . http_build_query([
-            'pa' => $upiId,     // Payee UPI ID
-            'pn' => $name,      // Store name
-            'am' => $amount,    // Amount
-            'cu' => 'INR',      // Currency
-            'tn' => "Pay now",      // 👀 User-visible (keep short)
-            'tr' => $ref        // 🧠 Backend reference
-        ]);
+        $upiQr = $this->buildUpiPayload($upiId, $name, $amount, $ref);
 
         // 🔥 Create payment record
         $payment = Payment::create([
@@ -194,8 +262,10 @@ class PaymentService
 
         if (!$response->successful()) {
             \Log::error("PhonePe Pay API Error", [
+                'order_id' => $order->id,
+                'location_id' => $order->location_id,
+                'provider' => 'phonepe',
                 'status' => $response->status(),
-                'body' => $response->body()
             ]);
             throw new \Exception("PhonePe API failed");
         }
@@ -227,7 +297,42 @@ class PaymentService
         ];
     }
 
-    private function broadcastPaymentQr(Order $order, Payment $payment, string $upiQr): void
+    private function buildUpiPayload(string $upiId, string $payeeName, $amount, string $reference): string
+    {
+        return "upi://pay?" . http_build_query([
+            'pa' => $upiId,
+            'pn' => $payeeName,
+            'am' => $amount,
+            'cu' => 'INR',
+            'tn' => 'Pay now',
+            'tr' => $reference,
+        ]);
+    }
+
+    private function upiProfileSnapshot(UpiProfile $profile): array
+    {
+        return [
+            'id' => $profile->id,
+            'label' => $profile->label,
+            'upi_id' => $profile->upi_id,
+            'payee_name' => $profile->payee_name,
+        ];
+    }
+
+    private function publicUpiProfilePayload(?array $snapshot): ?array
+    {
+        if (! $snapshot) {
+            return null;
+        }
+
+        return [
+            'id' => $snapshot['id'] ?? null,
+            'label' => $snapshot['label'] ?? null,
+            'payee_name' => $snapshot['payee_name'] ?? null,
+        ];
+    }
+
+    private function broadcastPaymentQr(Order $order, Payment $payment, string $upiQr, ?array $upiProfile = null): void
     {
         $qr = null;
 
@@ -246,6 +351,7 @@ class PaymentService
             'amount' => $payment->amount,
             'qr' => $qr ? base64_encode($qr) : null,
             'qr_payload' => $upiQr,
+            'upi_profile' => $this->publicUpiProfilePayload($upiProfile),
         ]));
     }
 

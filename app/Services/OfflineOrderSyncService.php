@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\OrderCreated;
 use App\Http\Resources\Tenant\OrderResource;
 use App\Models\OfflineOrderSync;
 use App\Models\Tenant\Customer;
@@ -20,7 +19,7 @@ class OfflineOrderSyncService
     public function __construct(
         private OrderService $orderService,
         private PaymentService $paymentService,
-        private TokenService $tokenService
+        private OrderKitchenDispatchService $kitchenDispatch
     ) {
     }
 
@@ -95,7 +94,15 @@ class OfflineOrderSyncService
             $payload['location_id'],
             $customerId,
             $payload['order_type'] ?? 'pos',
-            $payload['table_id'] ?? null
+            $payload['table_id'] ?? null,
+            null,
+            null,
+            null,
+            [
+                'delivery_channel' => $payload['delivery_channel'] ?? null,
+                'delivery_channel_label' => $payload['delivery_channel_label'] ?? null,
+                'external_order_reference' => $payload['external_order_reference'] ?? null,
+            ]
         );
 
         $this->applyOfflineOrderMetadata($order, $payload);
@@ -136,7 +143,8 @@ class OfflineOrderSyncService
         $payment = $this->paymentService->createPayment(
             $order,
             $paymentPayload['method'],
-            $paymentPayload['amount']
+            $paymentPayload['amount'],
+            $paymentPayload['method'] === 'upi' ? ($paymentPayload['upi_profile_id'] ?? null) : null
         );
 
         if (is_array($payment)) {
@@ -150,11 +158,7 @@ class OfflineOrderSyncService
             throw new \Exception('Offline payment did not fully complete the order');
         }
 
-        $token = $order->fresh()->token ?: $this->tokenService->generate($order->fresh());
-
-        if ($token) {
-            event(new OrderCreated($order->fresh(), $token));
-        }
+        $this->kitchenDispatch->ensureTokenAndDispatchWhenReady($order->fresh(), 'offline_order_synced');
 
         return $payment;
     }

@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Tenant\TableController;
 use App\Http\Controllers\Api\Tenant\TableSessionController;
 use App\Http\Controllers\Api\Tenant\PhonePeController;
 use App\Http\Controllers\Api\Tenant\TokenController;
+use App\Http\Controllers\Api\Tenant\UpiProfileController;
 use App\Http\Controllers\Api\DemoLeadController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\Tenant\ReportController;
@@ -142,6 +143,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
 
     // Attach Customer
     Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer']);
+    Route::patch('/orders/{order}/delivery-source', [OrderController::class, 'updateDeliverySource'])->whereNumber('order');
 
     Route::patch('/orders/{order}/table', [OrderController::class, 'assignTable'])->whereNumber('order');
     Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen'])->whereNumber('order');
@@ -157,6 +159,12 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment']);
 
     Route::get('/payments/methods', [PaymentController::class, 'list']);
+
+    Route::get('/upi-profiles', [UpiProfileController::class, 'index']);
+    Route::post('/upi-profiles', [UpiProfileController::class, 'store']);
+    Route::patch('/upi-profiles/{profile}', [UpiProfileController::class, 'update'])->whereNumber('profile');
+    Route::delete('/upi-profiles/{profile}', [UpiProfileController::class, 'destroy'])->whereNumber('profile');
+    Route::patch('/upi-profiles/{profile}/default', [UpiProfileController::class, 'makeDefault'])->whereNumber('profile');
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
 

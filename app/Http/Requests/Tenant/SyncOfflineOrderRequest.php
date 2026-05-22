@@ -14,11 +14,23 @@ class SyncOfflineOrderRequest extends FormRequest
 
     public function rules(): array
     {
+        $excludeUnlessDelivery = Rule::excludeIf(fn () => ! \App\Services\Orders\OrderService::isDeliveryOrderType($this->input('order_type')));
+
         return [
             'local_order_id' => ['required', 'string', 'max:100'],
             'offline_created_at' => ['nullable', 'date'],
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'order_type' => ['nullable', 'string', 'max:50'],
+            'delivery_channel' => [$excludeUnlessDelivery, 'nullable', 'string', Rule::in([
+                'swiggy',
+                'zomato',
+                'phone_call',
+                'whatsapp',
+                'own_delivery',
+                'other',
+            ])],
+            'delivery_channel_label' => [$excludeUnlessDelivery, 'nullable', 'string', 'max:100'],
+            'external_order_reference' => [$excludeUnlessDelivery, 'nullable', 'string', 'max:100'],
             'table_id' => ['nullable', 'integer'],
             'notes' => ['nullable', 'string'],
 
@@ -55,6 +67,7 @@ class SyncOfflineOrderRequest extends FormRequest
             'payment.amount' => ['required', 'numeric', 'gt:0'],
             'payment.status' => ['required', Rule::in(['success'])],
             'payment.reference' => ['nullable', 'string', 'max:150'],
+            'payment.upi_profile_id' => ['nullable', 'integer'],
             'payment.upi_transaction_id' => ['nullable', 'string', 'max:150'],
             'payment.proof' => ['nullable'],
 

@@ -16,6 +16,7 @@ class Payment extends Model
         'amount',
         'transaction_id',
         'provider_ref',
+        'upi_profile_id',
         'upi_qr_url',
         'status',
         'meta',
@@ -28,6 +29,11 @@ class Payment extends Model
     public function order()
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function upiProfile()
+    {
+        return $this->belongsTo(UpiProfile::class);
     }
 
     public function transactions()
