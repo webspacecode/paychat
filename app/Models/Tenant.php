@@ -44,4 +44,8 @@ class Tenant extends Model
     public function taxConfig() {
         return $this->hasOne(TaxConfig::class);
     }
+
+    public function onboarding() {
+        return $this->hasOne(TenantOnboarding::class);
+    }
 }

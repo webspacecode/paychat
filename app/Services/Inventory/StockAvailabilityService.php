@@ -16,6 +16,12 @@ class StockAvailabilityService
         foreach ($this->normalizeOrderItems($items) as $item) {
             $productId = (int) $item['product_id'];
             $quantity = (float) $item['quantity'];
+            $product = Product::find($productId);
+
+            if (! $this->shouldTrackInventory($product)) {
+                continue;
+            }
+
             $productName = $this->getProductDisplayName($productId);
             $recipe = $this->findRecipeForLocation($productId, $locationId);
 
@@ -49,6 +55,12 @@ class StockAvailabilityService
 
     public function checkProductStock(int $productId, float $quantity, int $locationId): void
     {
+        $product = Product::find($productId);
+
+        if (! $this->shouldTrackInventory($product)) {
+            return;
+        }
+
         $recipe = $this->findRecipeForLocation($productId, $locationId);
 
         if ($recipe) {
@@ -76,6 +88,12 @@ class StockAvailabilityService
 
     private function checkInventoryQuantity(int $productId, float $requiredQty, int $locationId, string $label, string $orderContext = ''): void
     {
+        $product = Product::find($productId);
+
+        if (! $this->shouldTrackInventory($product)) {
+            return;
+        }
+
         $productName = $this->getProductDisplayName($productId);
 
         $inventory = ProductInventory::where('product_id', $productId)
@@ -110,6 +128,11 @@ class StockAvailabilityService
         throw ValidationException::withMessages([
             'stock' => $message,
         ]);
+    }
+
+    private function shouldTrackInventory(?Product $product): bool
+    {
+        return $product ? (bool) $product->track_inventory : true;
     }
 
     private function getProductDisplayName(int $productId): string

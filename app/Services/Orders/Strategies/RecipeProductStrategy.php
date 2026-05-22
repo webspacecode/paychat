@@ -12,6 +12,12 @@ class RecipeProductStrategy implements StockDeductionStrategy
 {
     public function deduct(OrderItem $item, $locationId)
     {
+        $product = $item->product;
+
+        if (!$product || !$product->track_inventory) {
+            return;
+        }
+
         $recipe = Recipe::where('product_id', $item->product_id)
             ->where(function ($q) use ($locationId) {
                 $q->where('location_id', $locationId)

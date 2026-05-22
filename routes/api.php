@@ -57,6 +57,7 @@ Route::middleware(['api-public'])->prefix('kiosk/{tenant_slug}')->group(function
 });
 
 Route::post('/register-tenant', [TenantController::class, 'register']);
+Route::get('/onboarding/status/{tenant_slug}', [TenantController::class, 'onboardingStatus']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 

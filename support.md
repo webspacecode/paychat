@@ -411,3 +411,14 @@ We should immediately know:
 without reproducing the issue manually.
 
 That is the purpose of this system.
+
+---------------------------------------
+
+# Notes
+
+To run migrations on specific tenants db
+```
+php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant/some_migration.php
+php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --pretend
+php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --step
+```
