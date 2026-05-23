@@ -13,6 +13,7 @@ use App\Services\InvoiceService;
 use App\Services\OrderKitchenDispatchService;
 use App\Services\TableSessionService;
 use App\Http\Resources\Tenant\OrderResource;
+use App\Support\IndustryNormalizer;
 use App\Support\Observability;
 use App\Http\Requests\Tenant\InitiatePaymentRequest;
 use App\Http\Controllers\Controller;
@@ -233,11 +234,12 @@ class PaymentController extends Controller
 
     private function defaultInvoicePaperSize(string $industry): string
     {
+        $industry = IndustryNormalizer::normalize($industry);
         $templates = config("invoice.industries.{$industry}.templates", []);
 
         return array_key_exists('80mm', $templates)
             ? '80mm'
-            : (string) array_key_first($templates);
+            : ((string) array_key_first($templates) ?: 'a4');
     }
 
     private function logInvoiceGenerated(string $tenantSlug, Order $order, Payment $payment, bool $created): void

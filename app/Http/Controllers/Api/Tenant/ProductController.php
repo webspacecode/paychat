@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Facades\Storage;
+use App\Support\IndustryNormalizer;
 use App\Services\ProductManagement\Strategies\ProductStrategyResolver;
 
 use App\Jobs\ProcessProductImagesZip;
@@ -26,7 +27,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'industry' => ['required', Rule::in(['restaurant','bakery','cafe','retail'])],
+            'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())],
             'name'  => ['required','string','max:255'],
             'sku'   => ['required','string','max:255','unique:products,sku'],
             'type'  => ['required', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
@@ -45,6 +46,7 @@ class ProductController extends Controller
             'track_inventory' => ['nullable', 'boolean']
         ]);
 
+        $validated = $this->applySimpleBillingProductDefaults($validated);
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $product = $industryStrategy->create($validated);
 
@@ -55,7 +57,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $validated = $request->validate([
-            'industry' => ['required', Rule::in(['restaurant','bakery','cafe','retail'])], // 👈 new
+            'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'keyword'  => ['nullable','string'],
             'location_id'  => ['nullable','int'],
             'type'     => ['nullable', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
@@ -75,7 +77,7 @@ class ProductController extends Controller
     public function show(Request $request, int $id)
     {
         $validated = $request->validate([
-            'industry' => ['required', Rule::in(['restaurant','bakery','cafe','retail'])], // 👈 new
+            'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
         ]);
 
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
@@ -90,7 +92,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'industry' => ['required', Rule::in(['restaurant','bakery','cafe','retail'])], // 👈 new
+            'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'name'  => ['sometimes','string','max:255'],
             'type'  => ['sometimes', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
             'price' => ['nullable','numeric','min:0'],
@@ -105,8 +107,10 @@ class ProductController extends Controller
             'items.*.raw_product_id' => ['required_with:items','integer','exists:products,id'],
             'items.*.quantity'       => ['required_with:items','integer','min:1'],
             'items.*.unit'           => ['nullable','string','max:50'],
+            'track_inventory' => ['nullable', 'boolean'],
         ]);
 
+        $validated = $this->applySimpleBillingProductDefaults($validated);
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $updated = $industryStrategy->update($product, $validated);
 
@@ -117,7 +121,7 @@ class ProductController extends Controller
     public function destroy(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'industry' => ['required', Rule::in(['restaurant','bakery','cafe','retail'])], // 👈 new
+            'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
         ]);
 
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
@@ -130,7 +134,7 @@ class ProductController extends Controller
     public function adjustInventory(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'industry'    => ['required', Rule::in(['restaurant','bakery','cafe','retail'])], // 👈 new
+            'industry'    => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'location_id' => ['required','integer','exists:locations,id'],
             'delta_qty'   => ['required','integer'],
             'meta'        => ['nullable','array'],
@@ -146,7 +150,7 @@ class ProductController extends Controller
     public function moveStock(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'industry'        => ['required', Rule::in(['restaurant','bakery','cafe','retail'])], // 👈 new
+            'industry'        => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'from_location_id' => ['required','integer','exists:locations,id'],
             'to_location_id'   => ['required','integer','exists:locations,id','different:from_location_id'],
             'quantity'         => ['required','integer','min:1'],
@@ -235,6 +239,9 @@ class ProductController extends Controller
                         $created++;
                         $industryStrategy = $this->resolver::resolve($request['industry']); // 👈 resolve by industry
                         $productPayload = $industryStrategy->getProductPayload($row);
+                        $productPayload = $this->applySimpleBillingProductDefaults(
+                            array_merge($productPayload, ['industry' => $request['industry']])
+                        );
                         $updated = $industryStrategy->create($productPayload);
                     } catch (\Throwable $e) {
                         $failed[] = [
@@ -283,5 +290,20 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'Upload started. Images are being processed in background.'
         ]);
+    }
+
+    private function applySimpleBillingProductDefaults(array $data): array
+    {
+        if (! IndustryNormalizer::isSimpleBilling($data['industry'] ?? null)) {
+            return $data;
+        }
+
+        $data['type'] = $data['type'] ?? 'basic';
+
+        if (! array_key_exists('track_inventory', $data)) {
+            $data['track_inventory'] = false;
+        }
+
+        return $data;
     }
 }

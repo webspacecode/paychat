@@ -11,66 +11,85 @@ use Illuminate\Support\Facades\Log;
 
 class TokenService
 {
+    public const STAGE_DRAFT_CREATED = 'draft_created';
+    public const STAGE_ITEMS_SYNCED = 'items_synced';
+    public const STAGE_PAYMENT_SUCCESS = 'payment_success';
+    public const STAGE_OFFLINE_COMPLETED = 'offline_completed';
+
     private const QSR_ORDER_TYPES = ['takeaway', 'delivery'];
     private const DINE_IN_ORDER_TYPE = 'dine_in';
+    private const QUICK_COUNTER_FLOW = 'quick_counter';
     private const TABLE_SERVICE_FLOW = 'table_service';
+    private const GENERATION_STAGES = [self::STAGE_PAYMENT_SUCCESS, self::STAGE_OFFLINE_COMPLETED];
 
     public function isEnabled(): bool
     {
         return (bool) Setting::get('token_system_enabled', null, false);
     }
 
-    public function generate($order)
+    public function generate($order, string $stage = self::STAGE_PAYMENT_SUCCESS)
     {
         if (! $order instanceof Order) {
             return null;
         }
 
-        if (! $this->shouldGenerateQsrToken($order)) {
+        if (! $this->shouldGenerateQsrToken($order, $stage)) {
             return null;
         }
 
-        return $this->createForOrder($order);
+        return $this->createForOrder($order, $stage);
     }
 
     public function generateInlineKitchenToken(Order $order): ?OrderToken
     {
-        return $this->generate($order);
+        return $this->generate($order, self::STAGE_PAYMENT_SUCCESS);
     }
 
-    public function shouldGenerateQsrToken(Order $order): bool
+    public function shouldGenerateQsrToken(Order $order, string $stage): bool
     {
+        $context = $this->logContext($order, $stage);
+
+        if (! in_array($stage, self::GENERATION_STAGES, true)) {
+            Log::debug('token.generation.skipped_stage', $context);
+            return false;
+        }
+
         if (! $this->isEnabled()) {
-            $this->logSkipped('token.generation.skipped_disabled', $order);
+            Log::debug('token.generation.skipped_disabled', $context);
             return false;
         }
 
         if ($order->status === 'cancelled') {
-            $this->logSkipped('token.generation.skipped_cancelled_order', $order);
+            Log::debug('token.generation.skipped_cancelled_order', $context);
             return false;
         }
 
         if ($this->isTableService($order)) {
-            $this->logSkipped('token.generation.skipped_table_service', $order);
+            Log::debug('token.generation.skipped_table_service', $context);
             return false;
         }
 
         if (! $this->isQsrOrderType($order)) {
-            $this->logSkipped('token.generation.skipped_order_type', $order);
+            Log::debug('token.generation.skipped_order_type', $context);
             return false;
         }
 
         if ($this->itemCount($order) === 0) {
-            $this->logSkipped('token.generation.skipped_empty_order', $order);
+            Log::debug('token.generation.skipped_empty_order', $context);
+            return false;
+        }
+
+        if ($order->payment_status !== 'paid') {
+            Log::debug('token.generation.skipped_payment_status', $context);
             return false;
         }
 
         return true;
     }
 
-    private function createForOrder(Order $order): OrderToken
+    private function createForOrder(Order $order, string $stage): OrderToken
     {
-        return DB::transaction(function () use ($order) {
+        return DB::transaction(function () use ($order, $stage) {
             $lockedOrder = Order::whereKey($order->id)
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -86,8 +105,8 @@ class TokenService
                     ]);
                 }
 
-                Log::debug('Token generation skipped: token already exists', [
-                    ...$this->logContext($lockedOrder),
+                Log::info('token.generation.reused_after_payment', [
+                    ...$this->logContext($lockedOrder, $stage),
                     'token_id' => $existingToken->id,
                     'token_code' => $existingToken->token_code,
                 ]);
@@ -121,8 +140,8 @@ class TokenService
                 'token_id' => $token->id
             ]);
 
-            Log::info('token.generation.created', [
-                ...$this->logContext($lockedOrder),
+            Log::info('token.generation.created_after_payment', [
+                ...$this->logContext($lockedOrder, $stage),
                 'token_id' => $token->id,
                 'token_code' => $token->token_code,
             ]);
@@ -133,15 +152,20 @@ class TokenService
 
     private function isQsrOrderType(Order $order): bool
     {
-        $orderType = strtolower((string) $order->order_type);
+        $orderType = strtolower(trim((string) $order->order_type));
+        $diningFlow = strtolower(trim((string) $order->dining_flow));
 
-        return in_array($orderType, self::QSR_ORDER_TYPES, true)
-            || $orderType === self::DINE_IN_ORDER_TYPE;
+        if (in_array($orderType, self::QSR_ORDER_TYPES, true)) {
+            return true;
+        }
+
+        return $orderType === self::DINE_IN_ORDER_TYPE
+            && $diningFlow === self::QUICK_COUNTER_FLOW;
     }
 
     private function isTableService(Order $order): bool
     {
-        return strtolower((string) $order->dining_flow) === self::TABLE_SERVICE_FLOW;
+        return strtolower(trim((string) $order->dining_flow)) === self::TABLE_SERVICE_FLOW;
     }
 
     private function itemCount(Order $order): int
@@ -151,12 +175,7 @@ class TokenService
             ->count();
     }
 
-    private function logSkipped(string $event, Order $order): void
-    {
-        Log::debug($event, $this->logContext($order));
-    }
-
-    private function logContext(Order $order): array
+    private function logContext(Order $order, ?string $stage = null): array
     {
         return [
             'request_id' => $this->requestId(),
@@ -164,6 +183,8 @@ class TokenService
             'order_no' => $order->order_no,
             'order_type' => $order->order_type,
             'dining_flow' => $order->dining_flow,
+            'stage' => $stage,
+            'payment_status' => $order->payment_status,
             'item_count' => $this->itemCount($order),
         ];
     }

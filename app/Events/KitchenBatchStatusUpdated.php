@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Tenant\KitchenBatch;
+use App\Services\KitchenBatchService;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 
@@ -32,6 +33,7 @@ class KitchenBatchStatusUpdated implements ShouldBroadcastNow
             'id' => $this->batch->id,
             'order_id' => $this->batch->order_id,
             'batch_code' => $this->batch->batch_code,
+            'kitchen_operation_mode' => app(KitchenBatchService::class)->operationMode(),
             'status' => $this->batch->status,
             'location_id' => $this->batch->location_id,
             'table_session_id' => $this->batch->table_session_id,

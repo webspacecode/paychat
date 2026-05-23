@@ -206,12 +206,14 @@ class OfflineOrderSyncService
 
     private function applyOfflineOrderMetadata(Order $order, array $payload): void
     {
+        $meta = $order->meta ?? [];
+
         $updates = [
             'ordered_at' => $payload['offline_created_at'] ?? now(),
             'notes' => $payload['notes'] ?? null,
             'paid_amount' => $payload['totals']['paid_amount'],
             'balance_due' => $payload['totals']['balance_amount'] ?? 0,
-            'meta' => [
+            'meta' => array_merge($meta, [
                 'offline' => true,
                 'local_order_id' => $payload['local_order_id'],
                 'offline_created_at' => $payload['offline_created_at'] ?? null,
@@ -219,7 +221,7 @@ class OfflineOrderSyncService
                 'offline_token_number' => $payload['token']['offline_token_number'] ?? null,
                 'discount' => $payload['discount'] ?? null,
                 'tax_summary' => $payload['tax_summary'] ?? null,
-            ],
+            ]),
         ];
 
         if (Schema::hasColumn('pos_orders', 'business_date') && ! empty($payload['offline_created_at'])) {

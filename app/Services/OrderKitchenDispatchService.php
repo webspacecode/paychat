@@ -24,24 +24,26 @@ class OrderKitchenDispatchService
             return null;
         }
 
-        $token = $this->tokenService->generate($order);
+        $stage = $this->stageFromReason($reason);
+        $token = $this->tokenService->generate($order, $stage);
 
         if (! $token) {
             Log::debug('Kitchen token dispatch skipped: token unavailable', [
                 'order_id' => $order->id,
                 'reason' => $reason,
+                'stage' => $stage,
             ]);
             return null;
         }
 
-        $this->dispatchOnceWhenReady($order, $token, $reason);
+        $this->dispatchOnceWhenReady($order, $token, $reason, $stage);
 
         return $token;
     }
 
-    private function dispatchOnceWhenReady(Order $order, OrderToken $token, string $reason): void
+    private function dispatchOnceWhenReady(Order $order, OrderToken $token, string $reason, string $stage): void
     {
-        DB::transaction(function () use ($order, $token, $reason) {
+        DB::transaction(function () use ($order, $token, $reason, $stage) {
             $lockedOrder = Order::whereKey($order->id)
                 ->lockForUpdate()
                 ->first();
@@ -86,12 +88,25 @@ class OrderKitchenDispatchService
             }
 
             $meta = $lockedOrder->meta ?? [];
+            $lastDispatchReason = $meta[self::DISPATCH_REASON_META_KEY] ?? null;
+            $isFinalDispatch = in_array($stage, [
+                TokenService::STAGE_PAYMENT_SUCCESS,
+                TokenService::STAGE_OFFLINE_COMPLETED,
+            ], true);
+            $alreadyFinalDispatched = in_array($lastDispatchReason, [
+                'payment_success',
+                'offline_order_synced',
+            ], true);
 
-            if (! empty($meta[self::DISPATCHED_META_KEY])) {
+            if (
+                ! empty($meta[self::DISPATCHED_META_KEY])
+                && (! $isFinalDispatch || $alreadyFinalDispatched || $lastDispatchReason === $reason)
+            ) {
                 Log::debug('Kitchen token dispatch skipped: already dispatched', [
                     'order_id' => $lockedOrder->id,
                     'token_id' => $token->id,
                     'reason' => $reason,
+                    'stage' => $stage,
                 ]);
                 return;
             }
@@ -112,7 +127,7 @@ class OrderKitchenDispatchService
             ]);
             $dispatchToken = $token->fresh();
 
-            DB::afterCommit(function () use ($dispatchOrder, $dispatchToken, $reason) {
+            DB::afterCommit(function () use ($dispatchOrder, $dispatchToken, $reason, $stage) {
                 event(new OrderCreated($dispatchOrder, $dispatchToken));
 
                 Log::info('token.generation.dispatched', [
@@ -125,9 +140,33 @@ class OrderKitchenDispatchService
                     'token_id' => $dispatchToken->id,
                     'token_code' => $dispatchToken->token_code,
                     'reason' => $reason,
+                    'stage' => $stage,
+                ]);
+
+                Log::info('token.dispatch.after_payment', [
+                    'request_id' => $this->requestId(),
+                    'order_id' => $dispatchOrder->id,
+                    'order_no' => $dispatchOrder->order_no,
+                    'order_type' => $dispatchOrder->order_type,
+                    'dining_flow' => $dispatchOrder->dining_flow,
+                    'stage' => $stage,
+                    'payment_status' => $dispatchOrder->payment_status,
+                    'item_count' => $dispatchOrder->items->count(),
+                    'token_id' => $dispatchToken->id,
+                    'token_code' => $dispatchToken->token_code,
                 ]);
             });
         });
+    }
+
+    private function stageFromReason(string $reason): string
+    {
+        return match ($reason) {
+            'classic_pos_order_created' => TokenService::STAGE_DRAFT_CREATED,
+            'classic_pos_items_synced' => TokenService::STAGE_ITEMS_SYNCED,
+            'offline_order_synced' => TokenService::STAGE_OFFLINE_COMPLETED,
+            default => TokenService::STAGE_PAYMENT_SUCCESS,
+        };
     }
 
     private function requestId(): ?string

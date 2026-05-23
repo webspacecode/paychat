@@ -48,7 +48,7 @@ class DefaultCategoryStrategy implements CategoryStrategyInterface
                     // ✅ Simple products (check stock if location provided)
                     $w->orWhere(function ($q2) use ($locationId) {
 
-                        $q2->where('type', 'simple');
+                        $q2->where('type', 'basic');
 
                         if ($locationId) {
                             $q2->whereHas('inventories', function ($inv) use ($locationId) {

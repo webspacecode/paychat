@@ -233,6 +233,8 @@ class OrderService
 
     public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null, $diningFlow = null, $guestCount = null, $tableSessionId = null, array $deliverySource = [])
     {
+        [$orderType, $meta] = $this->normalizeDraftOrderType($orderType);
+
         $orderData = [
             'order_no' => strtoupper('ORD-' . Str::uuid()),
             'location_id' => $locationId,
@@ -243,7 +245,8 @@ class OrderService
             'guest_count' => $guestCount,
             'dining_flow' => $diningFlow,
             'status' => 'draft',
-            'payment_status' => 'unpaid'
+            'payment_status' => 'unpaid',
+            'meta' => $meta,
         ];
 
         $orderData = array_merge(
@@ -256,6 +259,22 @@ class OrderService
         }
 
         return Order::create($orderData);
+    }
+
+    private function normalizeDraftOrderType(?string $orderType): array
+    {
+        $originalOrderType = strtolower(trim((string) $orderType));
+
+        if ($originalOrderType === 'service') {
+            return [
+                'takeaway',
+                [
+                    'original_order_type' => 'service',
+                ],
+            ];
+        }
+
+        return [$orderType, null];
     }
 
     public function updateDeliverySource(Order $order, array $deliverySource): Order

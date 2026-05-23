@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Support\IndustryNormalizer;
 use Throwable;
 
 class SetupTenantJob implements ShouldQueue
@@ -58,6 +59,7 @@ class SetupTenantJob implements ShouldQueue
             $this->seedTaxConfig();
             $this->seedBranding();
             $this->seedPaymentMethods();
+            $this->seedDefaultServiceCategory();
             $this->seedSettings();
 
             $this->markOnboarding('ready', [
@@ -199,10 +201,14 @@ class SetupTenantJob implements ShouldQueue
 
     private function seedSettings(): void
     {
+        $enableTokenSystem = array_key_exists('enable_token_system', $this->setupData)
+            ? (bool) $this->setupData['enable_token_system']
+            : ! IndustryNormalizer::isSimpleBilling($this->tenant->industry ?? null);
+
         $settings = [
             [
                 'setting_key' => 'token_system_enabled',
-                'value' => ($this->setupData['enable_token_system'] ?? true) ? 'true' : 'false',
+                'value' => $enableTokenSystem ? 'true' : 'false',
                 'type' => 'boolean',
             ],
             [
@@ -220,6 +226,13 @@ class SetupTenantJob implements ShouldQueue
                 'value' => 'true',
                 'type' => 'boolean',
             ],
+            [
+                'setting_key' => 'kitchen_operation_mode',
+                'value' => IndustryNormalizer::isSimpleBilling($this->tenant->industry ?? null)
+                    ? 'inline'
+                    : 'dedicated_kds',
+                'type' => 'string',
+            ],
         ];
 
         foreach ($settings as $setting) {
@@ -233,5 +246,21 @@ class SetupTenantJob implements ShouldQueue
                 ]
             );
         }
+    }
+
+    private function seedDefaultServiceCategory(): void
+    {
+        if (! IndustryNormalizer::isSimpleBilling($this->tenant->industry ?? null)) {
+            return;
+        }
+
+        DB::connection('tenant')->table('categories')->updateOrInsert(
+            ['name' => 'Services'],
+            [
+                'description' => 'Services',
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
     }
 }

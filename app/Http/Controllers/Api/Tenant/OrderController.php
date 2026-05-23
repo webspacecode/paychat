@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use App\Services\Orders\OrderService;
 use App\Services\TableSessionService;
 use App\Services\KitchenBatchService;
-use App\Services\OrderKitchenDispatchService;
 use App\Services\Payments\TaxService;
 use App\Http\Requests\Tenant\CreateOrderRequest;
 use App\Http\Requests\Tenant\UpdateOrderRequest;
@@ -49,7 +48,7 @@ class OrderController extends Controller
         return OrderResource::collection($orders);
     }
 
-    public function create(Request $request, OrderService $service, OrderKitchenDispatchService $kitchenDispatch)
+    public function create(Request $request, OrderService $service)
     {
         $deliverySource = $this->validateDeliverySource($request, $request->order_type);
 
@@ -63,19 +62,6 @@ class OrderController extends Controller
             $request->table_session_id,
             $deliverySource
         );
-
-        try {
-            $kitchenDispatch->ensureTokenAndDispatchWhenReady($order, 'classic_pos_order_created');
-        } catch (Throwable $e) {
-            Observability::logFailure('kitchen.dispatch.failed', $e, [
-                'tenant_slug' => $request->route('tenant_slug'),
-                'order_id' => $order->id,
-                'location_id' => $order->location_id,
-                'action' => 'kitchen.dispatch.classic_pos_order_created',
-            ], $request);
-
-            throw $e;
-        }
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product')
@@ -112,24 +98,11 @@ class OrderController extends Controller
         ];
     }
 
-    public function updateItems(String $tenantSlug, String $orderId, Request $request, OrderService $service, OrderKitchenDispatchService $kitchenDispatch) 
+    public function updateItems(String $tenantSlug, String $orderId, Request $request, OrderService $service) 
     {
         $order = Order::findOrFail($orderId);
 
         $service->syncItems($order, $request);
-
-        try {
-            $kitchenDispatch->ensureTokenAndDispatchWhenReady($order->fresh(), 'classic_pos_items_synced');
-        } catch (Throwable $e) {
-            Observability::logFailure('kitchen.dispatch.failed', $e, [
-                'tenant_slug' => $tenantSlug,
-                'order_id' => $order->id,
-                'location_id' => $order->location_id,
-                'action' => 'kitchen.dispatch.classic_pos_items_synced',
-            ], $request);
-
-            throw $e;
-        }
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product')
@@ -245,10 +218,11 @@ class OrderController extends Controller
         $order = Order::with([
             'kitchenBatches.items.product',
         ])->findOrFail($orderId);
+        $operationMode = app(KitchenBatchService::class)->operationMode();
 
         return response()->json([
             'order_id' => $order->id,
-            'data' => $order->kitchenBatches->map(function ($batch) {
+            'data' => $order->kitchenBatches->map(function ($batch) use ($operationMode) {
                 return [
                     'id' => $batch->id,
                     'location_id' => $batch->location_id,
@@ -258,6 +232,7 @@ class OrderController extends Controller
                     'batch_number' => $batch->batch_number,
                     'batch_code' => $batch->batch_code,
                     'business_date' => $batch->business_date,
+                    'kitchen_operation_mode' => $operationMode,
                     'status' => $batch->status,
                     'sent_at' => $batch->sent_at,
                     'created_at' => $batch->created_at,
@@ -296,7 +271,7 @@ class OrderController extends Controller
                 'message' => 'Order not found'
             ], 404);
         }
-
+        
         // 🔥 Check token exists
         if (!$orderModel->token) {
             return response()->json([
@@ -353,7 +328,9 @@ class OrderController extends Controller
         try {
             $batch = $service->sendFreshItems($order);
 
-            event(new KitchenBatchCreated($batch));
+            if ($service->shouldBroadcastToKds($batch)) {
+                event(new KitchenBatchCreated($batch));
+            }
         } catch (Throwable $e) {
             Observability::logFailure('kitchen.send_to_kitchen.failed', $e, [
                 'tenant_slug' => $tenantSlug,

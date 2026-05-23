@@ -25,7 +25,15 @@ class KitchenQueueController extends Controller
         }
 
         if (in_array($source, ['all', 'table_service'], true)) {
-            $items = $items->merge($this->kitchenBatchItems($businessDate, $locationId, $status));
+            $includeInline = $request->boolean('include_inline', false);
+
+            $items = $items->merge($this->kitchenBatchItems(
+                $businessDate,
+                $locationId,
+                $status,
+                $includeInline,
+                $kitchenDates->operationMode()
+            ));
         }
 
         return response()->json([
@@ -37,7 +45,7 @@ class KitchenQueueController extends Controller
     private function orderTokenItems(string $businessDate, $locationId, $status)
     {
         return OrderToken::query()
-            ->with(['order.items.product', 'order.table'])
+            ->with(['order.items.product', 'order.location', 'order.table'])
             ->whereHas('order', function ($query) use ($businessDate, $locationId) {
                 $query->where('status', '!=', 'cancelled')
                     ->where(function ($q) {
@@ -58,15 +66,19 @@ class KitchenQueueController extends Controller
             ->map(fn ($token) => $this->normalizeToken($token));
     }
 
-    private function kitchenBatchItems(string $businessDate, $locationId, $status)
+    private function kitchenBatchItems(string $businessDate, $locationId, $status, bool $includeInline, string $operationMode)
     {
+        if ($operationMode === KitchenBatchService::MODE_INLINE && !$includeInline) {
+            return collect();
+        }
+
         return KitchenBatch::query()
             ->with(['order', 'table', 'items.product'])
             ->whereDate('business_date', $businessDate)
             ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
             ->when($status, fn ($q) => $q->where('status', $status))
             ->get()
-            ->map(fn ($batch) => $this->normalizeBatch($batch));
+            ->map(fn ($batch) => $this->normalizeBatch($batch, $operationMode));
     }
 
     private function normalizeToken(OrderToken $token): array
@@ -75,31 +87,53 @@ class KitchenQueueController extends Controller
 
         return [
             'type' => 'order_token',
-            'id' => $token->id,
+            'id' => $order?->id,
             'order_id' => $order?->id,
+            'token_id' => $token->id,
             'order_no' => $order?->order_no,
+            'invoice_id' => $order?->invoice_id,
+            'invoice_no' => $order?->invoice_no,
             'token_code' => $token->token_code,
+            'token_number' => $token->token_number,
+            'token' => [
+                'id' => $token->id,
+                'token_code' => $token->token_code,
+                'token_number' => $token->token_number,
+                'status' => $token->status,
+            ],
             'batch_code' => null,
             'location_id' => $order?->location_id,
-            'table' => null,
-            'guest_count' => null,
+            'location' => [
+                'id' => $order?->location_id,
+                'name' => optional($order?->location)->name,
+            ],
+            'table' => $order?->table ? [
+                'id' => $order->table->id,
+                'name' => $order->table->name,
+                'code' => $order->table->code,
+            ] : null,
+            'guest_count' => $order?->guest_count,
             'order_type' => $order?->order_type,
             'delivery_channel' => $order?->delivery_channel,
             'delivery_channel_label' => $order?->delivery_channel_label,
             'external_order_reference' => $order?->external_order_reference,
             'dining_flow' => $order?->dining_flow ?? 'qsr',
             'status' => $token->status,
+            'order_status' => $order?->status,
+            'payment_status' => $order?->payment_status,
             'sent_at' => null,
             'created_at' => $token->created_at,
+            'updated_at' => $token->updated_at,
             'items' => $order ? $this->normalizeItems($order->items) : [],
         ];
     }
 
-    private function normalizeBatch(KitchenBatch $batch): array
+    private function normalizeBatch(KitchenBatch $batch, string $operationMode): array
     {
         return [
             'type' => 'kitchen_batch',
             'id' => $batch->id,
+            'batch_id' => $batch->id,
             'order_id' => $batch->order_id,
             'order_no' => $batch->order?->order_no,
             'token_code' => null,
@@ -109,6 +143,7 @@ class KitchenQueueController extends Controller
             'table_id' => $batch->table_id,
             'batch_number' => $batch->batch_number,
             'business_date' => $batch->business_date,
+            'kitchen_operation_mode' => $operationMode,
             'table' => $batch->table ? [
                 'id' => $batch->table->id,
                 'name' => $batch->table->name,
@@ -135,6 +170,10 @@ class KitchenQueueController extends Controller
             'product_name' => optional($item->product)->name,
             'quantity' => $item->quantity,
             'price' => $item->price,
+            'discount' => $item->discount ?? 0,
+            'tax' => $item->tax ?? 0,
+            'sku' => optional($item->product)->sku,
+            'subtotal' => $item->subtotal,
             'total' => $item->total,
             'kitchen_status' => $item->kitchen_status,
             'kitchen_batch_id' => $item->kitchen_batch_id,

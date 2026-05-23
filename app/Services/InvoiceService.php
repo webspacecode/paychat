@@ -9,6 +9,7 @@ use App\Models\ReviewSession;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use App\Support\IndustryNormalizer;
 use SimpleSoftwareIO\QrCode\Generator;
 use Spatie\Browsershot\Browsershot;
 
@@ -16,17 +17,7 @@ class InvoiceService
 {
     public function generate($order,$tenant,$industry,$paper)
     {
-        $config = config("invoice.industries.$industry");
-    
-        if(!$config){
-            throw new \Exception("Invalid industry");
-        }
-
-        $template = $config['templates'][$paper] ?? null;
-
-        if(!$template){
-            throw new \Exception("Template not found");
-        }
+        [$config, $template] = $this->resolveInvoiceTemplate($industry, $paper);
 
         $orderData = $this->normalizeOrder($order);
         $orderId = $this->extractOrderId($orderData);
@@ -168,6 +159,55 @@ class InvoiceService
         return data_get($order, 'data.data', $order);
     }
 
+    private function resolveInvoiceTemplate(?string $industry, ?string $paper): array
+    {
+        $normalizedIndustry = IndustryNormalizer::normalize($industry);
+        $config = config("invoice.industries.$normalizedIndustry");
+
+        if (!$config) {
+            throw new \Exception("Invalid industry");
+        }
+
+        $template = $config['templates'][$paper] ?? null;
+
+        if ($template && view()->exists($template)) {
+            return [$config, $template];
+        }
+
+        if ($normalizedIndustry === 'services') {
+            $fallbackTemplate = $this->resolveServicesFallbackTemplate($paper);
+
+            if ($fallbackTemplate) {
+                return [$config, $fallbackTemplate];
+            }
+        }
+
+        if (!$template) {
+            throw new \Exception("Template not found");
+        }
+
+        throw new \Exception("Template not found");
+    }
+
+    private function resolveServicesFallbackTemplate(?string $paper): ?string
+    {
+        $candidates = array_filter([
+            $paper ? "invoices.services.$paper" : null,
+            $paper ? config("invoice.industries.cafe.templates.$paper") : null,
+            $paper === 'a4' ? 'invoices.cafe.a4' : null,
+            'invoices.cafe.a4',
+            config('invoice.industries.cafe.templates.80mm'),
+        ]);
+
+        foreach ($candidates as $template) {
+            if (view()->exists($template)) {
+                return $template;
+            }
+        }
+
+        return null;
+    }
+
     private function extractOrderId(array $order): ?int
     {
         $id = data_get($order, 'id');
@@ -257,13 +297,7 @@ class InvoiceService
     {
         $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
 
-        $config = config("invoice.industries.$inv->industry");
-    
-        if(!$config){
-            throw new \Exception("Invalid industry");
-        }
-
-        $template = $config['templates'][$inv->paper_size] ?? null;
+        [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
         
         $tenant = Tenant::where('id', $inv->tenant_id)->first();
 
@@ -300,17 +334,7 @@ class InvoiceService
     {
         $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
 
-        $config = config("invoice.industries.$inv->industry");
-
-        if(!$config){
-            throw new \Exception("Invalid industry");
-        }
-
-        $template = $config['templates'][$inv->paper_size] ?? null;
-
-        if(!$template){
-            throw new \Exception("Template not found");
-        }
+        [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
 
         $tenant = Tenant::where('id', $inv->tenant_id)->first();
         $orderData = $this->normalizeOrder($inv->order_data);
@@ -360,13 +384,7 @@ class InvoiceService
     {
         $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
 
-        $config = config("invoice.industries.$inv->industry");
-    
-        if(!$config){
-            throw new \Exception("Invalid industry");
-        }
-
-        $template = $config['templates'][$inv->paper_size] ?? null;
+        [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
         
         $tenant = Tenant::where('id', $inv->tenant_id)->first();
 
@@ -402,20 +420,9 @@ class InvoiceService
     {   
         $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
 
-        $config = config("invoice.industries.$inv->industry");
-
-    
-        if(!$config){
-            throw new \Exception("Invalid industry");
-        }
-
-        $template = $config['templates'][$inv->paper_size] ?? null;
+        [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
 
         $tenant = Tenant::where('id', $inv->tenant_id)->first();
-
-        if(!$template){
-            throw new \Exception("Template not found");
-        }
 
         $order = $inv->order_data;
         $orderData = $this->normalizeOrder($order);

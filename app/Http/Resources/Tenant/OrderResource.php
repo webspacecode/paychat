@@ -2,12 +2,15 @@
 
 namespace App\Http\Resources\Tenant;
 
+use App\Services\KitchenBatchService;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class OrderResource extends JsonResource
 {
     public function toArray($request)
     {
+        $kitchenOperationMode = app(KitchenBatchService::class)->operationMode();
+
         return [
 
             /*
@@ -124,7 +127,7 @@ class OrderResource extends JsonResource
                 ];
             }),
 
-            'kitchen_batches' => $this->kitchenBatches->map(function ($batch) {
+            'kitchen_batches' => $this->kitchenBatches->map(function ($batch) use ($kitchenOperationMode) {
                 return [
                     'id' => $batch->id,
                     'location_id' => $batch->location_id,
@@ -134,6 +137,7 @@ class OrderResource extends JsonResource
                     'batch_number' => $batch->batch_number,
                     'batch_code' => $batch->batch_code,
                     'business_date' => $batch->business_date,
+                    'kitchen_operation_mode' => $kitchenOperationMode,
                     'status' => $batch->status,
                     'sent_at' => $batch->sent_at,
                     'created_at' => $batch->created_at,

@@ -12,7 +12,11 @@ use Illuminate\Validation\ValidationException;
 
 class KitchenBatchService
 {
+    public const MODE_DEDICATED_KDS = 'dedicated_kds';
+    public const MODE_INLINE = 'inline';
+
     private const STATUSES = ['waiting', 'pending', 'preparing', 'ready', 'served', 'cancelled'];
+    private const OPERATION_MODES = [self::MODE_DEDICATED_KDS, self::MODE_INLINE];
 
     public function sendFreshItems(Order $order): KitchenBatch
     {
@@ -61,14 +65,14 @@ class KitchenBatchService
             }
 
             $businessDate = $this->resolveBusinessDate($lockedOrder);
-            $nextNumber = $this->nextBatchNumber($lockedOrder->location_id, $businessDate);
+            $nextNumber = $this->nextBatchNumber($businessDate);
             $batch = KitchenBatch::create([
                 'location_id' => $lockedOrder->location_id,
                 'order_id' => $lockedOrder->id,
                 'table_session_id' => $lockedOrder->table_session_id,
                 'table_id' => $lockedOrder->table_id,
                 'batch_number' => $nextNumber,
-                'batch_code' => $this->batchCode($nextNumber, $businessDate),
+                'batch_code' => $this->batchCode($nextNumber),
                 'business_date' => $businessDate,
                 'status' => 'waiting',
                 'sent_at' => now(),
@@ -109,6 +113,20 @@ class KitchenBatchService
         return $batch->fresh(['order.table', 'table', 'tableSession', 'items.product']);
     }
 
+    public function operationMode(): string
+    {
+        $mode = (string) Setting::get('kitchen_operation_mode', null, self::MODE_DEDICATED_KDS);
+
+        return in_array($mode, self::OPERATION_MODES, true)
+            ? $mode
+            : self::MODE_DEDICATED_KDS;
+    }
+
+    public function shouldBroadcastToKds(?KitchenBatch $batch = null): bool
+    {
+        return $this->operationMode() === self::MODE_DEDICATED_KDS;
+    }
+
     public function resolveBusinessDate(?Order $order = null): string
     {
         if ($order && $order->business_date) {
@@ -138,10 +156,9 @@ class KitchenBatchService
         return today()->toDateString();
     }
 
-    private function nextBatchNumber(int $locationId, string $businessDate): int
+    private function nextBatchNumber(string $businessDate): int
     {
-        $last = KitchenBatch::where('location_id', $locationId)
-            ->whereDate('business_date', $businessDate)
+        $last = KitchenBatch::whereDate('business_date', $businessDate)
             ->lockForUpdate()
             ->latest('id')
             ->first();
@@ -149,8 +166,8 @@ class KitchenBatchService
         return $last ? ((int) $last->batch_number + 1) : 1;
     }
 
-    private function batchCode(int $number, string $businessDate): string
+    private function batchCode(int $number): string
     {
-        return 'KB'.Carbon::parse($businessDate)->format('ymd').'-'.str_pad((string) $number, 3, '0', STR_PAD_LEFT);
+        return 'KOT-'.str_pad((string) $number, 3, '0', STR_PAD_LEFT);
     }
 }

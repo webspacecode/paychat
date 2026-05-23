@@ -161,7 +161,7 @@ class DefaultProductStrategy implements ProductStrategyInterface
 
     public function update(Product $product, array $data): Product
     {
-        $payload = collect($data)->only(['name','type','price','unit'])->all();
+        $payload = collect($data)->only(['name','type','price','unit','track_inventory'])->all();
         if (!empty($payload)) $product->update($payload);
 
         if (array_key_exists('images', $data)) {

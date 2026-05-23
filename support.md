@@ -91,7 +91,7 @@ cd /var/www/paychat-api
 # Find Request by Support Code
 
 ```bash
-grep -R "PC-A8F3K2" storage/logs/
+grep -R "PCR-MPI7KLTT-5Y2X3M61" storage/logs/
 ```
 
 This should reveal:
