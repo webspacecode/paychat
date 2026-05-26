@@ -141,6 +141,7 @@
                 <div class="hidden lg:flex items-center space-x-8">
                     <a href="{{ url('/features') }}" class="text-navy hover:text-primary font-medium">Features</a>
                     <a href="{{ url('/pricing') }}" class="text-navy hover:text-primary font-medium">Pricing</a>
+                    <a href="{{ url('/guide') }}" class="text-navy hover:text-primary font-medium">Guide</a>
                     <a href="{{ url('/about') }}" class="text-navy hover:text-primary font-medium">About</a>
                     <a href="{{ url('/contact') }}" class="text-navy hover:text-primary font-medium">Contact</a>
                 </div>
@@ -171,6 +172,7 @@
                 <div class="flex flex-col space-y-3">
                     <a href="{{ url('/features') }}">Features</a>
                     <a href="{{ url('/pricing') }}">Pricing</a>
+                    <a href="{{ url('/guide') }}">Guide</a>
                     <a href="{{ url('/about') }}">About</a>
                     <a href="{{ url('/contact') }}">Contact</a>
                 </div>
@@ -630,6 +632,7 @@
                         <li><a href="#features" class="text-blue-200 hover:text-white transition-colors">Features</a></li>
                         <li><a href="#benefits" class="text-blue-200 hover:text-white transition-colors">Why PayChat</a></li>
                         <li><a href="#scanner" class="text-blue-200 hover:text-white transition-colors">QR Scanner</a></li>
+                        <li><a href="{{ url('/guide') }}" class="text-blue-200 hover:text-white transition-colors">Guide</a></li>
                         <li><a href="login.html" class="text-blue-200 hover:text-white transition-colors">Shop Login</a></li>
                     </ul>
                 </div>
@@ -638,9 +641,10 @@
                 <div>
                     <h4 class="text-lg font-semibold mb-4">Company</h4>
                     <ul class="space-y-2">
-                        <li><a href="#" class="text-blue-200 hover:text-white transition-colors">About Us</a></li>
+                        <li><a href="{{ url('/') }}" class="text-blue-200 hover:text-white transition-colors">Home</a></li>
+                        <li><a href="{{ url('/about') }}" class="text-blue-200 hover:text-white transition-colors">About Us</a></li>
                         <li><a href="#" class="text-blue-200 hover:text-white transition-colors">Careers</a></li>
-                        <li><a href="#" class="text-blue-200 hover:text-white transition-colors">Contact</a></li>
+                        <li><a href="{{ url('/contact') }}" class="text-blue-200 hover:text-white transition-colors">Contact</a></li>
                         <li><a href="#" class="text-blue-200 hover:text-white transition-colors">Press Kit</a></li>
                     </ul>
                 </div>

@@ -117,12 +117,12 @@ class UpiProfileController extends Controller
 
     private function rules(bool $creating = true): array
     {
-        $required = $creating ? 'required' : 'sometimes|required';
+        $required = $creating ? ['required'] : ['sometimes', 'required'];
 
         return [
             'location_id' => ['nullable', 'integer', 'exists:locations,id'],
-            'label' => [$required, 'string', 'max:100'],
-            'upi_id' => [$required, 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/'],
+            'label' => [...$required, 'string', 'max:100'],
+            'upi_id' => [...$required, 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/'],
             'payee_name' => ['nullable', 'string', 'max:100'],
             'is_default' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
