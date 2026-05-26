@@ -9,7 +9,7 @@
     <meta property="og:description" content="POS & QR Ordering Platform">
     <meta property="og:image" content="https://paychat.shop/og-banner.jpg">
     <meta property="og:url" content="https://paychat.shop">
-    <title>PayChat - Revolutionary POS & Business Management Platform</title>
+    <title>PayChat - Smart POS for Cafes, Restaurants & Retail Stores</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
