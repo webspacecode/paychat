@@ -6,6 +6,7 @@ use App\Models\Tenant\Order;
 use App\Models\Tenant\OrderToken;
 use App\Models\Tenant\Setting;
 use App\Constants\TokenStatus;
+use App\Support\Observability;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -111,6 +112,13 @@ class TokenService
                     'token_code' => $existingToken->token_code,
                 ]);
 
+                Observability::logInfo('token.generated', [
+                    ...$this->logContext($lockedOrder, $stage),
+                    'token_id' => $existingToken->id,
+                    'token_code' => $existingToken->token_code,
+                    'reused' => true,
+                ]);
+
                 return $existingToken;
             }
 
@@ -144,6 +152,13 @@ class TokenService
                 ...$this->logContext($lockedOrder, $stage),
                 'token_id' => $token->id,
                 'token_code' => $token->token_code,
+            ]);
+
+            Observability::logInfo('token.generated', [
+                ...$this->logContext($lockedOrder, $stage),
+                'token_id' => $token->id,
+                'token_code' => $token->token_code,
+                'reused' => false,
             ]);
 
             return $token;

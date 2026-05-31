@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use App\Support\IndustryNormalizer;
+use App\Support\Observability;
 use SimpleSoftwareIO\QrCode\Generator;
 use Spatie\Browsershot\Browsershot;
 
@@ -17,6 +18,7 @@ class InvoiceService
 {
     public function generate($order,$tenant,$industry,$paper)
     {
+        $startedAt = microtime(true);
         [$config, $template] = $this->resolveInvoiceTemplate($industry, $paper);
 
         $orderData = $this->normalizeOrder($order);
@@ -121,6 +123,13 @@ class InvoiceService
 
             }
         } catch (\Exception $e) {
+            Observability::logWarning('invoice.qr_generation.failed', $e, [
+                'tenant_id' => $tenant->id,
+                'tenant_slug' => $tenant->slug,
+                'order_id' => $orderId,
+                'invoice_number' => $uuid,
+                'paper_size' => $paper,
+            ]);
             $qr = null; // fallback (important for production)
             $kitchenQr = null; // fallback (important for production)
             $tokenQr = null;
@@ -134,6 +143,19 @@ class InvoiceService
         event(new \App\Events\CustomerDisplayUpdated([
             'uuid' => $uuid,
         ]));
+
+        Observability::logInfo('invoice.generated', [
+            'tenant_id' => $tenant->id,
+            'tenant_slug' => $tenant->slug,
+            'order_id' => $orderId,
+            'invoice_number' => $uuid,
+            'paper_size' => $paper,
+            'template' => $template,
+            'has_invoice_qr' => $qr !== null,
+            'has_kitchen_qr' => $kitchenQr !== null,
+            'has_token_qr' => $tokenQr !== null,
+            'duration_ms' => Observability::durationMs($startedAt),
+        ]);
         
         return [
             'html'=>view($template,[
@@ -165,12 +187,23 @@ class InvoiceService
         $config = config("invoice.industries.$normalizedIndustry");
 
         if (!$config) {
+            Observability::logWarningMessage('invoice.template.invalid_industry', [
+                'industry' => $industry,
+                'normalized_industry' => $normalizedIndustry,
+                'paper_size' => $paper,
+            ]);
             throw new \Exception("Invalid industry");
         }
 
         $template = $config['templates'][$paper] ?? null;
 
         if ($template && view()->exists($template)) {
+            Observability::logInfo('invoice.template.resolved', [
+                'industry' => $normalizedIndustry,
+                'paper_size' => $paper,
+                'template' => $template,
+                'fallback' => false,
+            ]);
             return [$config, $template];
         }
 
@@ -178,13 +211,29 @@ class InvoiceService
             $fallbackTemplate = $this->resolveServicesFallbackTemplate($paper);
 
             if ($fallbackTemplate) {
+                Observability::logWarningMessage('invoice.template.fallback_used', [
+                    'industry' => $normalizedIndustry,
+                    'paper_size' => $paper,
+                    'configured_template' => $template,
+                    'fallback_template' => $fallbackTemplate,
+                ]);
                 return [$config, $fallbackTemplate];
             }
         }
 
         if (!$template) {
+            Observability::logWarningMessage('invoice.template.missing_config', [
+                'industry' => $normalizedIndustry,
+                'paper_size' => $paper,
+            ]);
             throw new \Exception("Template not found");
         }
+
+        Observability::logWarningMessage('invoice.template.view_missing', [
+            'industry' => $normalizedIndustry,
+            'paper_size' => $paper,
+            'template' => $template,
+        ]);
 
         throw new \Exception("Template not found");
     }
@@ -332,6 +381,7 @@ class InvoiceService
 
     public function downloadPdf($uuid)
     {
+        $startedAt = microtime(true);
         $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
@@ -364,15 +414,42 @@ class InvoiceService
             'isPdf'=>true
         ])->render();
 
-        $receiptHeightPx = (float) $this->configuredBrowsershot($html)
-            ->evaluate('document.querySelector(".receipt").getBoundingClientRect().height');
-        $receiptHeightMm = max(40, (int) ceil(($receiptHeightPx * 25.4 / 96) + 2));
+        try {
+            $receiptHeightPx = (float) $this->configuredBrowsershot($html)
+                ->evaluate('document.querySelector(".receipt").getBoundingClientRect().height');
+            $receiptHeightMm = max(40, (int) ceil(($receiptHeightPx * 25.4 / 96) + 2));
 
-        $pdf = $this->configuredBrowsershot($html)
-            ->paperSize(80, $receiptHeightMm)
-            ->margins(0, 0, 0, 0)
-            ->showBackground()
-            ->pdf();
+            $pdf = $this->configuredBrowsershot($html)
+                ->paperSize(80, $receiptHeightMm)
+                ->margins(0, 0, 0, 0)
+                ->showBackground()
+                ->pdf();
+        } catch (\Throwable $e) {
+            Observability::logFailure('invoice.pdf.render_failed', $e, [
+                'tenant_id' => $tenant?->id,
+                'tenant_slug' => $tenant?->slug,
+                'order_id' => $inv->order_id,
+                'invoice_id' => $inv->id,
+                'invoice_number' => $inv->uuid,
+                'paper_size' => $inv->paper_size,
+                'template' => $template,
+                'duration_ms' => Observability::durationMs($startedAt),
+            ]);
+
+            throw $e;
+        }
+
+        Observability::logInfo('invoice.pdf.rendered', [
+            'tenant_id' => $tenant?->id,
+            'tenant_slug' => $tenant?->slug,
+            'order_id' => $inv->order_id,
+            'invoice_id' => $inv->id,
+            'invoice_number' => $inv->uuid,
+            'paper_size' => $inv->paper_size,
+            'template' => $template,
+            'receipt_height_mm' => $receiptHeightMm,
+            'duration_ms' => Observability::durationMs($startedAt),
+        ]);
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
@@ -404,6 +481,12 @@ class InvoiceService
                 $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
             }
         } catch (\Exception $e) {
+            Observability::logWarning('invoice.token_qr_generation.failed', $e, [
+                'tenant_id' => $tenant?->id,
+                'tenant_slug' => $tenant?->slug,
+                'invoice_id' => $inv->id,
+                'invoice_number' => $inv->uuid,
+            ]);
             $qr = null; // fallback (important for production)
             $kitchenQr = null; // fallback (important for production)
         }
@@ -452,6 +535,12 @@ class InvoiceService
 
             }
         } catch (\Exception $e) {
+            Observability::logWarning('invoice.generated_view_qr_generation.failed', $e, [
+                'tenant_id' => $tenant?->id,
+                'tenant_slug' => $tenant?->slug,
+                'invoice_id' => $inv->id,
+                'invoice_number' => $inv->uuid,
+            ]);
             $qr = null; // fallback (important for production)
             $kitchenQr = null; // fallback (important for production)
             $tokenQr = null;
@@ -574,7 +663,7 @@ class InvoiceService
             'dining' => [
                 'order_type' => $order['order_type'] ?? null,
                 'dining_flow' => $order['dining_flow'] ?? null,
-                'table_name' => data_get($order, 'table.name') ?? data_get($order, 'table.code'),
+                'table_name' => data_get($order, 'table_display') ?? data_get($order, 'table.name') ?? data_get($order, 'table.code'),
                 'guest_count' => $order['guest_count'] ?? null,
                 'token_code' => data_get($order, 'token.token_code'),
                 'kot_codes' => $kotCodes,
@@ -627,6 +716,14 @@ class InvoiceService
             return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($publicPath));
         }
 
+        if ($inline && ! is_file($publicPath)) {
+            Observability::logWarningMessage('invoice.logo_resolution.failed', [
+                'logo' => $logo,
+                'public_path' => $publicPath,
+                'inline' => $inline,
+            ]);
+        }
+
         return asset($relativePath);
     }
 
@@ -650,7 +747,10 @@ class InvoiceService
     {
         try {
             return (new Generator())->format('svg')->size(120)->generate($url);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Observability::logWarning('invoice.safe_qr_generation.failed', $e, [
+                'url_host' => parse_url($url, PHP_URL_HOST),
+            ]);
             return null;
         }
     }

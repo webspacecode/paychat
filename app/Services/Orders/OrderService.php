@@ -338,14 +338,10 @@ class OrderService
             throw new \Exception('Completed or cancelled order cannot be modified');
         }
 
-        foreach ($request->items as $item) {
-            if (!Product::whereKey($item['product_id'])->exists()) {
-                abort(422, "Product not found with id: ".$item['product_id']);
-            }
-        }
+        $products = $this->productsForItems((array) $request->items);
 
         if ($order->dining_flow === 'table_service') {
-            $this->syncTableServiceItems($order, $request);
+            $this->syncTableServiceItems($order, $request, $products);
             return;
         }
 
@@ -354,7 +350,7 @@ class OrderService
             (int) $order->location_id
         );
         
-        DB::transaction(function () use ($order, $request) {
+        DB::transaction(function () use ($order, $request, $products) {
 
             // 1️⃣ Remove old items
             $order->items()->delete();
@@ -363,7 +359,7 @@ class OrderService
 
             // 2️⃣ Insert new ones
             foreach ($request->items as $item) {
-                $product = Product::find($item['product_id']);
+                $product = $products->get((int) $item['product_id']);
                 
                 if (!$product) {
                     abort(422, "Product not found with id: ".$item['product_id']);
@@ -391,9 +387,9 @@ class OrderService
         });
     }
 
-    private function syncTableServiceItems(Order $order, Request $request): void
+    private function syncTableServiceItems(Order $order, Request $request, $products): void
     {
-        DB::transaction(function () use ($order, $request) {
+        DB::transaction(function () use ($order, $request, $products) {
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
             $desiredItems = collect((array) $request->items)
                 ->groupBy(fn ($item) => (int) $item['product_id'])
@@ -444,7 +440,7 @@ class OrderService
                 ->delete();
 
             foreach ($pendingDeltas as $item) {
-                $product = Product::find($item['product_id']);
+                $product = $products->get((int) $item['product_id']);
 
                 if (!$product) {
                     abort(422, "Product not found with id: ".$item['product_id']);
@@ -466,6 +462,26 @@ class OrderService
                 'discount' => $request->discount,
             ]);
         });
+    }
+
+    private function productsForItems(array $items)
+    {
+        $productIds = collect($items)
+            ->pluck('product_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+        foreach ($productIds as $productId) {
+            if (!$products->has($productId)) {
+                abort(422, "Product not found with id: ".$productId);
+            }
+        }
+
+        return $products;
     }
 
     public function moveToPendingPayment(Order $order)

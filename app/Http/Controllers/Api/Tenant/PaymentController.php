@@ -79,17 +79,30 @@ class PaymentController extends Controller
 
     public function createPayment(String $tenantSlug, String $orderId, InitiatePaymentRequest $request, PaymentService $service)
     {
+        $startedAt = microtime(true);
         $order = Order::find($orderId);
 
         try {
-            return response()->json(
-                $service->createPayment(
-                    $order,
-                    $request->payment_method,
-                    $request->amount,
-                    $request->payment_method === 'upi' ? $request->upi_profile_id : null
-                )
+            $payment = $service->createPayment(
+                $order,
+                $request->payment_method,
+                $request->amount,
+                $request->payment_method === 'upi' ? $request->upi_profile_id : null
             );
+
+            $paymentModel = is_array($payment) ? ($payment['payment'] ?? null) : $payment;
+
+            Observability::logInfo('payment.created', [
+                'tenant_slug' => $tenantSlug,
+                'order_id' => $order?->id ?? $orderId,
+                'payment_id' => $paymentModel?->id,
+                'payment_method' => $request->payment_method,
+                'payment_status' => $paymentModel?->status,
+                'location_id' => $order?->location_id,
+                'duration_ms' => Observability::durationMs($startedAt),
+            ], $request);
+
+            return response()->json($payment);
         } catch (Throwable $e) {
             Observability::logFailure('payment.create.failed', $e, [
                 'tenant_slug' => $tenantSlug,
@@ -117,6 +130,7 @@ class PaymentController extends Controller
 
     public function markSuccess(String $tenantSlug, String $paymentId, PaymentService $service, OrderKitchenDispatchService $kitchenDispatch)
     {
+        $startedAt = microtime(true);
         $payment = Payment::find($paymentId);
         $order = $payment?->order;
 
@@ -132,6 +146,19 @@ class PaymentController extends Controller
 
             $token = $kitchenDispatch->ensureTokenAndDispatchWhenReady($order, 'payment_success');
             $order = $order->fresh(['tableSession', 'token']);
+
+            Observability::logInfo('payment.completed', [
+                'tenant_slug' => $tenantSlug,
+                'order_id' => $order?->id,
+                'payment_id' => $payment?->id ?? $paymentId,
+                'location_id' => $order?->location_id,
+                'table_id' => $order?->table_id,
+                'table_session_id' => $order?->table_session_id,
+                'token_id' => $token?->id,
+                'invoice_id' => $invoice['invoice_id'],
+                'invoice_number' => $invoice['invoice_number'],
+                'duration_ms' => Observability::durationMs($startedAt),
+            ]);
 
             return response()->json([
                 'payment' => $payment->fresh(),
@@ -174,6 +201,7 @@ class PaymentController extends Controller
         }
 
         try {
+            $startedAt = microtime(true);
             $tenant = app()->bound('currentTenant') ? app('currentTenant') : null;
 
             if (! $tenant) {
@@ -191,7 +219,7 @@ class PaymentController extends Controller
             );
 
             $freshOrder = $order->fresh();
-            $this->logInvoiceGenerated($tenantSlug, $freshOrder, $payment, true);
+            $this->logInvoiceGenerated($tenantSlug, $freshOrder, $payment, true, Observability::durationMs($startedAt));
 
             return [
                 'invoice_generated' => true,
@@ -242,7 +270,7 @@ class PaymentController extends Controller
             : ((string) array_key_first($templates) ?: 'a4');
     }
 
-    private function logInvoiceGenerated(string $tenantSlug, Order $order, Payment $payment, bool $created): void
+    private function logInvoiceGenerated(string $tenantSlug, Order $order, Payment $payment, bool $created, ?int $durationMs = null): void
     {
         try {
             Log::info('table_service.invoice.generated', Observability::context([
@@ -253,6 +281,7 @@ class PaymentController extends Controller
                 'invoice_number' => $order->invoice_no,
                 'location_id' => $order->location_id,
                 'created' => $created,
+                'duration_ms' => $durationMs,
                 'action' => 'table_service.invoice.generate',
             ]));
         } catch (Throwable) {

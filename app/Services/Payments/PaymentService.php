@@ -8,6 +8,7 @@ use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
 use App\Models\Tenant\PaymentMethod;
 use App\Models\Tenant\UpiProfile;
+use App\Support\Observability;
 use Illuminate\Support\Facades\DB;
 use App\Services\Orders\OrderService;
 use App\Services\Payments\Strategies\CashPaymentStrategy;
@@ -339,6 +340,12 @@ class PaymentService
         try {
             $qr = (new Generator())->format('svg')->size(240)->generate($upiQr);
         } catch (\Exception $e) {
+            Observability::logWarning('payment.qr_generation.failed', $e, [
+                'order_id' => $order->id,
+                'payment_id' => $payment->id,
+                'location_id' => $order->location_id,
+                'payment_method' => 'upi',
+            ]);
             $qr = null;
         }
 

@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\Resource;
 use App\Services\TableSessionService;
+use App\Support\Observability;
 use Illuminate\Http\Request;
 
 class TableController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, TableSessionService $service)
     {
+        $startedAt = microtime(true);
         $tables = Resource::query()
             ->where('type', 'table')
             ->when($request->filled('location_id'), fn ($q) =>
@@ -22,15 +24,32 @@ class TableController extends Controller
             ->when($request->filled('floor'), fn ($q) =>
                 $q->where('floor', $request->floor)
             )
-            ->when($request->filled('status'), fn ($q) =>
-                $q->where('status', $request->status)
-            )
-            ->with('activeTableSession.order')
+            ->with([
+                'activeTableSession.order',
+                'activeTableSession.tables',
+                'activeTableSession.primaryTable',
+                'activeTableSession.linkedTables',
+            ])
             ->orderBy('floor')
             ->orderBy('area')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+
+        $service->hydrateTableGroupContext($tables);
+
+        if ($request->filled('status')) {
+            $tables = $tables
+                ->filter(fn ($table) => $table->status === $request->status)
+                ->values();
+        }
+
+        Observability::logInfo('tables.index.loaded', [
+            'location_id' => $request->input('location_id'),
+            'table_count' => $tables->count(),
+            'active_session_count' => $tables->filter(fn ($table) => $table->activeTableSession !== null)->count(),
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
 
         return response()->json(['data' => $tables]);
     }
@@ -115,9 +134,18 @@ class TableController extends Controller
 
     public function release(String $tenantSlug, String $tableId, Request $request, TableSessionService $service)
     {
+        $startedAt = microtime(true);
         $table = Resource::whereKey($tableId)->where('type', 'table')->firstOrFail();
 
         $released = $service->release($table, $request->boolean('force'));
+
+        Observability::logInfo('table.released', [
+            'tenant_slug' => $tenantSlug,
+            'location_id' => $released->location_id,
+            'table_id' => $released->id,
+            'forced' => $request->boolean('force'),
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
 
         return response()->json([
             'message' => 'Table released',

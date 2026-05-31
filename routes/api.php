@@ -147,6 +147,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::patch('/orders/{order}/delivery-source', [OrderController::class, 'updateDeliverySource'])->whereNumber('order');
 
     Route::patch('/orders/{order}/table', [OrderController::class, 'assignTable'])->whereNumber('order');
+    Route::post('/orders/{order}/tables/link', [OrderController::class, 'linkTables'])->whereNumber('order');
     Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen'])->whereNumber('order');
     Route::post('/orders/{order}/inline-token', [InlineTokenController::class, 'store'])->whereNumber('order');
 

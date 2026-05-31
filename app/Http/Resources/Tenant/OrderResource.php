@@ -49,6 +49,10 @@ class OrderResource extends JsonResource
                 'name' => $this->table->name,
                 'code' => $this->table->code,
             ] : null,
+            'tables' => $this->tablePayloads(),
+            'primary_table' => $this->primaryTablePayload(),
+            'linked_tables' => $this->linkedTablePayloads(),
+            'table_display' => $this->tableDisplay(),
             'table_session_id' => $this->table_session_id,
             'guest_count' => $this->guest_count,
             'dining_flow' => $this->dining_flow,
@@ -134,6 +138,7 @@ class OrderResource extends JsonResource
                     'order_id' => $batch->order_id,
                     'table_session_id' => $batch->table_session_id,
                     'table_id' => $batch->table_id,
+                    'table_display' => $this->batchTableDisplay($batch),
                     'batch_number' => $batch->batch_number,
                     'batch_code' => $batch->batch_code,
                     'business_date' => $batch->business_date,
@@ -224,5 +229,103 @@ class OrderResource extends JsonResource
             'label' => $profile['label'] ?? null,
             'payee_name' => $profile['payee_name'] ?? null,
         ];
+    }
+
+    private function tablePayloads()
+    {
+        $session = $this->loadedTableSession();
+
+        if ($session) {
+            return $session->tables
+                ->map(fn ($table) => $this->tablePayload($table))
+                ->filter()
+                ->values();
+        }
+
+        return $this->table
+            ? collect([$this->tablePayload($this->table)])
+            : collect();
+    }
+
+    private function primaryTablePayload(): ?array
+    {
+        $session = $this->loadedTableSession();
+        $table = $session?->primaryTable ?: $this->table;
+
+        return $this->tablePayload($table);
+    }
+
+    private function linkedTablePayloads()
+    {
+        $session = $this->loadedTableSession();
+
+        if (! $session) {
+            return collect();
+        }
+
+        return $session->linkedTables
+            ->map(fn ($table) => $this->tablePayload($table))
+            ->filter()
+            ->values();
+    }
+
+    private function tableDisplay(): ?string
+    {
+        $session = $this->loadedTableSession();
+
+        if ($session?->table_display) {
+            return $session->table_display;
+        }
+
+        if (! $this->table) {
+            return null;
+        }
+
+        return $this->table->name ?: $this->table->code;
+    }
+
+    private function loadedTableSession()
+    {
+        $session = $this->tableSession;
+
+        if (! $session) {
+            return null;
+        }
+
+        $session->loadMissing(['tables', 'primaryTable', 'linkedTables']);
+
+        return $session;
+    }
+
+    private function tablePayload($table): ?array
+    {
+        if (! $table) {
+            return null;
+        }
+
+        return [
+            'id' => $table->id,
+            'name' => $table->name,
+            'code' => $table->code,
+        ];
+    }
+
+    private function batchTableDisplay($batch): ?string
+    {
+        $session = $batch->tableSession ?: $this->loadedTableSession();
+
+        if ($session) {
+            $session->loadMissing(['tables']);
+
+            if ($session->table_display) {
+                return $session->table_display;
+            }
+        }
+
+        if ($batch->table) {
+            return $batch->table->name ?: $batch->table->code;
+        }
+
+        return $this->tableDisplay();
     }
 }

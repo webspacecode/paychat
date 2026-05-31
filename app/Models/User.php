@@ -22,7 +22,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'tenant_id'
+        'tenant_id',
+        'role',
     ];
 
     /**
@@ -51,5 +52,15 @@ class User extends Authenticatable
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function isMaster(): bool
+    {
+        return $this->role === 'master';
+    }
+
+    public function isTenantUser(): bool
+    {
+        return ! $this->isMaster() && $this->tenant_id !== null;
     }
 }

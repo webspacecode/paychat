@@ -21,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (auth()->check()) {
+        if (auth()->check() && auth()->user()->tenant) {
             $tenant = auth()->user()->tenant;
 
             App::singleton(

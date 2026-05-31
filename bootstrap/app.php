@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\IdentifyTenant::class, // 👈 register alias
             'apikey' => ApiKeyMiddleware::class,
             'request.id' => RequestIdMiddleware::class,
+            'master' => \App\Http\Middleware\EnsureMasterUser::class,
         ]);
 
         $middleware->group('api', [

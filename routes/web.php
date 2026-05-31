@@ -3,6 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Tenant\InfoController;
 use App\Http\Controllers\PublicBillingController;
+use App\Http\Controllers\Web\AuthenticatedSessionController;
+use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\RegisteredTenantController;
 
 Route::get('/', [InfoController::class,'welcome']);
 
@@ -44,3 +47,24 @@ Route::get('/generate-sitemap', function () {
 });
 
 Route::get('/store/{slug}', [InfoController::class, 'storePage']);
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
+    Route::get('/register', [RegisteredTenantController::class, 'create'])->name('register');
+    Route::post('/register', [RegisteredTenantController::class, 'store']);
+});
+
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('logout');
+
+Route::middleware(['auth', 'master'])->prefix('master')->name('master.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'master'])->name('dashboard');
+    Route::patch('/tenants/{tenant}/password', [DashboardController::class, 'resetTenantPassword'])
+        ->name('tenants.password');
+});
+
+Route::get('/dashboard', [DashboardController::class, 'tenant'])
+    ->middleware('auth')
+    ->name('tenant.dashboard');

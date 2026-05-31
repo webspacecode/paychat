@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\Resource;
+use App\Services\TableSessionService;
+use App\Support\Observability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DiningStructureController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, TableSessionService $service)
     {
+        $startedAt = microtime(true);
         $validated = $request->validate([
             'location_id' => 'required|integer|exists:locations,id',
         ]);
@@ -18,12 +21,19 @@ class DiningStructureController extends Controller
         $tables = Resource::query()
             ->where('type', 'table')
             ->where('location_id', $validated['location_id'])
-            ->with('activeTableSession.order')
+            ->with([
+                'activeTableSession.order',
+                'activeTableSession.tables',
+                'activeTableSession.primaryTable',
+                'activeTableSession.linkedTables',
+            ])
             ->orderBy('floor')
             ->orderBy('area')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+
+        $service->hydrateTableGroupContext($tables);
 
         $floors = $tables
             ->groupBy(fn ($table) => $table->floor ?: 'Default')
@@ -41,6 +51,14 @@ class DiningStructureController extends Controller
             })
             ->values();
 
+        Observability::logInfo('dining_structure.loaded', [
+            'location_id' => (int) $validated['location_id'],
+            'table_count' => $tables->count(),
+            'floor_count' => $floors->count(),
+            'active_session_count' => $tables->filter(fn ($table) => $table->activeTableSession !== null)->count(),
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
+
         return response()->json([
             'location_id' => (int) $validated['location_id'],
             'floors' => $floors,
@@ -50,6 +68,7 @@ class DiningStructureController extends Controller
 
     public function bulkUpsert(Request $request)
     {
+        $startedAt = microtime(true);
         $validated = $request->validate([
             'location_id' => 'required|integer|exists:locations,id',
             'tables' => 'required|array|min:1',
@@ -93,6 +112,12 @@ class DiningStructureController extends Controller
             })->values();
         });
 
+        Observability::logInfo('dining_structure.saved', [
+            'location_id' => (int) $validated['location_id'],
+            'table_count' => $tables->count(),
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
+
         return response()->json([
             'message' => 'Dining structure saved',
             'data' => $tables,
@@ -101,6 +126,7 @@ class DiningStructureController extends Controller
 
     public function updatePosition(String $tenantSlug, String $tableId, Request $request)
     {
+        $startedAt = microtime(true);
         $table = Resource::whereKey($tableId)->where('type', 'table')->firstOrFail();
 
         $validated = $request->validate([
@@ -116,6 +142,13 @@ class DiningStructureController extends Controller
         ]);
 
         $table->update($validated);
+
+        Observability::logInfo('table.position_updated', [
+            'tenant_slug' => $tenantSlug,
+            'location_id' => $table->location_id,
+            'table_id' => $table->id,
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
 
         return response()->json([
             'message' => 'Table layout updated',

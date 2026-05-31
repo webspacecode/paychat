@@ -20,4 +20,8 @@ class DemoLead extends Model
         'notes',
 
     ];
+
+    protected $casts = [
+        'preferred_demo_time' => 'datetime',
+    ];
 }

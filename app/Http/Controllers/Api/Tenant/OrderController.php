@@ -16,6 +16,8 @@ use App\Services\Orders\Strategies\StockStrategyResolver;
 use App\Http\Resources\Tenant\OrderResource;
 use App\Http\Controllers\Controller;
 use App\Support\Observability;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -50,6 +52,7 @@ class OrderController extends Controller
 
     public function create(Request $request, OrderService $service)
     {
+        $startedAt = microtime(true);
         $deliverySource = $this->validateDeliverySource($request, $request->order_type);
 
         $order = $this->orderService->createDraft(
@@ -62,6 +65,17 @@ class OrderController extends Controller
             $request->table_session_id,
             $deliverySource
         );
+
+        Observability::logInfo('order.draft.created', [
+            'order_id' => $order->id,
+            'order_no' => $order->order_no,
+            'location_id' => $order->location_id,
+            'table_id' => $order->table_id,
+            'table_session_id' => $order->table_session_id,
+            'order_type' => $order->order_type,
+            'dining_flow' => $order->dining_flow,
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product')
@@ -100,9 +114,20 @@ class OrderController extends Controller
 
     public function updateItems(String $tenantSlug, String $orderId, Request $request, OrderService $service) 
     {
+        $startedAt = microtime(true);
         $order = Order::findOrFail($orderId);
 
         $service->syncItems($order, $request);
+
+        Observability::logInfo('order.items.synced', [
+            'tenant_slug' => $tenantSlug,
+            'order_id' => $order->id,
+            'location_id' => $order->location_id,
+            'table_id' => $order->table_id,
+            'table_session_id' => $order->table_session_id,
+            'item_count' => count((array) $request->items),
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product')
@@ -111,9 +136,19 @@ class OrderController extends Controller
 
     public function moveToPayment(String $tenantSlug, String $orderId, OrderService $service)
     {
+        $startedAt = microtime(true);
         $order = Order::findOrFail($orderId);
 
         $service->moveToPendingPayment($order);
+
+        Observability::logInfo('order.pending_payment', [
+            'tenant_slug' => $tenantSlug,
+            'order_id' => $order->id,
+            'location_id' => $order->location_id,
+            'table_id' => $order->table_id,
+            'table_session_id' => $order->table_session_id,
+            'duration_ms' => Observability::durationMs($startedAt),
+        ]);
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
@@ -217,6 +252,8 @@ class OrderController extends Controller
     {
         $order = Order::with([
             'kitchenBatches.items.product',
+            'kitchenBatches.table',
+            'kitchenBatches.tableSession.tables',
         ])->findOrFail($orderId);
         $operationMode = app(KitchenBatchService::class)->operationMode();
 
@@ -229,6 +266,7 @@ class OrderController extends Controller
                     'order_id' => $batch->order_id,
                     'table_session_id' => $batch->table_session_id,
                     'table_id' => $batch->table_id,
+                    'table_display' => $this->tableDisplayForBatch($batch),
                     'batch_number' => $batch->batch_number,
                     'batch_code' => $batch->batch_code,
                     'business_date' => $batch->business_date,
@@ -304,33 +342,137 @@ class OrderController extends Controller
         }
     }
 
+    private function tableDisplayForBatch($batch): ?string
+    {
+        $session = $batch->tableSession;
+
+        if ($session) {
+            $session->loadMissing(['tables']);
+
+            if ($session->table_display) {
+                return $session->table_display;
+            }
+        }
+
+        return $batch->table ? ($batch->table->name ?: $batch->table->code) : null;
+    }
+
     public function assignTable(String $tenantSlug, Order $order, Request $request, TableSessionService $service)
     {
+        $startedAt = microtime(true);
         $validated = $request->validate([
             'table_id' => 'required|integer|exists:resources,id',
             'guest_count' => 'nullable|integer|min:1',
             'dining_flow' => 'nullable|in:table_service',
         ]);
 
-        $service->assignOrder(
+        $session = $service->assignOrder(
             $order,
             (int) $validated['table_id'],
             $validated['guest_count'] ?? null
         );
+
+        Observability::logInfo('table.assigned', [
+            'tenant_slug' => $tenantSlug,
+            'order_id' => $order->id,
+            'location_id' => $order->location_id,
+            'table_id' => (int) $validated['table_id'],
+            'table_session_id' => $session->id,
+            'guest_count' => $validated['guest_count'] ?? null,
+            'duration_ms' => Observability::durationMs($startedAt),
+        ], $request);
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
     }
 
+    public function linkTables(String $tenantSlug, Order $order, Request $request, TableSessionService $service)
+    {
+        $startedAt = microtime(true);
+        $validated = $request->validate([
+            'primary_table_id' => 'required|integer|exists:resources,id',
+            'linked_table_ids' => 'sometimes|array',
+            'linked_table_ids.*' => 'integer|distinct|exists:resources,id',
+            'guest_count' => 'nullable|integer|min:1',
+        ]);
+
+        $linkedTableIds = collect($validated['linked_table_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $primaryTableId = (int) $validated['primary_table_id'];
+
+        if (in_array($primaryTableId, $linkedTableIds, true)) {
+            throw ValidationException::withMessages([
+                'linked_table_ids' => 'Linked tables cannot include the primary table.',
+            ]);
+        }
+
+        try {
+            $session = $service->assignOrderTables(
+                $order,
+                $primaryTableId,
+                $linkedTableIds,
+                $validated['guest_count'] ?? null
+            );
+
+            Log::info('table_group.linked', Observability::context([
+                'order_id' => $order->id,
+                'table_session_id' => $session->id,
+                'primary_table_id' => $primaryTableId,
+                'linked_table_ids' => $linkedTableIds,
+                'guest_count' => $validated['guest_count'] ?? null,
+                'duration_ms' => Observability::durationMs($startedAt),
+            ], $request));
+
+            return new OrderResource(
+                $order->fresh()->load([
+                    'items.product',
+                    'customer',
+                    'location',
+                    'payments',
+                    'table',
+                    'tableSession.tables',
+                    'tableSession.primaryTable',
+                    'tableSession.linkedTables',
+                    'kitchenBatches.items.product',
+                ])
+            );
+        } catch (Throwable $e) {
+            Observability::logFailure('table_group.link_failed', $e, [
+                'order_id' => $order->id,
+                'table_session_id' => $order->table_session_id,
+                'primary_table_id' => $primaryTableId,
+                'linked_table_ids' => $linkedTableIds,
+                'guest_count' => $validated['guest_count'] ?? null,
+            ], $request);
+
+            throw $e;
+        }
+    }
+
     public function sendToKitchen(String $tenantSlug, Order $order, KitchenBatchService $service)
     {
+        $startedAt = microtime(true);
         try {
             $batch = $service->sendFreshItems($order);
 
             if ($service->shouldBroadcastToKds($batch)) {
                 event(new KitchenBatchCreated($batch));
             }
+
+            Observability::logInfo('kitchen.batch.created', [
+                'tenant_slug' => $tenantSlug,
+                'order_id' => $order->id,
+                'location_id' => $order->location_id,
+                'table_id' => $batch->table_id,
+                'table_session_id' => $batch->table_session_id,
+                'batch_id' => $batch->id,
+                'batch_code' => $batch->batch_code,
+                'duration_ms' => Observability::durationMs($startedAt),
+            ]);
         } catch (Throwable $e) {
             Observability::logFailure('kitchen.send_to_kitchen.failed', $e, [
                 'tenant_slug' => $tenantSlug,
