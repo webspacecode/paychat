@@ -91,8 +91,10 @@ cd /var/www/paychat-api
 # Find Request by Support Code
 
 ```bash
-grep -R "PCR-MPI7KLTT-5Y2X3M61" storage/logs/
+grep -R "PCR-MPV8RP4J-1E4Q1S0N" storage/logs/
 ```
+
+php artisan ops:tenant-logs-check luxury-salon
 
 This should reveal:
 
