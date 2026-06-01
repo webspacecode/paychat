@@ -1,1 +1,1 @@
-{"name":"PayChat POS","short_name":"PayChat","start_url":"/pos/","display":"standalone","background_color":"#ffffff","theme_color":"#1d4ed8","lang":"en","scope":"/pos/"}
+{"name":"PayChat POS","short_name":"PayChat","start_url":"/pos/","display":"standalone","background_color":"#ffffff","theme_color":"#1d4ed8","lang":"en","scope":"/pos/","icons":[{"src":"/pos/paychat-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/pos/paychat-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}]}

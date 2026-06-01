@@ -7,6 +7,7 @@ use App\Models\Tenant\TableSession;
 use App\Services\TableSessionService;
 use App\Support\Observability;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class TableSessionController extends Controller
 {
@@ -71,7 +72,29 @@ class TableSessionController extends Controller
     public function close(Request $request, TableSession $session, TableSessionService $service)
     {
         $startedAt = microtime(true);
-        $closed = $service->close($session);
+
+        try {
+            $closed = $service->close($session);
+        } catch (ValidationException $e) {
+            if (! $this->isAwaitingLinkedPayment($session)) {
+                throw $e;
+            }
+
+            $active = $session->fresh(['table', 'order.payments']);
+
+            Observability::logInfo('table.session.close.deferred', [
+                'location_id' => $active->location_id,
+                'table_id' => $active->table_id,
+                'table_session_id' => $active->id,
+                'order_id' => $active->order_id,
+                'duration_ms' => Observability::durationMs($startedAt),
+            ], $request);
+
+            return response()->json([
+                'message' => 'Table session close deferred until pending payment is completed.',
+                'data' => $active,
+            ], 202);
+        }
 
         Observability::logInfo('table.session.closed', [
             'location_id' => $closed->location_id,
@@ -85,5 +108,20 @@ class TableSessionController extends Controller
             'message' => 'Table session closed',
             'data' => $closed,
         ]);
+    }
+
+    private function isAwaitingLinkedPayment(TableSession $session): bool
+    {
+        $order = $session->fresh(['order.payments'])->order;
+
+        if (! $order || $order->payment_status === 'paid') {
+            return false;
+        }
+
+        $committedAmount = (float) $order->payments
+            ->whereIn('status', ['pending', 'processing', 'success'])
+            ->sum('amount');
+
+        return round($committedAmount, 2) >= round((float) $order->total, 2);
     }
 }

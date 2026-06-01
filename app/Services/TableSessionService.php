@@ -218,7 +218,33 @@ class TableSessionService
             return $session;
         }
 
-        return $this->close($session);
+        return DB::transaction(function () use ($order, $session) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $lockedSession = TableSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedSession->status === 'closed') {
+                return $lockedSession->fresh(self::TABLE_GROUP_RELATIONS);
+            }
+
+            if ($lockedOrder->payment_status !== 'paid') {
+                throw ValidationException::withMessages([
+                    'order' => 'Cannot close table session while linked order is unpaid.',
+                ]);
+            }
+
+            if ((int) $lockedSession->order_id !== (int) $lockedOrder->id) {
+                $lockedSession->update(['order_id' => $lockedOrder->id]);
+            }
+
+            $lockedSession->update([
+                'status' => 'closed',
+                'closed_at' => now(),
+            ]);
+
+            $this->releaseSessionTables($lockedSession);
+
+            return $lockedSession->fresh(self::TABLE_GROUP_RELATIONS);
+        });
     }
 
     public function release(Resource $table, bool $force = false): Resource

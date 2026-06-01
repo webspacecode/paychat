@@ -60,7 +60,8 @@ class Order extends Model
 
         // Payment Tracking
         'paid_amount',
-        'change_amount',
+        'balance_due',
+        'change_returned',
 
         // Timestamps (Business)
         'paid_at',

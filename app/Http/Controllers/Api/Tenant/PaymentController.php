@@ -140,7 +140,7 @@ class PaymentController extends Controller
             $order = $order->fresh(['items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product']);
             $invoice = $this->autoGenerateTableServiceInvoice($tenantSlug, $order, $payment);
 
-            if ($order->dining_flow === 'table_service') {
+            if ($order->dining_flow === 'table_service' && $order->payment_status === 'paid') {
                 app(TableSessionService::class)->closeForOrder($order);
             }
 

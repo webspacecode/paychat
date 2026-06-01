@@ -55,25 +55,21 @@ class PaymentService
             throw new \Exception('Payment method not enabled');
         }
 
-        // ✅ Check remaining
-        $paidAmount = $order->payments()
-            ->where('status','success')
-            ->sum('amount');
-
-        $remaining = $order->total - $paidAmount;
+        $amount = $this->money($amount);
+        $remaining = $this->remainingAmount($order);
 
         if ($remaining <= 0) {
             throw new \Exception('Order already fully paid');
         }
 
-        if ($amount > $remaining) {
+        if ($method !== 'cash' && $amount > $remaining) {
             throw new \Exception('Amount exceeds remaining payment');
         }
 
         // 🔥 HANDLE METHODS
         return match ($method) {
 
-            'cash' => $this->handleCash($order, $amount),
+            'cash' => $this->handleCash($order, $amount, $remaining),
 
             'upi' => $this->handleUpi($order, $amount, $config, $upiProfileId),
 
@@ -81,16 +77,23 @@ class PaymentService
         };
     }
 
-    private function handleCash(Order $order, $amount)
+    private function handleCash(Order $order, $tenderedAmount, $remaining)
     {
+        $amount = min($this->money($tenderedAmount), $this->money($remaining));
+        $changeReturned = max(0, $this->money($tenderedAmount - $amount));
+
         $payment = Payment::create([
             'order_id' => $order->id,
             'payment_method' => 'cash',
             'amount' => $amount,
-            'status' => 'success'
+            'status' => 'success',
+            'meta' => $changeReturned > 0 ? [
+                'tendered_amount' => $this->money($tenderedAmount),
+                'change_returned' => $changeReturned,
+            ] : null,
         ]);
 
-        $this->updateOrderPaymentStatus($order);
+        $this->updateOrderPaymentStatus($order, $changeReturned);
 
         return $payment;
     }
@@ -362,22 +365,27 @@ class PaymentService
         ]));
     }
 
-    public function updateOrderPaymentStatus(Order $order)
+    public function updateOrderPaymentStatus(Order $order, float $changeReturned = 0)
     {
-        $paidAmount = $order->payments()
-            ->where('status','success')
-            ->sum('amount');
+        $paidAmount = $this->successfulPaidAmount($order);
+        $balanceDue = max(0, $this->money($order->total - $paidAmount));
 
         if ($paidAmount >= $order->total) {
 
             $order->update([
-                'payment_status' => 'paid'
+                'payment_status' => 'paid',
+                'paid_amount' => $paidAmount,
+                'balance_due' => 0,
+                'change_returned' => $this->money(($order->change_returned ?? 0) + $changeReturned),
             ]);
 
         } else {
 
             $order->update([
-                'payment_status' => 'partial'
+                'payment_status' => 'partially_paid',
+                'paid_amount' => $paidAmount,
+                'balance_due' => $balanceDue,
+                'change_returned' => $this->money(($order->change_returned ?? 0) + $changeReturned),
             ]);
         }
     }
@@ -405,14 +413,21 @@ class PaymentService
 
         $payment->update(['status' => 'success']);
 
-        $paid = $order->payments()
-            ->where('status', 'success')
-            ->sum('amount');
+        $paid = $this->successfulPaidAmount($order);
+        $balanceDue = max(0, $this->money($order->total - $paid));
 
         if ($paid >= $order->total) {
-            $order->update(['payment_status' => 'paid']);
+            $order->update([
+                'payment_status' => 'paid',
+                'paid_amount' => $paid,
+                'balance_due' => 0,
+            ]);
         } else {
-            $order->update(['payment_status' => 'partially_paid']);
+            $order->update([
+                'payment_status' => 'partially_paid',
+                'paid_amount' => $paid,
+                'balance_due' => $balanceDue,
+            ]);
         }
     }
 
@@ -432,14 +447,15 @@ class PaymentService
                 throw new \Exception('Cancelled order cannot accept payment');
             }
 
-            $paidAmount = $order->payments()
-                ->where('status','success')
-                ->sum('amount');
+            $paidAmount = $this->successfulPaidAmount($order);
+            $balanceDue = max(0, $this->money($order->total - $paidAmount));
 
             if ($paidAmount >= $order->total) {
 
                 $order->update([
-                    'payment_status' => 'paid'
+                    'payment_status' => 'paid',
+                    'paid_amount' => $paidAmount,
+                    'balance_due' => 0,
                 ]);
 
                 app(OrderService::class)->completeOrder($order);
@@ -447,12 +463,38 @@ class PaymentService
             } else {
 
                 $order->update([
-                    'payment_status' => 'partial'
+                    'payment_status' => 'partially_paid',
+                    'paid_amount' => $paidAmount,
+                    'balance_due' => $balanceDue,
                 ]);
             }
 
         });
 
         return $payment->fresh();
+    }
+
+    private function remainingAmount(Order $order): float
+    {
+        return max(0, $this->money($order->total - $this->committedPaymentAmount($order)));
+    }
+
+    private function successfulPaidAmount(Order $order): float
+    {
+        return $this->money($order->payments()
+            ->where('status', 'success')
+            ->sum('amount'));
+    }
+
+    private function committedPaymentAmount(Order $order): float
+    {
+        return $this->money($order->payments()
+            ->whereIn('status', ['pending', 'processing', 'success'])
+            ->sum('amount'));
+    }
+
+    private function money($amount): float
+    {
+        return round((float) $amount, 2);
     }
 }
