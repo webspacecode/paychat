@@ -94,6 +94,7 @@ cd /var/www/paychat-api
 grep -R "PCR-MPV8RP4J-1E4Q1S0N" storage/logs/
 ```
 
+php artisan ops:tenant-logs-check
 php artisan ops:tenant-logs-check luxury-salon
 
 This should reveal:
