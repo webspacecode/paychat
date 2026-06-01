@@ -24,4 +24,9 @@ class PaymentException extends RuntimeException
             'details' => $this->context,
         ], fn ($value) => $value !== null && $value !== []), $this->status);
     }
+
+    public function getStatusCode(): int
+    {
+        return $this->status;
+    }
 }

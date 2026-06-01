@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\OperationalLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -67,7 +68,9 @@ class Observability
     public static function logWarningMessage(string $message, array $extra = [], ?Request $request = null): void
     {
         try {
-            Log::warning($message, self::context($extra, $request));
+            $context = self::context($extra, $request);
+            Log::warning($message, $context);
+            self::writeOperational('warning', $message, $context, $request);
         } catch (Throwable) {
             // Observability must never interrupt billing or order flow.
         }
@@ -76,11 +79,14 @@ class Observability
     public static function logFailure(string $message, Throwable $exception, array $extra = [], ?Request $request = null): void
     {
         try {
-            Log::error($message, self::context(array_merge($extra, [
+            $context = self::context(array_merge($extra, [
                 'exception_message' => $exception->getMessage(),
                 'exception_class' => $exception::class,
                 'exception' => $exception,
-            ]), $request));
+            ]), $request);
+
+            Log::error($message, $context);
+            self::writeOperational('error', $message, $context, $request);
         } catch (Throwable) {
             // Observability must never interrupt billing or order flow.
         }
@@ -89,13 +95,25 @@ class Observability
     public static function logWarning(string $message, Throwable $exception, array $extra = [], ?Request $request = null): void
     {
         try {
-            Log::warning($message, self::context(array_merge($extra, [
+            $context = self::context(array_merge($extra, [
                 'exception_message' => $exception->getMessage(),
                 'exception_class' => $exception::class,
                 'exception' => $exception,
-            ]), $request));
+            ]), $request);
+
+            Log::warning($message, $context);
+            self::writeOperational('warning', $message, $context, $request);
         } catch (Throwable) {
             // Observability must never interrupt billing or order flow.
+        }
+    }
+
+    private static function writeOperational(string $level, string $event, array $context, ?Request $request = null): void
+    {
+        try {
+            app(OperationalLogService::class)->write($level, $event, $context, $request);
+        } catch (Throwable) {
+            // Tenant operational logs are best-effort only.
         }
     }
 }

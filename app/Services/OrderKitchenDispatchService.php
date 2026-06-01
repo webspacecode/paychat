@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\OrderCreated;
 use App\Models\Tenant\Order;
 use App\Models\Tenant\OrderToken;
+use App\Support\Observability;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -20,7 +21,11 @@ class OrderKitchenDispatchService
     public function ensureTokenAndDispatchWhenReady(Order $order, string $reason): ?OrderToken
     {
         if (! $order->exists) {
-            Log::warning('Kitchen token dispatch skipped: order does not exist');
+            Observability::logWarningMessage('token.dispatch.warning', [
+                'safe_message' => 'Kitchen token dispatch skipped: order does not exist',
+                'module' => 'token',
+                'reason' => $reason,
+            ]);
             return null;
         }
 
@@ -49,7 +54,9 @@ class OrderKitchenDispatchService
                 ->first();
 
             if (! $lockedOrder) {
-                Log::warning('Kitchen token dispatch skipped: order not found', [
+                Observability::logWarningMessage('token.dispatch.warning', [
+                    'safe_message' => 'Kitchen token dispatch skipped: order not found',
+                    'module' => 'token',
                     'order_id' => $order->id,
                     'reason' => $reason,
                 ]);

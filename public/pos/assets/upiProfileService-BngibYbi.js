@@ -1,0 +1,1 @@
+import{a as r}from"./api-kncWtHDB.js";const i={list(e={}){return r.get("/upi-profiles",{params:e})},create(e){return r.post("/upi-profiles",e)},update(e,t){return r.patch(`/upi-profiles/${e}`,t)},deactivate(e){return r.delete(`/upi-profiles/${e}`)},setDefault(e){return r.patch(`/upi-profiles/${e}/default`)}};export{i as u};

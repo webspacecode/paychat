@@ -61,6 +61,10 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware(['auth', 'master'])->prefix('master')->name('master.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'master'])->name('dashboard');
+    Route::get('/tenants/{tenant}/logs', [DashboardController::class, 'tenantLogs'])
+        ->name('tenants.logs');
+    Route::get('/tenants/{tenant}/logs/available-dates', [DashboardController::class, 'tenantLogDates'])
+        ->name('tenants.logs.dates');
     Route::patch('/tenants/{tenant}/password', [DashboardController::class, 'resetTenantPassword'])
         ->name('tenants.password');
 });

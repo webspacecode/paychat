@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Tenant\Payment;
 use App\Services\Payments\PaymentService;
+use App\Support\Observability;
+use Throwable;
 
 class PhonePeController extends Controller
 {
@@ -42,11 +44,12 @@ class PhonePeController extends Controller
 
             return response()->json(['status' => 'ok']);
 
-        } catch (\Exception $e) {
-
-            \Log::error("PhonePe Callback Error", [
-                'error' => $e->getMessage()
-            ]);
+        } catch (Throwable $e) {
+            Observability::logFailure('phonepe.callback.failed', $e, [
+                'module' => 'payment',
+                'safe_message' => 'PhonePe callback failed',
+                'action' => 'phonepe.callback',
+            ], $request);
 
             return response()->json(['status' => 'error']);
         }

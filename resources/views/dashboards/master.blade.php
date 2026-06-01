@@ -54,6 +54,7 @@
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tax</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Users</th>
                         <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Created</th>
+                        <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white">
@@ -99,10 +100,22 @@
                             </td>
                             <td class="px-5 py-4 text-sm text-slate-700">{{ $tenant->users->count() }}</td>
                             <td class="px-5 py-4 text-right text-sm text-slate-500">{{ $tenant->created_at?->format('d M Y') }}</td>
+                            <td class="px-5 py-4 text-right">
+                                <button
+                                    type="button"
+                                    class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                                    data-logs-open
+                                    data-tenant-name="{{ $tenant->name }}"
+                                    data-logs-url="{{ route('master.tenants.logs', $tenant) }}"
+                                    data-dates-url="{{ route('master.tenants.logs.dates', $tenant) }}"
+                                >
+                                    Logs
+                                </button>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-5 py-10 text-center text-sm text-slate-500">No tenants registered yet.</td>
+                            <td colspan="6" class="px-5 py-10 text-center text-sm text-slate-500">No tenants registered yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -307,7 +320,314 @@
         </div>
     @endforeach
 
+    <div id="tenant-logs-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/80 px-3 py-4" data-modal aria-hidden="true">
+        <div class="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+            <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-950 px-5 py-4 text-white lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold">Operational Logs</h2>
+                    <p id="logs-tenant-name" class="mt-1 text-sm text-slate-300"></p>
+                </div>
+                <button type="button" class="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-white/10" data-modal-close>
+                    Close
+                </button>
+            </div>
+
+            <div class="border-b border-slate-200 px-5 py-4">
+                <div class="grid gap-3 md:grid-cols-6">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Date
+                        <input id="logs-date" type="date" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
+                    </label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Module
+                        <select id="logs-module" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
+                            <option value="">All</option>
+                            <option value="payment">Payment</option>
+                            <option value="order">Order</option>
+                            <option value="invoice">Invoice</option>
+                            <option value="kds">KDS</option>
+                            <option value="token">Token</option>
+                            <option value="offline">Offline</option>
+                            <option value="system">System</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Event
+                        <input id="logs-event" type="search" placeholder="payment.create.failed" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
+                    </label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Level
+                        <select id="logs-level" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
+                            <option value="">All</option>
+                            <option value="error">Error</option>
+                            <option value="warning">Warning</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Severity
+                        <select id="logs-severity" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
+                            <option value="">All</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500 md:col-span-2">
+                        Support Code
+                        <div class="mt-1 flex gap-2">
+                            <input id="logs-support-code" type="search" placeholder="PCR-..." class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
+                            <button id="logs-refresh" type="button" class="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Refresh</button>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="min-h-0 flex-1 overflow-auto">
+                <div id="logs-status" class="hidden px-5 py-4 text-sm text-slate-600"></div>
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="sticky top-0 bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Level</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Module</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Event</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Support Code</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Message</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Location/User</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body" class="divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-600">
+                <span id="logs-page-summary">No logs loaded</span>
+                <div class="flex gap-2">
+                    <button id="logs-prev" type="button" class="rounded-md border border-slate-300 px-3 py-2 font-medium hover:bg-slate-100 disabled:opacity-40">Prev</button>
+                    <button id="logs-next" type="button" class="rounded-md border border-slate-300 px-3 py-2 font-medium hover:bg-slate-100 disabled:opacity-40">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        const logsState = {
+            url: null,
+            datesUrl: null,
+            page: 1,
+            lastPage: 1,
+            perPage: 25,
+        };
+
+        const today = () => new Date().toISOString().slice(0, 10);
+        const logsModal = document.getElementById('tenant-logs-modal');
+        const logsBody = document.getElementById('logs-table-body');
+        const logsStatus = document.getElementById('logs-status');
+        const logsSummary = document.getElementById('logs-page-summary');
+        const logsPrev = document.getElementById('logs-prev');
+        const logsNext = document.getElementById('logs-next');
+
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;',
+        }[char]));
+
+        const showLogsStatus = (message, tone = 'default') => {
+            logsStatus.textContent = message;
+            logsStatus.className = `px-5 py-4 text-sm ${tone === 'error' ? 'text-rose-700' : 'text-slate-600'}`;
+            logsStatus.classList.remove('hidden');
+        };
+
+        const hideLogsStatus = () => {
+            logsStatus.classList.add('hidden');
+            logsStatus.textContent = '';
+        };
+
+        const logsParams = () => {
+            const params = new URLSearchParams({
+                date: document.getElementById('logs-date').value || today(),
+                page: logsState.page,
+                per_page: logsState.perPage,
+            });
+
+            ['module', 'level', 'severity', 'event'].forEach((id) => {
+                const value = document.getElementById(`logs-${id}`).value;
+                if (value) params.set(id, value);
+            });
+
+            const supportCode = document.getElementById('logs-support-code').value.trim();
+            if (supportCode) params.set('support_code', supportCode);
+
+            return params;
+        };
+
+        const loadAvailableLogDate = async () => {
+            document.getElementById('logs-date').value = today();
+
+            if (!logsState.datesUrl) return;
+
+            try {
+                const response = await fetch(logsState.datesUrl, { headers: { Accept: 'application/json' } });
+                if (!response.ok) return;
+                const json = await response.json();
+                if (Array.isArray(json.data) && json.data.length > 0) {
+                    document.getElementById('logs-date').value = json.data.includes(today()) ? today() : json.data[0];
+                }
+            } catch (error) {
+                // Date lookup is optional; log loading will still work with today.
+            }
+        };
+
+        const renderLogs = (rows) => {
+            logsBody.innerHTML = '';
+
+            rows.forEach((row, index) => {
+                const supportCode = escapeHtml(row.support_code || row.request_id || '');
+                const detailId = `log-detail-${index}-${Math.random().toString(16).slice(2)}`;
+                const time = row.timestamp ? new Date(row.timestamp).toLocaleString() : '';
+                const levelClass = row.level === 'error' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700';
+
+                logsBody.insertAdjacentHTML('beforeend', `
+                    <tr class="align-top hover:bg-slate-50">
+                        <td class="whitespace-nowrap px-4 py-3 text-slate-600">${escapeHtml(time)}</td>
+                        <td class="px-4 py-3"><span class="rounded-md px-2 py-1 text-xs font-semibold ${levelClass}">${escapeHtml(row.level || '')}/${escapeHtml(row.severity || '')}</span></td>
+                        <td class="px-4 py-3 text-slate-700">${escapeHtml(row.module || '')}</td>
+                        <td class="px-4 py-3 font-medium text-slate-900">${escapeHtml(row.event || '')}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <code class="text-xs text-slate-700">${supportCode}</code>
+                                ${supportCode ? `<button type="button" class="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100" data-copy="${supportCode}">Copy</button>` : ''}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-slate-700">${escapeHtml(row.status_code || '')}</td>
+                        <td class="max-w-md px-4 py-3 text-slate-700">
+                            <div>${escapeHtml(row.safe_message || '')}</div>
+                            <button type="button" class="mt-2 text-xs font-semibold text-indigo-700 hover:text-indigo-900" data-detail-toggle="${detailId}">Details</button>
+                        </td>
+                        <td class="whitespace-nowrap px-4 py-3 text-slate-600">${escapeHtml(row.location_id || '-')} / ${escapeHtml(row.user_id || '-')}</td>
+                    </tr>
+                    <tr id="${detailId}" class="hidden bg-slate-50">
+                        <td colspan="8" class="px-4 py-3">
+                            <dl class="grid gap-2 text-xs text-slate-700 md:grid-cols-2">
+                                <div><dt class="font-semibold text-slate-500">Path</dt><dd class="mt-1 break-all">${escapeHtml(row.path || '')}</dd></div>
+                                <div><dt class="font-semibold text-slate-500">Route</dt><dd class="mt-1 break-all">${escapeHtml(row.route || '')}</dd></div>
+                                <div><dt class="font-semibold text-slate-500">Exception</dt><dd class="mt-1 break-all">${escapeHtml(row.exception_class || '')}</dd></div>
+                                <div><dt class="font-semibold text-slate-500">Exception Message</dt><dd class="mt-1 break-all">${escapeHtml(row.exception_message || '')}</dd></div>
+                                <div><dt class="font-semibold text-slate-500">File</dt><dd class="mt-1 break-all">${escapeHtml(row.file || '')}</dd></div>
+                                <div><dt class="font-semibold text-slate-500">Line</dt><dd class="mt-1">${escapeHtml(row.line || '')}</dd></div>
+                            </dl>
+                        </td>
+                    </tr>
+                `);
+            });
+        };
+
+        const loadLogs = async () => {
+            if (!logsState.url) return;
+
+            showLogsStatus('Loading logs...');
+            logsBody.innerHTML = '';
+
+            try {
+                const response = await fetch(`${logsState.url}?${logsParams().toString()}`, { headers: { Accept: 'application/json' } });
+                const json = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(json.message || 'Unable to load logs.');
+                }
+
+                logsState.lastPage = json.meta?.last_page || 1;
+                renderLogs(json.data || []);
+
+                if (!json.data || json.data.length === 0) {
+                    showLogsStatus('No operational logs found for this tenant/date/filter.');
+                } else {
+                    hideLogsStatus();
+                }
+
+                logsSummary.textContent = `Page ${json.meta?.page || 1} of ${logsState.lastPage} · ${json.meta?.total || 0} logs`;
+                logsPrev.disabled = logsState.page <= 1;
+                logsNext.disabled = logsState.page >= logsState.lastPage;
+            } catch (error) {
+                logsSummary.textContent = 'No logs loaded';
+                logsPrev.disabled = true;
+                logsNext.disabled = true;
+                showLogsStatus(error.message || 'Unable to load logs.', 'error');
+            }
+        };
+
+        document.querySelectorAll('[data-logs-open]').forEach((button) => {
+            button.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                logsState.url = button.dataset.logsUrl;
+                logsState.datesUrl = button.dataset.datesUrl;
+                logsState.page = 1;
+                logsState.lastPage = 1;
+                document.getElementById('logs-tenant-name').textContent = button.dataset.tenantName || '';
+                document.getElementById('logs-module').value = '';
+                document.getElementById('logs-level').value = '';
+                document.getElementById('logs-severity').value = '';
+                document.getElementById('logs-event').value = '';
+                document.getElementById('logs-support-code').value = '';
+                logsModal?.classList.remove('hidden');
+                logsModal?.classList.add('flex');
+                await loadAvailableLogDate();
+                await loadLogs();
+            });
+        });
+
+        document.getElementById('logs-refresh').addEventListener('click', () => {
+            logsState.page = 1;
+            loadLogs();
+        });
+
+        ['logs-date', 'logs-module', 'logs-level', 'logs-severity'].forEach((id) => {
+            document.getElementById(id).addEventListener('change', () => {
+                logsState.page = 1;
+                loadLogs();
+            });
+        });
+
+        ['logs-support-code', 'logs-event'].forEach((id) => document.getElementById(id).addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                logsState.page = 1;
+                loadLogs();
+            }
+        }));
+
+        logsPrev.addEventListener('click', () => {
+            if (logsState.page > 1) {
+                logsState.page -= 1;
+                loadLogs();
+            }
+        });
+
+        logsNext.addEventListener('click', () => {
+            if (logsState.page < logsState.lastPage) {
+                logsState.page += 1;
+                loadLogs();
+            }
+        });
+
+        logsBody.addEventListener('click', (event) => {
+            const copyButton = event.target.closest('[data-copy]');
+            if (copyButton) {
+                navigator.clipboard?.writeText(copyButton.dataset.copy);
+                copyButton.textContent = 'Copied';
+                setTimeout(() => copyButton.textContent = 'Copy', 1200);
+                return;
+            }
+
+            const detailButton = event.target.closest('[data-detail-toggle]');
+            if (detailButton) {
+                document.getElementById(detailButton.dataset.detailToggle)?.classList.toggle('hidden');
+            }
+        });
+
         document.querySelectorAll('[data-modal-target]').forEach((row) => {
             row.addEventListener('click', () => {
                 const modal = document.getElementById(row.dataset.modalTarget);
