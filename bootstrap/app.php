@@ -72,23 +72,42 @@ return Application::configure(basePath: dirname(__DIR__))
 
             $request->attributes->set('request_id', $requestId);
 
+            $modelNotFound = $e instanceof ModelNotFoundException
+                ? $e
+                : ($e->getPrevious() instanceof ModelNotFoundException ? $e->getPrevious() : null);
+
             $status = match (true) {
                 $e instanceof ValidationException => 422,
                 $e instanceof AuthenticationException => 401,
                 $e instanceof AuthorizationException => 403,
-                $e instanceof ModelNotFoundException => 404,
+                $modelNotFound instanceof ModelNotFoundException => 404,
                 $e instanceof HttpExceptionInterface => $e->getStatusCode(),
                 default => 500,
             };
 
-            $message = $status >= 500
-                ? 'Server error'
-                : ($e->getMessage() ?: 'Request failed');
+            if ($modelNotFound instanceof ModelNotFoundException) {
+                $model = class_basename($modelNotFound->getModel());
+                $message = $model === 'Order'
+                    ? 'Order not found. Please create a new order.'
+                    : Str::of(Str::of($model)->headline()->lower()->toString())->ucfirst()." not found.";
+            } else {
+                $message = $status >= 500
+                    ? 'Server error'
+                    : ($e->getMessage() ?: 'Request failed');
+            }
 
             $payload = [
                 'message' => $message,
                 'support_code' => $requestId,
             ];
+
+            if ($modelNotFound instanceof ModelNotFoundException) {
+                $payload['code'] = Str::of(class_basename($modelNotFound->getModel()))
+                    ->snake()
+                    ->upper()
+                    ->append('_NOT_FOUND')
+                    ->toString();
+            }
 
             if ($e instanceof ValidationException) {
                 $payload['errors'] = $e->errors();
