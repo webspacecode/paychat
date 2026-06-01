@@ -57,6 +57,7 @@ class PaymentService
         }
 
         $amount = $this->money($amount);
+        $this->expirePendingPaymentAttempts($order, $method);
         $remaining = $this->remainingAmount($order);
 
         if ($remaining <= 0) {
@@ -496,6 +497,26 @@ class PaymentService
     private function remainingAmount(Order $order): float
     {
         return max(0, $this->money($order->total - $this->committedPaymentAmount($order)));
+    }
+
+    private function expirePendingPaymentAttempts(Order $order, string $method): void
+    {
+        if ($method === 'cash') {
+            return;
+        }
+
+        $order->payments()
+            ->where('payment_method', $method)
+            ->where('status', 'pending')
+            ->get()
+            ->each(function (Payment $payment) {
+                $payment->update([
+                    'status' => 'expired',
+                    'meta' => array_merge($payment->meta ?? [], [
+                        'expired_reason' => 'replaced_by_new_payment_attempt',
+                    ]),
+                ]);
+            });
     }
 
     private function successfulPaidAmount(Order $order): float
