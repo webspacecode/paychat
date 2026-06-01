@@ -343,6 +343,7 @@
                         <select id="logs-module" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
                             <option value="">All</option>
                             <option value="payment">Payment</option>
+                            <option value="cart">Cart</option>
                             <option value="order">Order</option>
                             <option value="invoice">Invoice</option>
                             <option value="kds">KDS</option>

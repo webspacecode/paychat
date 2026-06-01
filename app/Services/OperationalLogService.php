@@ -35,6 +35,7 @@ class OperationalLogService
         'token.dispatch.warning',
         'phonepe.callback.failed',
         'webhook.failed',
+        'cart.stock_unavailable',
     ];
 
     public function write(string $level, string $event, array $context = [], ?Request $request = null): void
@@ -151,6 +152,7 @@ class OperationalLogService
     {
         return match (true) {
             str_starts_with($event, 'payment.'), str_starts_with($event, 'phonepe.'), str_starts_with($event, 'webhook.') => 'payment',
+            str_starts_with($event, 'cart.') => 'cart',
             str_starts_with($event, 'invoice.'), str_starts_with($event, 'table_service.invoice.') => 'invoice',
             str_starts_with($event, 'kitchen.'), str_starts_with($event, 'kds.') => 'kds',
             str_starts_with($event, 'token.') => 'token',

@@ -18,6 +18,8 @@ use App\Services\Orders\Strategies\StockStrategyResolver;
 use App\Http\Resources\Tenant\OrderResource;
 use App\Models\Tenant\Token;
 use App\Events\OrderStatusUpdated;
+use App\Support\Observability;
+use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
@@ -345,10 +347,15 @@ class OrderService
             return;
         }
 
-        $this->stockAvailabilityService->checkProductsStock(
-            (array) $request->items,
-            (int) $order->location_id
-        );
+        try {
+            $this->stockAvailabilityService->checkProductsStock(
+                (array) $request->items,
+                (int) $order->location_id
+            );
+        } catch (ValidationException $e) {
+            $this->logStockUnavailable($e, $order, $request);
+            throw $e;
+        }
         
         DB::transaction(function () use ($order, $request, $products) {
 
@@ -424,10 +431,15 @@ class OrderService
             }
 
             if (!empty($pendingDeltas)) {
-                $this->stockAvailabilityService->checkProductsStock(
-                    $pendingDeltas,
-                    (int) $lockedOrder->location_id
-                );
+                try {
+                    $this->stockAvailabilityService->checkProductsStock(
+                        $pendingDeltas,
+                        (int) $lockedOrder->location_id
+                    );
+                } catch (ValidationException $e) {
+                    $this->logStockUnavailable($e, $lockedOrder, $request);
+                    throw $e;
+                }
             }
 
             $lockedOrder->items()
@@ -482,6 +494,25 @@ class OrderService
         }
 
         return $products;
+    }
+
+    private function logStockUnavailable(ValidationException $exception, Order $order, Request $request): void
+    {
+        $message = collect($exception->errors()['stock'] ?? [])
+            ->filter()
+            ->first() ?: 'Stock unavailable for one or more cart items.';
+
+        Observability::logWarning('cart.stock_unavailable', $exception, [
+            'module' => 'cart',
+            'severity' => 'medium',
+            'status_code' => 422,
+            'safe_message' => $message,
+            'order_id' => $order->id,
+            'location_id' => $order->location_id,
+            'table_id' => $order->table_id,
+            'table_session_id' => $order->table_session_id,
+            'item_count' => count((array) $request->items),
+        ], $request);
     }
 
     public function moveToPendingPayment(Order $order)
