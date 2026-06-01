@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Events\PaymentQrGenerated;
+use App\Exceptions\PaymentException;
 use Illuminate\Support\Str;
 use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
@@ -59,11 +60,29 @@ class PaymentService
         $remaining = $this->remainingAmount($order);
 
         if ($remaining <= 0) {
-            throw new \Exception('Order already fully paid');
+            throw new PaymentException(
+                'Order already fully paid',
+                'ORDER_ALREADY_PAID',
+                422,
+                [
+                    'order_total' => $this->money($order->total),
+                    'remaining_amount' => $remaining,
+                ]
+            );
         }
 
         if ($method !== 'cash' && $amount > $remaining) {
-            throw new \Exception('Amount exceeds remaining payment');
+            throw new PaymentException(
+                'Amount exceeds remaining payment',
+                'PAYMENT_AMOUNT_EXCEEDS_REMAINING',
+                422,
+                [
+                    'requested_amount' => $amount,
+                    'remaining_amount' => $remaining,
+                    'order_total' => $this->money($order->total),
+                    'committed_payment_amount' => $this->committedPaymentAmount($order),
+                ]
+            );
         }
 
         // 🔥 HANDLE METHODS

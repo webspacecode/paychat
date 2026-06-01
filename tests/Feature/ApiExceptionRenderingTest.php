@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Exceptions\PaymentException;
 use App\Models\Tenant\Order;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Route;
@@ -23,5 +24,29 @@ class ApiExceptionRenderingTest extends TestCase
             ->assertJsonPath('message', 'Order not found. Please create a new order.')
             ->assertJsonPath('code', 'ORDER_NOT_FOUND')
             ->assertJsonStructure(['message', 'support_code', 'code']);
+    }
+
+    public function test_payment_business_errors_are_rendered_as_unprocessable_json(): void
+    {
+        Route::post('/api/__test/payment-error', function () {
+            throw new PaymentException(
+                'Amount exceeds remaining payment',
+                'PAYMENT_AMOUNT_EXCEEDS_REMAINING',
+                422,
+                [
+                    'requested_amount' => 4000.0,
+                    'remaining_amount' => 3500.0,
+                ]
+            );
+        });
+
+        $response = $this->postJson('/api/__test/payment-error');
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Amount exceeds remaining payment')
+            ->assertJsonPath('code', 'PAYMENT_AMOUNT_EXCEEDS_REMAINING')
+            ->assertJsonPath('details.requested_amount', 4000)
+            ->assertJsonPath('details.remaining_amount', 3500);
     }
 }
