@@ -39,62 +39,67 @@ class PaymentService
             throw new \Exception('Order not found');
         }
 
-        if ($order->status === 'cancelled') {
-            throw new \Exception('Cancelled order cannot accept payment');
-        }
-
-        if ($order->status !== 'pending_payment') {
-            throw new \Exception('Order not ready for payment');
-        }
-
-        // ✅ Get tenant config
-        $config = PaymentMethod::where('type', $method)
-            ->where('enabled', true)
-            ->first();
-
-        if (!$config) {
-            throw new \Exception('Payment method not enabled');
-        }
-
         $amount = $this->money($amount);
-        $this->expirePendingPaymentAttempts($order, $method);
-        $remaining = $this->remainingAmount($order);
 
-        if ($remaining <= 0) {
-            throw new PaymentException(
-                'Order already fully paid',
-                'ORDER_ALREADY_PAID',
-                422,
-                [
-                    'order_total' => $this->money($order->total),
-                    'remaining_amount' => $remaining,
-                ]
-            );
-        }
+        return DB::transaction(function () use ($order, $method, $amount, $upiProfileId) {
+            $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-        if ($method !== 'cash' && $amount > $remaining) {
-            throw new PaymentException(
-                'Amount exceeds remaining payment',
-                'PAYMENT_AMOUNT_EXCEEDS_REMAINING',
-                422,
-                [
-                    'requested_amount' => $amount,
-                    'remaining_amount' => $remaining,
-                    'order_total' => $this->money($order->total),
-                    'committed_payment_amount' => $this->committedPaymentAmount($order),
-                ]
-            );
-        }
+            if ($lockedOrder->status === 'cancelled') {
+                throw new \Exception('Cancelled order cannot accept payment');
+            }
 
-        // 🔥 HANDLE METHODS
-        return match ($method) {
+            if ($lockedOrder->status !== 'pending_payment') {
+                throw new \Exception('Order not ready for payment');
+            }
 
-            'cash' => $this->handleCash($order, $amount, $remaining),
+            // ✅ Get tenant config
+            $config = PaymentMethod::where('type', $method)
+                ->where('enabled', true)
+                ->first();
 
-            'upi' => $this->handleUpi($order, $amount, $config, $upiProfileId),
+            if (!$config) {
+                throw new \Exception('Payment method not enabled');
+            }
 
-            default => throw new \Exception("Unsupported payment method")
-        };
+            $this->expireReplaceablePaymentAttempts($lockedOrder);
+            $remaining = $this->remainingAmount($lockedOrder);
+
+            if ($remaining <= 0) {
+                throw new PaymentException(
+                    'Order already fully paid',
+                    'ORDER_ALREADY_PAID',
+                    422,
+                    [
+                        'order_total' => $this->money($lockedOrder->total),
+                        'remaining_amount' => $remaining,
+                    ]
+                );
+            }
+
+            if ($method !== 'cash' && $amount > $remaining) {
+                throw new PaymentException(
+                    'Amount exceeds remaining payment',
+                    'PAYMENT_AMOUNT_EXCEEDS_REMAINING',
+                    422,
+                    [
+                        'requested_amount' => $amount,
+                        'remaining_amount' => $remaining,
+                        'order_total' => $this->money($lockedOrder->total),
+                        'committed_payment_amount' => $this->committedPaymentAmount($lockedOrder),
+                    ]
+                );
+            }
+
+            // 🔥 HANDLE METHODS
+            return match ($method) {
+
+                'cash' => $this->handleCash($lockedOrder, $amount, $remaining),
+
+                'upi' => $this->handleUpi($lockedOrder, $amount, $config, $upiProfileId),
+
+                default => throw new \Exception("Unsupported payment method")
+            };
+        });
     }
 
     private function handleCash(Order $order, $tenderedAmount, $remaining)
@@ -425,70 +430,35 @@ class PaymentService
 
     public function markSuccess(Payment $payment)
     {
-        $order = $payment->order;
+        DB::transaction(function () use ($payment) {
+            $lockedPayment = Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $order = Order::whereKey($lockedPayment->order_id)->lockForUpdate()->firstOrFail();
 
-        if ($order->status === 'cancelled') {
-            throw new \Exception('Cancelled order cannot accept payment');
-        }
+            $this->assertPaymentCanBeMarkedSuccessful($lockedPayment, $order);
 
-        $payment->update(['status' => 'success']);
+            if ($lockedPayment->status !== 'success') {
+                $lockedPayment->update(['status' => 'success']);
+            }
 
-        $paid = $this->successfulPaidAmount($order);
-        $balanceDue = max(0, $this->money($order->total - $paid));
-
-        if ($paid >= $order->total) {
-            $order->update([
-                'payment_status' => 'paid',
-                'paid_amount' => $paid,
-                'balance_due' => 0,
-            ]);
-        } else {
-            $order->update([
-                'payment_status' => 'partially_paid',
-                'paid_amount' => $paid,
-                'balance_due' => $balanceDue,
-            ]);
-        }
+            $this->syncOrderAfterPaymentSuccess($order);
+        });
     }
 
     public function markPaymentSuccess(Payment $payment)
     {
         DB::transaction(function () use ($payment) {
+            $lockedPayment = Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $order = Order::whereKey($lockedPayment->order_id)->lockForUpdate()->firstOrFail();
 
-            if ($payment->status !== 'success') {
-                $payment->update([
+            $this->assertPaymentCanBeMarkedSuccessful($lockedPayment, $order);
+
+            if ($lockedPayment->status !== 'success') {
+                $lockedPayment->update([
                     'status' => 'success'
                 ]);
             }
 
-            $order = $payment->order;
-
-            if ($order->status === 'cancelled') {
-                throw new \Exception('Cancelled order cannot accept payment');
-            }
-
-            $paidAmount = $this->successfulPaidAmount($order);
-            $balanceDue = max(0, $this->money($order->total - $paidAmount));
-
-            if ($paidAmount >= $order->total) {
-
-                $order->update([
-                    'payment_status' => 'paid',
-                    'paid_amount' => $paidAmount,
-                    'balance_due' => 0,
-                ]);
-
-                app(OrderService::class)->completeOrder($order);
-
-            } else {
-
-                $order->update([
-                    'payment_status' => 'partially_paid',
-                    'paid_amount' => $paidAmount,
-                    'balance_due' => $balanceDue,
-                ]);
-            }
-
+            $this->syncOrderAfterPaymentSuccess($order, true);
         });
 
         return $payment->fresh();
@@ -499,15 +469,15 @@ class PaymentService
         return max(0, $this->money($order->total - $this->committedPaymentAmount($order)));
     }
 
-    private function expirePendingPaymentAttempts(Order $order, string $method): void
+    private function expireReplaceablePaymentAttempts(Order $order): void
     {
-        if ($method === 'cash') {
+        if ($this->successfulPaidAmount($order) > 0) {
             return;
         }
 
         $order->payments()
-            ->where('payment_method', $method)
             ->where('status', 'pending')
+            ->where('amount', '>=', $this->money($order->total))
             ->get()
             ->each(function (Payment $payment) {
                 $payment->update([
@@ -517,6 +487,53 @@ class PaymentService
                     ]),
                 ]);
             });
+    }
+
+    private function assertPaymentCanBeMarkedSuccessful(Payment $payment, Order $order): void
+    {
+        if ($order->status === 'cancelled') {
+            throw new \Exception('Cancelled order cannot accept payment');
+        }
+
+        if (in_array($payment->status, ['expired', 'failed'], true)) {
+            throw new PaymentException(
+                'Payment attempt is no longer valid',
+                'PAYMENT_ATTEMPT_NOT_PAYABLE',
+                422,
+                [
+                    'payment_id' => $payment->id,
+                    'payment_status' => $payment->status,
+                    'order_id' => $order->id,
+                ]
+            );
+        }
+    }
+
+    private function syncOrderAfterPaymentSuccess(Order $order, bool $completeWhenPaid = false): void
+    {
+        $paidAmount = $this->successfulPaidAmount($order);
+        $balanceDue = max(0, $this->money($order->total - $paidAmount));
+
+        if ($paidAmount >= $order->total) {
+
+            $order->update([
+                'payment_status' => 'paid',
+                'paid_amount' => $paidAmount,
+                'balance_due' => 0,
+            ]);
+
+            if ($completeWhenPaid && $order->status === 'pending_payment') {
+                app(OrderService::class)->completeOrder($order);
+            }
+
+        } else {
+
+            $order->update([
+                'payment_status' => $paidAmount > 0 ? 'partially_paid' : 'unpaid',
+                'paid_amount' => $paidAmount,
+                'balance_due' => $balanceDue,
+            ]);
+        }
     }
 
     private function successfulPaidAmount(Order $order): float
