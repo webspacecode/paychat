@@ -61,7 +61,7 @@ class PaymentService
                 throw new \Exception('Payment method not enabled');
             }
 
-            $this->expireReplaceablePaymentAttempts($lockedOrder);
+            $this->expireReplaceablePaymentAttempts($lockedOrder, $amount);
             $remaining = $this->remainingAmount($lockedOrder);
 
             if ($remaining <= 0) {
@@ -469,15 +469,18 @@ class PaymentService
         return max(0, $this->money($order->total - $this->committedPaymentAmount($order)));
     }
 
-    private function expireReplaceablePaymentAttempts(Order $order): void
+    private function expireReplaceablePaymentAttempts(Order $order, float $requestedAmount): void
     {
         if ($this->successfulPaidAmount($order) > 0) {
             return;
         }
 
+        if ($requestedAmount < $this->money($order->total)) {
+            return;
+        }
+
         $order->payments()
             ->where('status', 'pending')
-            ->where('amount', '>=', $this->money($order->total))
             ->get()
             ->each(function (Payment $payment) {
                 $payment->update([

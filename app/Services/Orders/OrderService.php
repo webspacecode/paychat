@@ -391,6 +391,8 @@ class OrderService
                 'tax' => $request->tax,
                 'discount' => $request->discount
             ]);
+
+            $this->syncPaymentStateAfterOrderChange($order->fresh());
         });
     }
 
@@ -473,7 +475,46 @@ class OrderService
             $this->recalculate($lockedOrder->fresh('items'), [
                 'discount' => $request->discount,
             ]);
+
+            $this->syncPaymentStateAfterOrderChange($lockedOrder->fresh());
         });
+    }
+
+    private function syncPaymentStateAfterOrderChange(Order $order): void
+    {
+        $order->payments()
+            ->whereIn('status', ['pending', 'processing'])
+            ->get()
+            ->each(function ($payment) {
+                $payment->update([
+                    'status' => 'expired',
+                    'meta' => array_merge($payment->meta ?? [], [
+                        'expired_reason' => 'order_amount_changed',
+                    ]),
+                ]);
+            });
+
+        $paidAmount = (float) $order->payments()
+            ->where('status', 'success')
+            ->sum('amount');
+        $paidAmount = round($paidAmount, 2);
+        $total = round((float) $order->fresh()->total, 2);
+
+        if ($paidAmount >= $total && $total > 0) {
+            $order->update([
+                'payment_status' => 'paid',
+                'paid_amount' => $paidAmount,
+                'balance_due' => 0,
+            ]);
+
+            return;
+        }
+
+        $order->update([
+            'payment_status' => $paidAmount > 0 ? 'partially_paid' : 'unpaid',
+            'paid_amount' => $paidAmount,
+            'balance_due' => max(0, round($total - $paidAmount, 2)),
+        ]);
     }
 
     private function productsForItems(array $items)
