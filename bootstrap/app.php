@@ -28,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'apikey' => ApiKeyMiddleware::class,
             'request.id' => RequestIdMiddleware::class,
             'master' => \App\Http\Middleware\EnsureMasterUser::class,
+            'tenant.user' => \App\Http\Middleware\EnsureTenantUserBelongsToCurrentTenant::class,
+            'permission' => \App\Http\Middleware\EnsurePermission::class,
+            'feature' => \App\Http\Middleware\EnsureFeature::class,
         ]);
 
         $middleware->group('api', [
@@ -40,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth:sanctum',
             // 'throttle:api',
             'tenant',
+            'tenant.user',
             RequestIdMiddleware::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);

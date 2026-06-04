@@ -28,6 +28,8 @@ use App\Http\Controllers\Api\DemoLeadController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\Tenant\ReportController;
 use App\Http\Controllers\Api\Tenant\OfflineOrderSyncController;
+use App\Http\Controllers\Api\Tenant\BootstrapController;
+use App\Http\Controllers\Api\Tenant\LoyaltySettingsController;
 
 
 
@@ -64,16 +66,24 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/bootstrap', [BootstrapController::class, 'show']);
 
     Route::get('/customers', [CustomerController::class, 'index']);
+    Route::get('/customers/{customer}', [CustomerController::class, 'show'])->whereNumber('customer');
+    Route::get('/customers/{customer}/summary', [CustomerController::class, 'summary'])->whereNumber('customer');
+    Route::get('/customers/{customer}/orders', [CustomerController::class, 'orders'])->whereNumber('customer');
+    Route::get('/customers/{customer}/loyalty-transactions', [CustomerController::class, 'loyaltyTransactions'])->whereNumber('customer');
+
+    Route::get('/settings/loyalty', [LoyaltySettingsController::class, 'show']);
+    Route::put('/settings/loyalty', [LoyaltySettingsController::class, 'update'])->middleware('permission:settings.manage');
 
     // Category Management
     Route::prefix('categories')->group(function () {
-        Route::post('/', [CategoryController::class, 'store']);
-        Route::post('/bulk', [CategoryController::class, 'bulkUpload']);
+        Route::post('/', [CategoryController::class, 'store'])->middleware('permission:product.manage');
+        Route::post('/bulk', [CategoryController::class, 'bulkUpload'])->middleware('permission:product.manage');
         Route::get('/bulk/template', [CategoryController::class, 'bulkTemplate']);
-        Route::put('/{category}', [CategoryController::class, 'update']);
-        Route::delete('/{category}', [CategoryController::class, 'destroy']);
+        Route::put('/{category}', [CategoryController::class, 'update'])->middleware('permission:product.manage');
+        Route::delete('/{category}', [CategoryController::class, 'destroy'])->middleware('permission:product.manage');
         Route::get('/search', [CategoryController::class, 'search']);
         Route::get('/{id}', [CategoryController::class, 'show']); 
     });
@@ -82,18 +92,18 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::prefix('products')->group(function () {
         // CRUD
         Route::get('/',        [ProductController::class, 'index']);   // search/list
-        Route::post('/',       [ProductController::class, 'store']);   // create
-        Route::post('/bulk',       [ProductController::class, 'bulkUpload']);   // bulk create
+        Route::post('/',       [ProductController::class, 'store'])->middleware('permission:product.manage');   // create
+        Route::post('/bulk',       [ProductController::class, 'bulkUpload'])->middleware('permission:product.manage');   // bulk create
         Route::get('/{id}',    [ProductController::class, 'show']);    // read one
-        Route::put('/{product}',   [ProductController::class, 'update']);  // update
-        Route::delete('/{product}',[ProductController::class, 'destroy']); // delete
+        Route::put('/{product}',   [ProductController::class, 'update'])->middleware('permission:product.manage');  // update
+        Route::delete('/{product}',[ProductController::class, 'destroy'])->middleware('permission:product.manage'); // delete
 
         // Inventory & Movement
-        Route::post('/{product}/inventory/adjust', [ProductController::class, 'adjustInventory']);
-        Route::post('/{product}/inventory/move',   [ProductController::class, 'moveStock']);
+        Route::post('/{product}/inventory/adjust', [ProductController::class, 'adjustInventory'])->middleware(['feature:inventory', 'permission:product.manage']);
+        Route::post('/{product}/inventory/move',   [ProductController::class, 'moveStock'])->middleware(['feature:inventory', 'permission:product.manage']);
 
         // Image Upload
-        Route::post('/images/bulk',       [ProductController::class, 'bulkImageUpload']);   // bulk image upload
+        Route::post('/images/bulk',       [ProductController::class, 'bulkImageUpload'])->middleware('permission:product.manage');   // bulk image upload
     });
 
     // Location Management
@@ -105,7 +115,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::delete('/{id}', [LocationController::class, 'destroy']); // Delete location
     });
 
-    Route::prefix('tables')->group(function () {
+    Route::prefix('tables')->middleware(['feature:dine_in', 'permission:table.manage'])->group(function () {
         Route::get('/', [TableController::class, 'index']);
         Route::post('/', [TableController::class, 'store']);
         Route::match(['put', 'patch'], '/{table}', [TableController::class, 'update'])->whereNumber('table');
@@ -113,13 +123,13 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::post('/{table}/release', [TableController::class, 'release'])->whereNumber('table');
     });
 
-    Route::prefix('dining-structure')->group(function () {
+    Route::prefix('dining-structure')->middleware(['feature:dine_in', 'permission:table.manage'])->group(function () {
         Route::get('/', [DiningStructureController::class, 'index']);
         Route::post('/tables/bulk', [DiningStructureController::class, 'bulkUpsert']);
         Route::patch('/tables/{table}/position', [DiningStructureController::class, 'updatePosition'])->whereNumber('table');
     });
 
-    Route::prefix('table-sessions')->group(function () {
+    Route::prefix('table-sessions')->middleware(['feature:dine_in', 'permission:table.manage'])->group(function () {
         Route::post('/', [TableSessionController::class, 'store']);
         Route::get('/open', [TableSessionController::class, 'open']);
         Route::post('/{session}/close', [TableSessionController::class, 'close'])->whereNumber('session');
@@ -134,43 +144,43 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     // });
 
     // 1️⃣ Create Draft
-    Route::post('/orders', [OrderController::class, 'create']);
+    Route::post('/orders', [OrderController::class, 'create'])->middleware(['feature:pos', 'permission:order.create']);
 
     // 2️⃣ Sync Items (Recommended instead of add one by one)
-    Route::put('/orders/{order}/items', [OrderController::class, 'updateItems'])->whereNumber('order');
+    Route::put('/orders/{order}/items', [OrderController::class, 'updateItems'])->middleware(['feature:pos', 'permission:order.edit'])->whereNumber('order');
 
     // If you still want single item endpoint
     // Route::post('/orders/{order}/items', [OrderController::class, 'addItem']);
 
     // Attach Customer
-    Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer']);
-    Route::patch('/orders/{order}/delivery-source', [OrderController::class, 'updateDeliverySource'])->whereNumber('order');
+    Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer'])->middleware(['feature:pos', 'permission:order.edit']);
+    Route::patch('/orders/{order}/delivery-source', [OrderController::class, 'updateDeliverySource'])->middleware(['feature:pos', 'permission:order.edit'])->whereNumber('order');
 
-    Route::patch('/orders/{order}/table', [OrderController::class, 'assignTable'])->whereNumber('order');
-    Route::post('/orders/{order}/tables/link', [OrderController::class, 'linkTables'])->whereNumber('order');
-    Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen'])->whereNumber('order');
-    Route::post('/orders/{order}/inline-token', [InlineTokenController::class, 'store'])->whereNumber('order');
+    Route::patch('/orders/{order}/table', [OrderController::class, 'assignTable'])->middleware(['feature:dine_in', 'permission:table.manage'])->whereNumber('order');
+    Route::post('/orders/{order}/tables/link', [OrderController::class, 'linkTables'])->middleware(['feature:dine_in', 'permission:table.manage'])->whereNumber('order');
+    Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen'])->middleware(['feature:kds', 'permission:kds.update'])->whereNumber('order');
+    Route::post('/orders/{order}/inline-token', [InlineTokenController::class, 'store'])->middleware(['feature:token_management', 'permission:order.edit'])->whereNumber('order');
 
     // Cancel Order
-    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->whereNumber('order');
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->middleware('permission:order.cancel')->whereNumber('order');
 
     // 3️⃣ Move To Pending Payment
     Route::post('/orders/{order}/pending-payment', [OrderController::class, 'moveToPayment']);
 
     // 3️⃣ Complete Payment
-    Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment']);
+    Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment'])->middleware(['feature:pos', 'permission:payment.collect']);
 
     Route::get('/payments/methods', [PaymentController::class, 'list']);
 
     Route::get('/upi-profiles', [UpiProfileController::class, 'index']);
-    Route::post('/upi-profiles', [UpiProfileController::class, 'store']);
-    Route::patch('/upi-profiles/{profile}', [UpiProfileController::class, 'update'])->whereNumber('profile');
-    Route::delete('/upi-profiles/{profile}', [UpiProfileController::class, 'destroy'])->whereNumber('profile');
-    Route::patch('/upi-profiles/{profile}/default', [UpiProfileController::class, 'makeDefault'])->whereNumber('profile');
+    Route::post('/upi-profiles', [UpiProfileController::class, 'store'])->middleware('permission:settings.manage');
+    Route::patch('/upi-profiles/{profile}', [UpiProfileController::class, 'update'])->middleware('permission:settings.manage')->whereNumber('profile');
+    Route::delete('/upi-profiles/{profile}', [UpiProfileController::class, 'destroy'])->middleware('permission:settings.manage')->whereNumber('profile');
+    Route::patch('/upi-profiles/{profile}/default', [UpiProfileController::class, 'makeDefault'])->middleware('permission:settings.manage')->whereNumber('profile');
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    Route::get('/inventory', [InventoryController::class, 'index']);
+    Route::get('/inventory', [InventoryController::class, 'index'])->middleware(['feature:inventory', 'permission:product.manage']);
     Route::post('/offline-orders/sync', [OfflineOrderSyncController::class, 'sync']);
 
     /*
@@ -180,31 +190,31 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     */
 
     // 5️⃣ Payment Success Callback
-    Route::post('/payments/{payment}/success', [PaymentController::class, 'markSuccess']);
+    Route::post('/payments/{payment}/success', [PaymentController::class, 'markSuccess'])->middleware(['feature:pos', 'permission:payment.collect']);
 
     // 6️⃣ Final Complete (manual completion if needed)
     Route::post('/orders/{order}/complete', [OrderController::class, 'complete']);
 
     Route::get('/orders/list', [OrderController::class, 'index']);
-    Route::get('/orders/kitchen', [OrderController::class, 'kitchenIndex']);
+    Route::get('/orders/kitchen', [OrderController::class, 'kitchenIndex'])->middleware(['feature:kds', 'permission:kds.access']);
 
-    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
-    Route::get('/orders/{order}/kitchen-batches', [OrderController::class, 'kitchenBatches'])->whereNumber('order');
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus'])->middleware(['feature:kds', 'permission:kds.update']);
+    Route::get('/orders/{order}/kitchen-batches', [OrderController::class, 'kitchenBatches'])->middleware(['feature:kds', 'permission:kds.access'])->whereNumber('order');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->whereNumber('order');
 
 
 
     Route::prefix('tokens')->group(function () {
-        Route::get('{token}', [TokenController::class, 'show']);
-        Route::post('{token}/status', [TokenController::class, 'updateStatus']);
+        Route::get('{token}', [TokenController::class, 'show'])->middleware(['feature:token_management', 'permission:kds.access']);
+        Route::post('{token}/status', [TokenController::class, 'updateStatus'])->middleware(['feature:token_management', 'permission:kds.update']);
     });
 
-    Route::get('/kitchen/orders', [KitchenController::class, 'index']);
-    Route::get('/kitchen/queue', [KitchenQueueController::class, 'index']);
-    Route::patch('/kitchen-batches/{batch}/status', [KitchenBatchController::class, 'updateStatus'])->whereNumber('batch');
+    Route::get('/kitchen/orders', [KitchenController::class, 'index'])->middleware(['feature:kds', 'permission:kds.access']);
+    Route::get('/kitchen/queue', [KitchenQueueController::class, 'index'])->middleware(['feature:kds', 'permission:kds.access']);
+    Route::patch('/kitchen-batches/{batch}/status', [KitchenBatchController::class, 'updateStatus'])->middleware(['feature:kds', 'permission:kds.update'])->whereNumber('batch');
 
 
-    Route::prefix('reports')->group(function () {
+    Route::prefix('reports')->middleware(['feature:reports', 'permission:report.view'])->group(function () {
         Route::get('/summary', [ReportController::class, 'summary']);
         Route::get('/payments', [ReportController::class, 'payments']);
         Route::get('/top-products', [ReportController::class, 'topProducts']);

@@ -11,11 +11,21 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    private const TENANT_USER_ROLES = [
+        'owner',
+        'manager',
+        'cashier',
+        'kitchen',
+        'waiter',
+        'accountant',
+    ];
+
     public function master(): View
     {
         $tenants = Tenant::with(['taxConfig', 'branding', 'users' => fn ($query) => $query->orderBy('role')->orderBy('name')])
@@ -37,6 +47,41 @@ class DashboardController extends Controller
         return view('dashboards.tenant', [
             'tenant' => $request->user()->tenant?->load(['taxConfig', 'branding', 'onboarding']),
         ]);
+    }
+
+    public function storeTenantUser(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $request->session()->flash('tenant_user_tenant_id', $tenant->id);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'role' => ['required', 'string', Rule::in(self::TENANT_USER_ROLES)],
+            'generate_password' => ['nullable', 'boolean'],
+            'password' => ['nullable', 'required_without:generate_password', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $password = $request->boolean('generate_password')
+            ? Str::random(16)
+            : $validated['password'];
+
+        User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'tenant_id' => $tenant->id,
+            'role' => $validated['role'],
+            'password' => Hash::make($password),
+        ]);
+
+        $redirect = back()
+            ->with('status', "Tenant user created for {$tenant->name}.")
+            ->with('tenant_user_tenant_id', $tenant->id);
+
+        if ($request->boolean('generate_password')) {
+            $redirect->with('generated_password', $password);
+        }
+
+        return $redirect;
     }
 
     public function resetTenantPassword(Request $request, Tenant $tenant): RedirectResponse

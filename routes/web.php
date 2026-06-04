@@ -65,6 +65,8 @@ Route::middleware(['auth', 'master'])->prefix('master')->name('master.')->group(
         ->name('tenants.logs');
     Route::get('/tenants/{tenant}/logs/available-dates', [DashboardController::class, 'tenantLogDates'])
         ->name('tenants.logs.dates');
+    Route::post('/tenants/{tenant}/users', [DashboardController::class, 'storeTenantUser'])
+        ->name('tenants.users.store');
     Route::patch('/tenants/{tenant}/password', [DashboardController::class, 'resetTenantPassword'])
         ->name('tenants.password');
 });

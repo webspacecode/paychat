@@ -9,9 +9,20 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Services\BootstrapService;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
+    private const TENANT_USER_ROLES = [
+        'owner',
+        'manager',
+        'cashier',
+        'kitchen',
+        'waiter',
+        'accountant',
+    ];
+
     public function login(Request $request)
     {
         $request->validate([
@@ -32,7 +43,8 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'user' => $user,
-            'tenant' => $user->tenant()->with(['taxConfig', 'branding'])->first()
+            'tenant' => $user->tenant()->with(['taxConfig', 'branding'])->first(),
+            'bootstrap' => app(BootstrapService::class)->forUser($user),
         ]);
     }
 
@@ -50,12 +62,14 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed', // expect password_confirmation field
             'tenant_id' => 'required|exists:tenants,id',
+            'role' => ['nullable', 'string', Rule::in(self::TENANT_USER_ROLES)],
         ]);
 
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'tenant_id' => $request->tenant_id,
+            'role' => $request->input('role', 'owner'),
             'password' => bcrypt($request->password),
         ]);
 
@@ -89,8 +103,13 @@ class AuthController extends Controller
         // dd(DB::connection('tenant')->getDatabaseName());
 
         
-        return response()->json($request->user());
+        $user = $request->user();
+
+        return response()->json(array_merge($user->toArray(), [
+            'user' => $user,
+            'tenant' => $user->tenant()->with(['taxConfig', 'branding'])->first(),
+            'bootstrap' => app(BootstrapService::class)->forUser($user),
+        ]));
     }
 
 }
-

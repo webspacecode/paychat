@@ -187,32 +187,66 @@ class OrderController extends Controller
         // if ($order->status === 'completed') {
         //     return response()->json(['message' => 'Completed order cannot be modified'], 422);
         // }
+        $validated = $request->validate([
+            'customer_id' => ['nullable', 'integer', 'exists:pos_customers,id'],
+            'name' => ['nullable', 'string', 'max:150'],
+            'email' => ['nullable', 'email', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:50'],
+        ]);
+
         $customer = null;
-        
-        if ($request->customer_id) {
-            $customer = Customer::find($request->customer_id);
-        }
-        
-        // 2. If phone exists → try to find existing
-        if ($request->phone) {
-            $customer = Customer::where('phone', $request->phone)->first();
+        $phone = $this->normalizeCustomerPhone($validated['phone'] ?? null);
+
+        if (! empty($validated['customer_id'])) {
+            $customer = Customer::find($validated['customer_id']);
         }
 
-        if (!$customer && !empty($request->phone)) {
+        if (! $customer && $phone) {
+            $customer = Customer::whereIn('phone', $this->customerPhoneCandidates($validated['phone'] ?? null, $phone))->first();
+        }
+
+        if (! $customer && $phone) {
             $customer = Customer::create([
-                'name'  => $request->name ?? null,
-                'phone' => $request->phone ?? null,
-                'email' => $request->email ?? null,
+                'name'  => $validated['name'] ?? null,
+                'phone' => $phone,
+                'email' => $validated['email'] ?? null,
             ]);
-        
+        }
+
+        if ($customer) {
             $order->update([
                 'customer_id' => $customer->id,
+                'customer_name' => $customer->name ?? ($validated['name'] ?? null),
+                'customer_phone' => $customer->phone ?? $phone,
             ]);
         }
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
+    }
+
+    private function normalizeCustomerPhone(?string $phone): ?string
+    {
+        $phone = trim((string) $phone);
+
+        if ($phone === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone);
+
+        return $digits !== '' ? $digits : $phone;
+    }
+
+    private function customerPhoneCandidates(?string $rawPhone, string $normalizedPhone): array
+    {
+        return collect([$rawPhone, $normalizedPhone])
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->map(fn ($value) => trim($value))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function completeOrder(String $tenantSlug, Order $order, OrderService $service)

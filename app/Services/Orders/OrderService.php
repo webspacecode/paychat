@@ -18,8 +18,10 @@ use App\Services\Orders\Strategies\StockStrategyResolver;
 use App\Http\Resources\Tenant\OrderResource;
 use App\Models\Tenant\Token;
 use App\Events\OrderStatusUpdated;
+use App\Services\LoyaltyService;
 use App\Support\Observability;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class OrderService
 {
@@ -633,9 +635,20 @@ class OrderService
             }
 
             $order->update([
-                'status' => 'completed'
+                'status' => 'completed',
+                'completed_at' => $order->completed_at ?: now(),
             ]);
         });
+
+        try {
+            app(LoyaltyService::class)->awardForCompletedOrder($order->fresh());
+        } catch (Throwable $e) {
+            Observability::logWarning('loyalty.award.failed', $e, [
+                'order_id' => $order->id,
+                'customer_id' => $order->customer_id,
+                'location_id' => $order->location_id,
+            ]);
+        }
 
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments')

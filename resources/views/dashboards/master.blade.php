@@ -37,6 +37,30 @@
         </div>
     </div>
 
+    @if(session('status'))
+        <div class="mb-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+            {{ session('status') }}
+        </div>
+    @endif
+
+    @if(session('generated_password'))
+        <div class="mb-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div class="font-semibold">Generated password, show once only:</div>
+            <code class="mt-2 block break-all rounded-md bg-white px-3 py-2 font-mono text-sm text-slate-950">{{ session('generated_password') }}</code>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="mb-5 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <div class="font-semibold">Please fix the highlighted user details.</div>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-5 py-4">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -101,6 +125,15 @@
                             <td class="px-5 py-4 text-sm text-slate-700">{{ $tenant->users->count() }}</td>
                             <td class="px-5 py-4 text-right text-sm text-slate-500">{{ $tenant->created_at?->format('d M Y') }}</td>
                             <td class="px-5 py-4 text-right">
+                                <button
+                                    type="button"
+                                    title="Manage tenant"
+                                    class="mr-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                                    data-modal-target="tenant-modal-{{ $tenant->id }}"
+                                    data-open-tab="users"
+                                >
+                                    Manage ...
+                                </button>
                                 <button
                                     type="button"
                                     class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -193,13 +226,14 @@
             $branding = $tenant->branding;
             $tax = $tenant->taxConfig;
             $accent = $branding?->primary_color ?: '#6366f1';
+            $isUserModalOpen = (int) session('tenant_user_tenant_id') === (int) $tenant->id;
         @endphp
 
         <div
             id="tenant-modal-{{ $tenant->id }}"
-            class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 px-4 py-6"
+            class="fixed inset-0 z-50 {{ $isUserModalOpen ? 'flex' : 'hidden' }} items-center justify-center bg-slate-950/70 px-4 py-6"
             data-modal
-            aria-hidden="true"
+            aria-hidden="{{ $isUserModalOpen ? 'false' : 'true' }}"
         >
             <div class="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-2xl">
                 <div class="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-950 px-6 py-5 text-white">
@@ -221,99 +255,153 @@
                     </button>
                 </div>
 
-                <div class="max-h-[calc(92vh-89px)] overflow-y-auto p-6">
-                    <div class="grid gap-5 lg:grid-cols-3">
-                        <section class="rounded-md border border-slate-200 p-5">
-                            <h3 class="text-sm font-semibold text-slate-950">Tenant Profile</h3>
-                            <dl class="mt-4 space-y-3 text-sm">
-                                <div><dt class="text-slate-500">Name</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->name }}</dd></div>
-                                <div><dt class="text-slate-500">Industry</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->industry }}</dd></div>
-                                <div><dt class="text-slate-500">API key</dt><dd class="mt-1 break-all font-mono text-xs text-slate-700">{{ $tenant->api_key }}</dd></div>
-                            </dl>
-                        </section>
-
-                        <section class="rounded-md border border-slate-200 p-5">
-                            <h3 class="text-sm font-semibold text-slate-950">Tax Config</h3>
-                            <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                <div><dt class="text-slate-500">GST</dt><dd class="mt-1 font-medium">{{ $tax?->gst_number ?: 'Not set' }}</dd></div>
-                                <div><dt class="text-slate-500">Enabled</dt><dd class="mt-1 font-medium">{{ $tax?->is_gst_enabled ? 'Yes' : 'No' }}</dd></div>
-                                <div><dt class="text-slate-500">Inclusive</dt><dd class="mt-1 font-medium">{{ $tax?->is_inclusive ? 'Yes' : 'No' }}</dd></div>
-                                <div><dt class="text-slate-500">CGST</dt><dd class="mt-1 font-medium">{{ $tax?->cgst_rate ?? 0 }}%</dd></div>
-                                <div><dt class="text-slate-500">SGST</dt><dd class="mt-1 font-medium">{{ $tax?->sgst_rate ?? 0 }}%</dd></div>
-                                <div><dt class="text-slate-500">IGST</dt><dd class="mt-1 font-medium">{{ $tax?->igst_rate ?? 0 }}%</dd></div>
-                            </dl>
-                        </section>
-
-                        <section class="rounded-md border border-slate-200 p-5">
-                            <h3 class="text-sm font-semibold text-slate-950">Branding</h3>
-                            <dl class="mt-4 space-y-3 text-sm">
-                                <div><dt class="text-slate-500">Company</dt><dd class="mt-1 font-medium">{{ $branding?->company_name ?: 'Not set' }}</dd></div>
-                                <div>
-                                    <dt class="text-slate-500">Primary color</dt>
-                                    <dd class="mt-1 flex items-center gap-2 font-medium">
-                                        <span class="h-4 w-4 rounded-full border border-slate-200" style="background-color: {{ $accent }}"></span>
-                                        {{ $branding?->primary_color ?: 'Not set' }}
-                                    </dd>
-                                </div>
-                                <div><dt class="text-slate-500">Phone</dt><dd class="mt-1 font-medium">{{ $branding?->phone ?: 'Not set' }}</dd></div>
-                                <div><dt class="text-slate-500">Address</dt><dd class="mt-1 font-medium">{{ $branding?->address ?: 'Not set' }}</dd></div>
-                            </dl>
-                        </section>
+                <div class="max-h-[calc(92vh-89px)] overflow-y-auto">
+                    <div class="border-b border-slate-200 px-6 pt-4">
+                        <div class="flex gap-2" role="tablist" aria-label="Tenant management">
+                            <button type="button" class="rounded-t-md border border-b-0 border-slate-200 px-4 py-2 text-sm font-semibold {{ $isUserModalOpen ? 'bg-white text-slate-600' : 'bg-slate-950 text-white' }}" data-tenant-tab="profile" data-tab-active-class="bg-slate-950 text-white" data-tab-inactive-class="bg-white text-slate-600">
+                                Profile
+                            </button>
+                            <button type="button" class="rounded-t-md border border-b-0 border-slate-200 px-4 py-2 text-sm font-semibold {{ $isUserModalOpen ? 'bg-slate-950 text-white' : 'bg-white text-slate-600' }}" data-tenant-tab="users" data-tab-active-class="bg-slate-950 text-white" data-tab-inactive-class="bg-white text-slate-600">
+                                Users
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="mt-5 grid gap-5 lg:grid-cols-[1fr_420px]">
-                        <section class="rounded-md border border-slate-200 p-5">
-                            <h3 class="text-sm font-semibold text-slate-950">Tenant Users</h3>
-                            <div class="mt-4 overflow-hidden rounded-md border border-slate-200">
-                                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                                    <thead class="bg-slate-50">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left font-semibold text-slate-600">Name</th>
-                                            <th class="px-4 py-2 text-left font-semibold text-slate-600">Email</th>
-                                            <th class="px-4 py-2 text-left font-semibold text-slate-600">Role</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-100">
-                                        @forelse($tenant->users as $user)
+                    <div class="p-6 {{ $isUserModalOpen ? 'hidden' : '' }}" data-tenant-tab-panel="profile">
+                        <div class="grid gap-5 lg:grid-cols-3">
+                            <section class="rounded-md border border-slate-200 p-5">
+                                <h3 class="text-sm font-semibold text-slate-950">Tenant Profile</h3>
+                                <dl class="mt-4 space-y-3 text-sm">
+                                    <div><dt class="text-slate-500">Name</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->name }}</dd></div>
+                                    <div><dt class="text-slate-500">Industry</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->industry }}</dd></div>
+                                    <div><dt class="text-slate-500">API key</dt><dd class="mt-1 break-all font-mono text-xs text-slate-700">{{ $tenant->api_key }}</dd></div>
+                                </dl>
+                            </section>
+
+                            <section class="rounded-md border border-slate-200 p-5">
+                                <h3 class="text-sm font-semibold text-slate-950">Tax Config</h3>
+                                <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                    <div><dt class="text-slate-500">GST</dt><dd class="mt-1 font-medium">{{ $tax?->gst_number ?: 'Not set' }}</dd></div>
+                                    <div><dt class="text-slate-500">Enabled</dt><dd class="mt-1 font-medium">{{ $tax?->is_gst_enabled ? 'Yes' : 'No' }}</dd></div>
+                                    <div><dt class="text-slate-500">Inclusive</dt><dd class="mt-1 font-medium">{{ $tax?->is_inclusive ? 'Yes' : 'No' }}</dd></div>
+                                    <div><dt class="text-slate-500">CGST</dt><dd class="mt-1 font-medium">{{ $tax?->cgst_rate ?? 0 }}%</dd></div>
+                                    <div><dt class="text-slate-500">SGST</dt><dd class="mt-1 font-medium">{{ $tax?->sgst_rate ?? 0 }}%</dd></div>
+                                    <div><dt class="text-slate-500">IGST</dt><dd class="mt-1 font-medium">{{ $tax?->igst_rate ?? 0 }}%</dd></div>
+                                </dl>
+                            </section>
+
+                            <section class="rounded-md border border-slate-200 p-5">
+                                <h3 class="text-sm font-semibold text-slate-950">Branding</h3>
+                                <dl class="mt-4 space-y-3 text-sm">
+                                    <div><dt class="text-slate-500">Company</dt><dd class="mt-1 font-medium">{{ $branding?->company_name ?: 'Not set' }}</dd></div>
+                                    <div>
+                                        <dt class="text-slate-500">Primary color</dt>
+                                        <dd class="mt-1 flex items-center gap-2 font-medium">
+                                            <span class="h-4 w-4 rounded-full border border-slate-200" style="background-color: {{ $accent }}"></span>
+                                            {{ $branding?->primary_color ?: 'Not set' }}
+                                        </dd>
+                                    </div>
+                                    <div><dt class="text-slate-500">Phone</dt><dd class="mt-1 font-medium">{{ $branding?->phone ?: 'Not set' }}</dd></div>
+                                    <div><dt class="text-slate-500">Address</dt><dd class="mt-1 font-medium">{{ $branding?->address ?: 'Not set' }}</dd></div>
+                                </dl>
+                            </section>
+                        </div>
+                    </div>
+
+                    <div class="p-6 {{ $isUserModalOpen ? '' : 'hidden' }}" data-tenant-tab-panel="users">
+                        <div class="grid gap-5 lg:grid-cols-[1fr_420px]">
+                            <section class="rounded-md border border-slate-200 p-5">
+                                <h3 class="text-sm font-semibold text-slate-950">Tenant Users</h3>
+                                <div class="mt-4 overflow-hidden rounded-md border border-slate-200">
+                                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                                        <thead class="bg-slate-50">
                                             <tr>
-                                                <td class="px-4 py-3 font-medium text-slate-950">{{ $user->name }}</td>
-                                                <td class="px-4 py-3 text-slate-700">{{ $user->email }}</td>
-                                                <td class="px-4 py-3 text-slate-700">{{ $user->role ?: 'user' }}</td>
+                                                <th class="px-4 py-2 text-left font-semibold text-slate-600">Name</th>
+                                                <th class="px-4 py-2 text-left font-semibold text-slate-600">Email</th>
+                                                <th class="px-4 py-2 text-left font-semibold text-slate-600">Role</th>
                                             </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="3" class="px-4 py-6 text-center text-slate-500">No tenant users found.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100">
+                                            @forelse($tenant->users as $user)
+                                                <tr>
+                                                    <td class="px-4 py-3 font-medium text-slate-950">{{ $user->name }}</td>
+                                                    <td class="px-4 py-3 text-slate-700">{{ $user->email }}</td>
+                                                    <td class="px-4 py-3 text-slate-700">{{ $user->role ?: 'user' }}</td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="3" class="px-4 py-6 text-center text-slate-500">No tenant users found.</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+
+                            <div class="space-y-5">
+                                <section class="rounded-md border border-slate-200 p-5">
+                                    <h3 class="text-sm font-semibold text-slate-950">Create User</h3>
+                                    <form method="POST" action="{{ route('master.tenants.users.store', $tenant) }}" class="mt-4 space-y-3">
+                                        @csrf
+
+                                        <input name="name" type="text" required value="{{ $isUserModalOpen ? old('name') : '' }}" placeholder="Name"
+                                            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+
+                                        <input name="email" type="email" required value="{{ $isUserModalOpen ? old('email') : '' }}" placeholder="Email"
+                                            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+
+                                        <select name="role" required class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                                            <option value="">Select role</option>
+                                            @foreach(['owner', 'manager', 'cashier', 'kitchen', 'waiter', 'accountant'] as $role)
+                                                <option value="{{ $role }}" @selected($isUserModalOpen && old('role') === $role)>{{ ucfirst($role) }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <label class="flex items-center gap-2 text-sm font-medium text-slate-700">
+                                            <input name="generate_password" value="1" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-950" data-generate-password @checked($isUserModalOpen && old('generate_password'))>
+                                            Generate password
+                                        </label>
+
+                                        <div data-password-fields>
+                                            <input name="password" type="password" placeholder="Password"
+                                                class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+
+                                            <input name="password_confirmation" type="password" placeholder="Confirm password"
+                                                class="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                                        </div>
+
+                                        <button class="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+                                            Create Tenant User
+                                        </button>
+                                    </form>
+                                </section>
+
+                                <section class="rounded-md border border-slate-200 p-5">
+                                    <h3 class="text-sm font-semibold text-slate-950">Reset Password</h3>
+                                    <form method="POST" action="{{ route('master.tenants.password', $tenant) }}" class="mt-4 space-y-3">
+                                        @csrf
+                                        @method('PATCH')
+
+                                        <select name="user_id" required class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                                            <option value="">Select user</option>
+                                            @foreach($tenant->users as $user)
+                                                <option value="{{ $user->id }}">{{ $user->name }} - {{ $user->email }}</option>
+                                            @endforeach
+                                        </select>
+
+                                        <input name="password" type="password" required placeholder="New password"
+                                            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+
+                                        <input name="password_confirmation" type="password" required placeholder="Confirm password"
+                                            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+
+                                        <button class="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+                                            Reset Tenant Password
+                                        </button>
+                                    </form>
+                                </section>
                             </div>
-                        </section>
-
-                        <section class="rounded-md border border-slate-200 p-5">
-                            <h3 class="text-sm font-semibold text-slate-950">Reset Password</h3>
-                            <form method="POST" action="{{ route('master.tenants.password', $tenant) }}" class="mt-4 space-y-3">
-                                @csrf
-                                @method('PATCH')
-
-                                <select name="user_id" required class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
-                                    <option value="">Select user</option>
-                                    @foreach($tenant->users as $user)
-                                        <option value="{{ $user->id }}">{{ $user->name }} - {{ $user->email }}</option>
-                                    @endforeach
-                                </select>
-
-                                <input name="password" type="password" required placeholder="New password"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
-
-                                <input name="password_confirmation" type="password" required placeholder="Confirm password"
-                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
-
-                                <button class="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
-                                    Reset Tenant Password
-                                </button>
-                            </form>
-                        </section>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -436,6 +524,54 @@
             '"': '&quot;',
             "'": '&#039;',
         }[char]));
+
+        const toggleClasses = (element, removeClasses, addClasses) => {
+            element.classList.remove(...removeClasses.split(' '));
+            element.classList.add(...addClasses.split(' '));
+        };
+
+        const setTenantTab = (modal, selectedTab) => {
+            if (!modal) return;
+
+            modal.querySelectorAll('[data-tenant-tab]').forEach((button) => {
+                const active = button.dataset.tenantTab === selectedTab;
+                toggleClasses(
+                    button,
+                    active ? button.dataset.tabInactiveClass : button.dataset.tabActiveClass,
+                    active ? button.dataset.tabActiveClass : button.dataset.tabInactiveClass
+                );
+            });
+
+            modal.querySelectorAll('[data-tenant-tab-panel]').forEach((panel) => {
+                panel.classList.toggle('hidden', panel.dataset.tenantTabPanel !== selectedTab);
+            });
+        };
+
+        const openModal = (modal, tab = null) => {
+            if (!modal) return;
+
+            if (tab) {
+                setTenantTab(modal, tab);
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            modal.setAttribute('aria-hidden', 'false');
+        };
+
+        const closeModal = (modal) => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+
+        const syncGeneratedPasswordFields = (checkbox) => {
+            const form = checkbox.closest('form');
+            const fields = form?.querySelector('[data-password-fields]');
+            if (!fields) return;
+
+            fields.classList.toggle('hidden', checkbox.checked);
+        };
 
         const showLogsStatus = (message, tone = 'default') => {
             logsStatus.textContent = message;
@@ -574,8 +710,7 @@
                 document.getElementById('logs-severity').value = '';
                 document.getElementById('logs-event').value = '';
                 document.getElementById('logs-support-code').value = '';
-                logsModal?.classList.remove('hidden');
-                logsModal?.classList.add('flex');
+                openModal(logsModal);
                 await loadAvailableLogDate();
                 await loadLogs();
             });
@@ -629,25 +764,40 @@
             }
         });
 
-        document.querySelectorAll('[data-modal-target]').forEach((row) => {
-            row.addEventListener('click', () => {
-                const modal = document.getElementById(row.dataset.modalTarget);
-                modal?.classList.remove('hidden');
-                modal?.classList.add('flex');
+        document.querySelectorAll('[data-modal-target]').forEach((trigger) => {
+            trigger.addEventListener('click', (event) => {
+                if (trigger.tagName === 'BUTTON') {
+                    event.stopPropagation();
+                }
+
+                const modal = document.getElementById(trigger.dataset.modalTarget);
+                openModal(modal, trigger.dataset.openTab || 'profile');
             });
 
-            row.addEventListener('keydown', (event) => {
+            trigger.addEventListener('keydown', (event) => {
+                if (trigger.tagName === 'BUTTON') return;
+
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    row.click();
+                    trigger.click();
                 }
             });
         });
 
+        document.querySelectorAll('[data-tenant-tab]').forEach((button) => {
+            button.addEventListener('click', () => {
+                setTenantTab(button.closest('[data-modal]'), button.dataset.tenantTab);
+            });
+        });
+
+        document.querySelectorAll('[data-generate-password]').forEach((checkbox) => {
+            syncGeneratedPasswordFields(checkbox);
+            checkbox.addEventListener('change', () => syncGeneratedPasswordFields(checkbox));
+        });
+
         document.querySelectorAll('[data-modal]').forEach((modal) => {
             const close = () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+                closeModal(modal);
             };
 
             modal.querySelectorAll('[data-modal-close]').forEach((button) => {
@@ -664,8 +814,7 @@
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 document.querySelectorAll('[data-modal]').forEach((modal) => {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
+                    closeModal(modal);
                 });
             }
         });
