@@ -152,7 +152,8 @@ class OfflineOrderSyncService
         }
 
         $this->applyPaymentMetadata($payment, $payload);
-        $payment = $this->paymentService->markPaymentSuccess($payment->fresh());
+        $paymentResult = $this->paymentService->markPaymentSuccess($payment->fresh());
+        $payment = $paymentResult['payment'];
 
         if ($order->fresh()->status !== 'completed') {
             throw new \Exception('Offline payment did not fully complete the order');

@@ -6,7 +6,9 @@ use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
 use App\Models\Tenant\PaymentMethod;
 use App\Models\Tenant\UpiProfile;
+use App\Models\Invoice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Services\Payments\PaymentService;
 use App\Services\InvoiceService;
@@ -91,13 +93,17 @@ class PaymentController extends Controller
             );
 
             $paymentModel = is_array($payment) ? ($payment['payment'] ?? null) : $payment;
+            $alreadyPaid = is_array($payment) && ($payment['already_paid'] ?? false);
 
             Observability::logInfo('payment.created', [
                 'tenant_slug' => $tenantSlug,
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'endpoint' => 'payment.create',
                 'order_id' => $order?->id ?? $orderId,
                 'payment_id' => $paymentModel?->id,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $paymentModel?->status,
+                'already_paid' => $alreadyPaid,
                 'location_id' => $order?->location_id,
                 'duration_ms' => Observability::durationMs($startedAt),
             ], $request);
@@ -106,9 +112,12 @@ class PaymentController extends Controller
         } catch (Throwable $e) {
             Observability::logFailure('payment.create.failed', $e, [
                 'tenant_slug' => $tenantSlug,
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'endpoint' => 'payment.create',
                 'order_id' => $orderId,
                 'payment_method' => $request->payment_method,
                 'location_id' => $order?->location_id ?? $request->input('location_id'),
+                'duration_ms' => Observability::durationMs($startedAt),
                 'action' => 'payment.create',
             ], $request);
 
@@ -131,24 +140,55 @@ class PaymentController extends Controller
     public function markSuccess(String $tenantSlug, String $paymentId, PaymentService $service, OrderKitchenDispatchService $kitchenDispatch)
     {
         $startedAt = microtime(true);
-        $payment = Payment::find($paymentId);
+        $payment = Payment::findOrFail($paymentId);
         $order = $payment?->order;
 
         try {
-            $service->markPaymentSuccess($payment);
+            $result = $service->markPaymentSuccess($payment);
+            $payment = $result['payment'];
+            $order = $result['order'];
+
+            if ($result['idempotent']) {
+                $order = $order->fresh(['tableSession', 'token']);
+
+                Observability::logInfo('payment.success.idempotent', [
+                    'tenant_slug' => $tenantSlug,
+                    'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                    'endpoint' => 'payment.success',
+                    'order_id' => $order?->id,
+                    'payment_id' => $payment?->id ?? $paymentId,
+                    'payment_status' => $payment?->status,
+                    'order_status' => $order?->status,
+                    'already_paid' => true,
+                    'already_successful' => $result['already_successful'],
+                    'post_processing_required' => false,
+                    'duration_ms' => Observability::durationMs($startedAt),
+                ]);
+
+                return response()->json([
+                    'payment' => $payment,
+                    'token' => $order?->token,
+                    'order' => $order,
+                    'already_paid' => true,
+                    'invoice_generated' => false,
+                    'invoice_id' => $order?->invoice_id,
+                    'invoice_number' => $order?->invoice_no,
+                    'invoice_url' => data_get($order?->meta, 'invoice.url'),
+                ]);
+            }
 
             $order = $order->fresh(['items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product']);
             $invoice = $this->autoGenerateTableServiceInvoice($tenantSlug, $order, $payment);
 
-            if ($order->dining_flow === 'table_service' && $order->payment_status === 'paid') {
-                app(TableSessionService::class)->closeForOrder($order);
-            }
+            $this->closeTableSessionAfterPayment($tenantSlug, $order, $payment);
 
-            $token = $kitchenDispatch->ensureTokenAndDispatchWhenReady($order, 'payment_success');
+            $token = $this->ensureTokenAfterPayment($tenantSlug, $order, $payment, $kitchenDispatch);
             $order = $order->fresh(['tableSession', 'token']);
 
             Observability::logInfo('payment.completed', [
                 'tenant_slug' => $tenantSlug,
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'endpoint' => 'payment.success',
                 'order_id' => $order?->id,
                 'payment_id' => $payment?->id ?? $paymentId,
                 'location_id' => $order?->location_id,
@@ -157,6 +197,7 @@ class PaymentController extends Controller
                 'token_id' => $token?->id,
                 'invoice_id' => $invoice['invoice_id'],
                 'invoice_number' => $invoice['invoice_number'],
+                'already_paid' => false,
                 'duration_ms' => Observability::durationMs($startedAt),
             ]);
 
@@ -164,6 +205,7 @@ class PaymentController extends Controller
                 'payment' => $payment->fresh(),
                 'token' => $token,
                 'order' => $order,
+                'already_paid' => false,
                 'invoice_generated' => $invoice['invoice_generated'],
                 'invoice_id' => $invoice['invoice_id'],
                 'invoice_number' => $invoice['invoice_number'],
@@ -172,13 +214,60 @@ class PaymentController extends Controller
         } catch (Throwable $e) {
             Observability::logFailure('payment.success.failed', $e, [
                 'tenant_slug' => $tenantSlug,
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'endpoint' => 'payment.success',
                 'order_id' => $order?->id,
                 'payment_id' => $paymentId,
                 'location_id' => $order?->location_id,
+                'duration_ms' => Observability::durationMs($startedAt),
                 'action' => 'payment.success',
             ]);
 
             throw $e;
+        }
+    }
+
+    private function closeTableSessionAfterPayment(string $tenantSlug, Order $order, Payment $payment): void
+    {
+        if ($order->dining_flow !== 'table_service' || $order->payment_status !== 'paid') {
+            return;
+        }
+
+        try {
+            app(TableSessionService::class)->closeForOrder($order);
+        } catch (Throwable $e) {
+            Observability::logFailure('table_service.close_after_payment.failed', $e, [
+                'tenant_slug' => $tenantSlug,
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'order_id' => $order->id,
+                'payment_id' => $payment->id,
+                'table_session_id' => $order->table_session_id,
+                'endpoint' => 'payment.success',
+                'action' => 'table_service.close_after_payment',
+            ]);
+        }
+    }
+
+    private function ensureTokenAfterPayment(
+        string $tenantSlug,
+        Order $order,
+        Payment $payment,
+        OrderKitchenDispatchService $kitchenDispatch
+    ) {
+        try {
+            return $kitchenDispatch->ensureTokenAndDispatchWhenReady($order, 'payment_success');
+        } catch (Throwable $e) {
+            Observability::logFailure('token.dispatch_after_payment.failed', $e, [
+                'tenant_slug' => $tenantSlug,
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'order_id' => $order->id,
+                'payment_id' => $payment->id,
+                'location_id' => $order->location_id,
+                'endpoint' => 'payment.success',
+                'action' => 'token.dispatch_after_payment',
+            ]);
+
+            return $order->token;
         }
     }
 
@@ -236,6 +325,9 @@ class PaymentController extends Controller
                 'payment_id' => $payment->id,
                 'invoice_id' => $freshOrder?->invoice_id ?? $order->invoice_id,
                 'location_id' => $order->location_id,
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'invoice_connection' => Invoice::CENTRAL_CONNECTION,
+                'default_connection' => DB::getDefaultConnection(),
                 'action' => 'table_service.invoice.generate',
             ]);
 

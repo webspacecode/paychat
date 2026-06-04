@@ -16,6 +16,7 @@ use App\Services\Payments\Strategies\CashPaymentStrategy;
 use App\Services\Payments\Strategies\UpiPaymentStrategy;
 use App\Services\Payments\Strategies\PhonePePaymentStrategy;
 use SimpleSoftwareIO\QrCode\Generator;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class PaymentService
 {       
@@ -36,7 +37,7 @@ class PaymentService
     public function createPayment(Order $order, $method, $amount, ?int $upiProfileId = null)
     {
         if (!$order) {
-            throw new \Exception('Order not found');
+            throw new PaymentException('Order not found', 'ORDER_NOT_FOUND', 404);
         }
 
         $amount = $this->money($amount);
@@ -45,11 +46,19 @@ class PaymentService
             $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($lockedOrder->status === 'cancelled') {
-                throw new \Exception('Cancelled order cannot accept payment');
+                throw new ConflictHttpException('Cancelled order cannot accept payment');
+            }
+
+            if ($lockedOrder->payment_status === 'paid' || $this->successfulPaidAmount($lockedOrder) >= $this->money($lockedOrder->total)) {
+                return $this->alreadyPaidResponse($lockedOrder);
+            }
+
+            if ($lockedOrder->status === 'completed') {
+                return $this->alreadyPaidResponse($lockedOrder);
             }
 
             if ($lockedOrder->status !== 'pending_payment') {
-                throw new \Exception('Order not ready for payment');
+                throw new ConflictHttpException('Order not ready for payment');
             }
 
             // ✅ Get tenant config
@@ -58,22 +67,18 @@ class PaymentService
                 ->first();
 
             if (!$config) {
-                throw new \Exception('Payment method not enabled');
+                throw new PaymentException('Payment method not enabled', 'PAYMENT_METHOD_NOT_ENABLED', 422);
+            }
+
+            if ($existingPayment = $this->findReusablePendingPayment($lockedOrder, $method, $amount, $upiProfileId)) {
+                return $existingPayment->fresh($method === 'upi' ? 'upiProfile' : []);
             }
 
             $this->expireReplaceablePaymentAttempts($lockedOrder, $amount);
             $remaining = $this->remainingAmount($lockedOrder);
 
             if ($remaining <= 0) {
-                throw new PaymentException(
-                    'Order already fully paid',
-                    'ORDER_ALREADY_PAID',
-                    422,
-                    [
-                        'order_total' => $this->money($lockedOrder->total),
-                        'remaining_amount' => $remaining,
-                    ]
-                );
+                return $this->alreadyPaidResponse($lockedOrder);
             }
 
             if ($method !== 'cash' && $amount > $remaining) {
@@ -97,9 +102,37 @@ class PaymentService
 
                 'upi' => $this->handleUpi($lockedOrder, $amount, $config, $upiProfileId),
 
-                default => throw new \Exception("Unsupported payment method")
+                default => throw new PaymentException('Unsupported payment method', 'PAYMENT_METHOD_UNSUPPORTED', 422)
             };
         });
+    }
+
+    private function alreadyPaidResponse(Order $order): array
+    {
+        return [
+            'already_paid' => true,
+            'message' => 'Order already fully paid',
+            'order_id' => $order->id,
+            'order_status' => $order->status,
+            'payment_status' => $order->payment_status,
+            'paid_amount' => $this->money($order->paid_amount ?? $this->successfulPaidAmount($order)),
+            'balance_due' => 0,
+        ];
+    }
+
+    private function findReusablePendingPayment(Order $order, string $method, float $amount, ?int $upiProfileId = null): ?Payment
+    {
+        $query = $order->payments()
+            ->where('payment_method', $method)
+            ->where('status', 'pending')
+            ->where('amount', $amount)
+            ->latest('id');
+
+        if ($method === 'upi' && $upiProfileId !== null) {
+            $query->where('upi_profile_id', $upiProfileId);
+        }
+
+        return $query->first();
     }
 
     private function handleCash(Order $order, $tenderedAmount, $remaining)
@@ -150,11 +183,11 @@ class PaymentService
                 ->first();
 
             if (! $profile) {
-                throw new \Exception('Selected UPI profile is not active');
+                throw new PaymentException('Selected UPI profile is not active', 'UPI_PROFILE_INACTIVE', 422);
             }
 
             if ($profile->location_id !== null && (int) $profile->location_id !== (int) $order->location_id) {
-                throw new \Exception('Selected UPI profile is not available for this order location');
+                throw new PaymentException('Selected UPI profile is not available for this order location', 'UPI_PROFILE_LOCATION_MISMATCH', 422);
             }
 
             return $profile;
@@ -217,7 +250,7 @@ class PaymentService
         $name  = $config->config['name'] ?? 'Store';
 
         if (!$upiId) {
-            throw new \Exception('UPI ID not configured');
+            throw new PaymentException('UPI ID not configured', 'UPI_NOT_CONFIGURED', 422);
         }
 
         // 🔥 Clean store name (remove spaces/special chars for better display)
@@ -377,7 +410,7 @@ class PaymentService
             $qr = null;
         }
 
-        event(new PaymentQrGenerated([
+        $payload = [
             'type' => 'payment_qr',
             'payment_method' => 'upi',
             'order_id' => $order->id,
@@ -387,7 +420,20 @@ class PaymentService
             'qr' => $qr ? base64_encode($qr) : null,
             'qr_payload' => $upiQr,
             'upi_profile' => $this->publicUpiProfilePayload($upiProfile),
-        ]));
+        ];
+
+        DB::afterCommit(function () use ($payload, $order, $payment) {
+            try {
+                event(new PaymentQrGenerated($payload));
+            } catch (\Throwable $e) {
+                Observability::logWarning('payment.qr_broadcast.failed', $e, [
+                    'order_id' => $order->id,
+                    'payment_id' => $payment->id,
+                    'location_id' => $order->location_id,
+                    'payment_method' => 'upi',
+                ]);
+            }
+        });
     }
 
     public function updateOrderPaymentStatus(Order $order, float $changeReturned = 0)
@@ -444,11 +490,27 @@ class PaymentService
         });
     }
 
-    public function markPaymentSuccess(Payment $payment)
+    public function markPaymentSuccess(Payment $payment): array
     {
-        DB::transaction(function () use ($payment) {
+        $result = DB::transaction(function () use ($payment) {
             $lockedPayment = Payment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
             $order = Order::whereKey($lockedPayment->order_id)->lockForUpdate()->firstOrFail();
+            $wasAlreadySuccessful = $lockedPayment->status === 'success';
+            $orderWasCompleted = $order->status === 'completed';
+            $orderWasAlreadyPaid = $order->payment_status === 'paid'
+                || $this->successfulPaidAmount($order) >= $this->money($order->total);
+
+            if ($orderWasAlreadyPaid && ! $wasAlreadySuccessful) {
+                return [
+                    'payment' => $lockedPayment->fresh(),
+                    'order' => $order->fresh(),
+                    'already_successful' => false,
+                    'already_paid' => true,
+                    'idempotent' => $orderWasCompleted,
+                    'post_processing_required' => false,
+                    'completed_now' => false,
+                ];
+            }
 
             $this->assertPaymentCanBeMarkedSuccessful($lockedPayment, $order);
 
@@ -459,9 +521,21 @@ class PaymentService
             }
 
             $this->syncOrderAfterPaymentSuccess($order, true);
+
+            $freshOrder = $order->fresh();
+
+            return [
+                'payment' => $lockedPayment->fresh(),
+                'order' => $freshOrder,
+                'already_successful' => $wasAlreadySuccessful,
+                'already_paid' => $wasAlreadySuccessful && $freshOrder->payment_status === 'paid',
+                'idempotent' => $wasAlreadySuccessful && $orderWasCompleted,
+                'post_processing_required' => ! $orderWasCompleted && $freshOrder->status === 'completed',
+                'completed_now' => ! $orderWasCompleted && $freshOrder->status === 'completed',
+            ];
         });
 
-        return $payment->fresh();
+        return $result;
     }
 
     private function remainingAmount(Order $order): float
@@ -495,7 +569,7 @@ class PaymentService
     private function assertPaymentCanBeMarkedSuccessful(Payment $payment, Order $order): void
     {
         if ($order->status === 'cancelled') {
-            throw new \Exception('Cancelled order cannot accept payment');
+            throw new ConflictHttpException('Cancelled order cannot accept payment');
         }
 
         if (in_array($payment->status, ['expired', 'failed'], true)) {

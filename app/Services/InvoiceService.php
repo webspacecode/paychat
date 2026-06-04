@@ -40,6 +40,8 @@ class InvoiceService
             throw new \Exception("Cancelled order cannot generate invoice");
         }
 
+        $this->logInvoiceConnectionContext('invoice.generation.connection_context', $tenant, $orderId);
+
         $existingInvoice = $this->findExistingInvoice($tenant->id, $orderId);
 
         if ($existingInvoice) {
@@ -59,7 +61,7 @@ class InvoiceService
         DB::connection('tenant')->beginTransaction();
 
         try {
-            $invoice = Invoice::create([
+            $invoice = $this->invoiceQuery()->create([
                 'tenant_id'=>$tenant->id,
                 'order_id'=>$orderId,
                 'uuid'=>$uuid,
@@ -83,6 +85,11 @@ class InvoiceService
                 'customer_phone' => $this->nullableTrim(data_get($orderData, 'customer.phone')),
                 'review_token' => $reviewToken,
                 'expires_at' => now()->addMonths(6),
+            ]);
+
+            $this->logInvoiceConnectionContext('invoice.created.connection_context', $tenant, $orderId, [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->uuid,
             ]);
 
             DB::connection('tenant')->commit();
@@ -266,7 +273,8 @@ class InvoiceService
 
     private function findExistingInvoice(int $tenantId, int $orderId): ?Invoice
     {
-        $invoice = Invoice::where('tenant_id', $tenantId)
+        $invoice = $this->invoiceQuery()
+            ->where('tenant_id', $tenantId)
             ->where('order_id', $orderId)
             ->first();
 
@@ -274,13 +282,38 @@ class InvoiceService
             return $invoice;
         }
 
-        return Invoice::where('tenant_id', $tenantId)
+        return $this->invoiceQuery()
+            ->where('tenant_id', $tenantId)
             ->where(function ($query) use ($orderId) {
                 $query->where('order_data->id', $orderId)
                     ->orWhere('order_data->id', (string) $orderId);
             })
             ->oldest()
             ->first();
+    }
+
+    private function invoiceQuery()
+    {
+        return Invoice::on(Invoice::CENTRAL_CONNECTION);
+    }
+
+    private function centralTenantQuery()
+    {
+        return Tenant::on(Invoice::CENTRAL_CONNECTION);
+    }
+
+    private function logInvoiceConnectionContext(string $event, Tenant $tenant, int $orderId, array $extra = []): void
+    {
+        Observability::logInfo($event, array_merge([
+            'tenant_id' => $tenant->id,
+            'tenant_slug' => $tenant->slug,
+            'order_id' => $orderId,
+            'invoice_connection' => Invoice::CENTRAL_CONNECTION,
+            'invoice_database' => DB::connection(Invoice::CENTRAL_CONNECTION)->getDatabaseName(),
+            'tenant_connection' => 'tenant',
+            'tenant_database' => DB::connection('tenant')->getDatabaseName(),
+            'default_connection' => DB::getDefaultConnection(),
+        ], $extra));
     }
 
     private function configureTenantConnection(Tenant $tenant): void
@@ -344,11 +377,11 @@ class InvoiceService
 
     public function view($uuid)
     {
-        $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
+        $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
         
-        $tenant = Tenant::where('id', $inv->tenant_id)->first();
+        $tenant = $this->centralTenantQuery()->where('id', $inv->tenant_id)->first();
 
         $totals = $this->calculateGST($inv->order_data,$tenant->taxConfig);
         $url = request()->url();
@@ -366,14 +399,14 @@ class InvoiceService
             $template,
             [
                 'order'=>$inv->order_data,
-                'branding'=>$inv->tenant->branding,
-                'tax'=>$inv->tenant->taxConfig,
+                'branding'=>$tenant->branding,
+                'tax'=>$tenant->taxConfig,
                 'totals'=>$totals,
                 'receipt'=>$receipt,
                 'qr'=>$qr,
                 'url'=>$url,
                 'pdfUrl'=>route('invoice.pdf', ['uuid' => $uuid]),
-                'logoSrc'=>$this->invoiceLogoSrc($inv->tenant->branding),
+                'logoSrc'=>$this->invoiceLogoSrc($tenant->branding),
                 'isPdf'=>false
             ]
         );
@@ -382,11 +415,11 @@ class InvoiceService
     public function downloadPdf($uuid)
     {
         $startedAt = microtime(true);
-        $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
+        $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
 
-        $tenant = Tenant::where('id', $inv->tenant_id)->first();
+        $tenant = $this->centralTenantQuery()->where('id', $inv->tenant_id)->first();
         $orderData = $this->normalizeOrder($inv->order_data);
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
         $url = url("/api/invoice/$uuid");
@@ -403,14 +436,14 @@ class InvoiceService
 
         $html = view($template, [
             'order'=>$orderData,
-            'branding'=>$inv->tenant->branding,
-            'tax'=>$inv->tenant->taxConfig,
+            'branding'=>$tenant->branding,
+            'tax'=>$tenant->taxConfig,
             'totals'=>$totals,
             'receipt'=>$receipt,
             'qr'=>$qr,
             'url'=>$url,
             'pdfUrl'=>null,
-            'logoSrc'=>$this->invoiceLogoSrc($inv->tenant->branding, true),
+            'logoSrc'=>$this->invoiceLogoSrc($tenant->branding, true),
             'isPdf'=>true
         ])->render();
 
@@ -459,11 +492,11 @@ class InvoiceService
 
     public function viewToken($uuid)
     {
-        $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
+        $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
         
-        $tenant = Tenant::where('id', $inv->tenant_id)->first();
+        $tenant = $this->centralTenantQuery()->where('id', $inv->tenant_id)->first();
 
         $totals = $this->calculateGST($inv->order_data,$tenant->taxConfig);
 
@@ -501,11 +534,11 @@ class InvoiceService
 
     public function generatedView($uuid)
     {   
-        $inv = \App\Models\Invoice::where('uuid',$uuid)->firstOrFail();
+        $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
 
-        $tenant = Tenant::where('id', $inv->tenant_id)->first();
+        $tenant = $this->centralTenantQuery()->where('id', $inv->tenant_id)->first();
 
         $order = $inv->order_data;
         $orderData = $this->normalizeOrder($order);
@@ -789,7 +822,8 @@ class InvoiceService
             $invoice = 'PC' . now()->format('y') . '-' . $random;
 
         } while (
-            DB::table('invoices')
+            DB::connection(Invoice::CENTRAL_CONNECTION)
+                ->table('invoices')
                 ->where('uuid', $invoice)
                 ->exists()
         );

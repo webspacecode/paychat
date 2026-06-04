@@ -21,6 +21,7 @@ use App\Events\OrderStatusUpdated;
 use App\Services\LoyaltyService;
 use App\Support\Observability;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Throwable;
 
 class OrderService
@@ -339,7 +340,7 @@ class OrderService
     public function syncItems(Order $order, Request $request): void
     {
         if (in_array($order->status, ['completed', 'cancelled'], true)) {
-            throw new \Exception('Completed or cancelled order cannot be modified');
+            throw new ConflictHttpException('Completed or cancelled order cannot be modified');
         }
 
         $products = $this->productsForItems((array) $request->items);
@@ -562,7 +563,7 @@ class OrderService
     {
         if ($order->status !== 'pending_payment') {
             if ($order->status !== 'draft') {
-                throw new \Exception("Invalid state");
+                throw new ConflictHttpException("Invalid state");
             }
 
             $order->update(['status' => 'pending_payment']);
@@ -612,15 +613,15 @@ class OrderService
     public function completeOrder(Order $order)
     {
         if ($order->status === 'cancelled') {
-            throw new \Exception('Cancelled order cannot be completed');
+            throw new ConflictHttpException('Cancelled order cannot be completed');
         }
 
         if ($order->status !== 'pending_payment') {
-            throw new \Exception('Invalid state');
+            throw new ConflictHttpException('Invalid state');
         }
 
         if ($order->payment_status !== 'paid') {
-            throw new \Exception('Payment not completed');
+            throw new ConflictHttpException('Payment not completed');
         }
 
         DB::transaction(function () use ($order) {
