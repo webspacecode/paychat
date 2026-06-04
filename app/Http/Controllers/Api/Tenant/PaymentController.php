@@ -142,6 +142,7 @@ class PaymentController extends Controller
         $startedAt = microtime(true);
         $payment = Payment::findOrFail($paymentId);
         $order = $payment?->order;
+        $sideEffects = $this->pendingSideEffects();
 
         try {
             $result = $service->markPaymentSuccess($payment);
@@ -166,10 +167,13 @@ class PaymentController extends Controller
                 ]);
 
                 return response()->json([
+                    'success' => true,
+                    'payment_status' => 'success',
                     'payment' => $payment,
                     'token' => $order?->token,
                     'order' => $order,
                     'already_paid' => true,
+                    'side_effects' => $sideEffects,
                     'invoice_generated' => false,
                     'invoice_id' => $order?->invoice_id,
                     'invoice_number' => $order?->invoice_no,
@@ -179,10 +183,14 @@ class PaymentController extends Controller
 
             $order = $order->fresh(['items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product']);
             $invoice = $this->autoGenerateTableServiceInvoice($tenantSlug, $order, $payment);
+            $sideEffects['invoice'] = $invoice['side_effect_status'];
 
-            $this->closeTableSessionAfterPayment($tenantSlug, $order, $payment);
+            $sideEffects['table_session'] = $this->closeTableSessionAfterPayment($tenantSlug, $order, $payment);
 
-            $token = $this->ensureTokenAfterPayment($tenantSlug, $order, $payment, $kitchenDispatch);
+            $tokenResult = $this->ensureTokenAfterPayment($tenantSlug, $order, $payment, $kitchenDispatch);
+            $token = $tokenResult['token'];
+            $sideEffects['token'] = $tokenResult['status'];
+            $sideEffects['broadcast'] = $tokenResult['broadcast'];
             $order = $order->fresh(['tableSession', 'token']);
 
             Observability::logInfo('payment.completed', [
@@ -202,10 +210,13 @@ class PaymentController extends Controller
             ]);
 
             return response()->json([
+                'success' => true,
+                'payment_status' => 'success',
                 'payment' => $payment->fresh(),
                 'token' => $token,
                 'order' => $order,
                 'already_paid' => false,
+                'side_effects' => $sideEffects,
                 'invoice_generated' => $invoice['invoice_generated'],
                 'invoice_id' => $invoice['invoice_id'],
                 'invoice_number' => $invoice['invoice_number'],
@@ -227,14 +238,25 @@ class PaymentController extends Controller
         }
     }
 
-    private function closeTableSessionAfterPayment(string $tenantSlug, Order $order, Payment $payment): void
+    private function pendingSideEffects(): array
+    {
+        return [
+            'invoice' => 'pending',
+            'token' => 'pending',
+            'broadcast' => 'pending',
+            'table_session' => 'pending',
+        ];
+    }
+
+    private function closeTableSessionAfterPayment(string $tenantSlug, Order $order, Payment $payment): string
     {
         if ($order->dining_flow !== 'table_service' || $order->payment_status !== 'paid') {
-            return;
+            return 'pending';
         }
 
         try {
             app(TableSessionService::class)->closeForOrder($order);
+            return 'success';
         } catch (Throwable $e) {
             Observability::logFailure('table_service.close_after_payment.failed', $e, [
                 'tenant_slug' => $tenantSlug,
@@ -245,6 +267,8 @@ class PaymentController extends Controller
                 'endpoint' => 'payment.success',
                 'action' => 'table_service.close_after_payment',
             ]);
+
+            return 'failed';
         }
     }
 
@@ -253,9 +277,15 @@ class PaymentController extends Controller
         Order $order,
         Payment $payment,
         OrderKitchenDispatchService $kitchenDispatch
-    ) {
+    ): array {
         try {
-            return $kitchenDispatch->ensureTokenAndDispatchWhenReady($order, 'payment_success');
+            $token = $kitchenDispatch->ensureTokenAndDispatchWhenReady($order, 'payment_success');
+
+            return [
+                'token' => $token,
+                'status' => $token ? 'success' : 'pending',
+                'broadcast' => $token ? 'success' : 'pending',
+            ];
         } catch (Throwable $e) {
             Observability::logFailure('token.dispatch_after_payment.failed', $e, [
                 'tenant_slug' => $tenantSlug,
@@ -267,7 +297,11 @@ class PaymentController extends Controller
                 'action' => 'token.dispatch_after_payment',
             ]);
 
-            return $order->token;
+            return [
+                'token' => $order->token,
+                'status' => 'failed',
+                'broadcast' => 'failed',
+            ];
         }
     }
 
@@ -278,6 +312,7 @@ class PaymentController extends Controller
             'invoice_id' => $order->invoice_id,
             'invoice_number' => $order->invoice_no,
             'invoice_url' => data_get($order->meta, 'invoice.url'),
+            'side_effect_status' => 'pending',
         ];
 
         if (! $this->shouldAutoGenerateTableServiceInvoice($order)) {
@@ -286,6 +321,7 @@ class PaymentController extends Controller
 
         if ($order->invoice_id || $order->invoice_no) {
             $this->logInvoiceGenerated($tenantSlug, $order, $payment, false);
+            $invoice['side_effect_status'] = 'success';
             return $invoice;
         }
 
@@ -315,6 +351,7 @@ class PaymentController extends Controller
                 'invoice_id' => $freshOrder->invoice_id,
                 'invoice_number' => $freshOrder->invoice_no,
                 'invoice_url' => data_get($freshOrder->meta, 'invoice.url'),
+                'side_effect_status' => 'success',
             ];
         } catch (Throwable $e) {
             $freshOrder = $order->fresh();
@@ -337,8 +374,11 @@ class PaymentController extends Controller
                     'invoice_id' => $freshOrder->invoice_id,
                     'invoice_number' => $freshOrder->invoice_no,
                     'invoice_url' => data_get($freshOrder->meta, 'invoice.url'),
+                    'side_effect_status' => 'success',
                 ];
             }
+
+            $invoice['side_effect_status'] = 'failed';
 
             return $invoice;
         }

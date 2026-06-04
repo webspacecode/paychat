@@ -135,7 +135,21 @@ class OrderKitchenDispatchService
             $dispatchToken = $token->fresh();
 
             DB::afterCommit(function () use ($dispatchOrder, $dispatchToken, $reason, $stage) {
-                event(new OrderCreated($dispatchOrder, $dispatchToken));
+                try {
+                    event(new OrderCreated($dispatchOrder, $dispatchToken));
+                } catch (\Throwable $e) {
+                    Log::warning('token.generation.broadcast_failed', [
+                        'request_id' => $this->requestId(),
+                        'order_id' => $dispatchOrder->id,
+                        'order_no' => $dispatchOrder->order_no,
+                        'token_id' => $dispatchToken->id,
+                        'token_code' => $dispatchToken->token_code,
+                        'reason' => $reason,
+                        'stage' => $stage,
+                        'error_code' => 'broadcast_failed',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
 
                 Log::info('token.generation.dispatched', [
                     'request_id' => $this->requestId(),

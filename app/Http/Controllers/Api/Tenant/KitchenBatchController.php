@@ -8,6 +8,7 @@ use App\Models\Tenant\KitchenBatch;
 use App\Services\KitchenBatchService;
 use App\Support\Observability;
 use Illuminate\Http\Request;
+use Throwable;
 
 class KitchenBatchController extends Controller
 {
@@ -22,7 +23,18 @@ class KitchenBatchController extends Controller
 
         $batch = $service->updateStatus($batch, $validated['status']);
 
-        event(new KitchenBatchStatusUpdated($batch));
+        try {
+            event(new KitchenBatchStatusUpdated($batch));
+        } catch (Throwable $e) {
+            Observability::logFailure('kitchen.batch.status_broadcast.failed', $e, [
+                'tenant_slug' => $tenantSlug,
+                'batch_id' => $batch->id,
+                'order_id' => $batch->order_id,
+                'location_id' => $batch->location_id,
+                'status' => $batch->status,
+                'error_code' => 'broadcast_failed',
+            ], $request);
+        }
 
         Observability::logInfo('kitchen.batch.status_updated', [
             'tenant_slug' => $tenantSlug,

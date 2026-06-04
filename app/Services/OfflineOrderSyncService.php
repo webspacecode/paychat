@@ -9,13 +9,17 @@ use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
 use App\Services\Orders\OrderService;
 use App\Services\Payments\PaymentService;
+use App\Support\Observability;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class OfflineOrderSyncService
 {
+    private const STALE_PROCESSING_MINUTES = 15;
+
     public function __construct(
         private OrderService $orderService,
         private PaymentService $paymentService,
@@ -25,30 +29,33 @@ class OfflineOrderSyncService
 
     public function sync($tenant, array $payload): array
     {
-        $sync = OfflineOrderSync::firstOrCreate(
-            [
-                'tenant_id' => $tenant->id,
-                'local_order_id' => $payload['local_order_id'],
-            ],
-            [
-                'status' => 'processing',
-                'payload' => $payload,
-            ]
-        );
+        $sync = $this->firstOrCreateSyncRecord($tenant, $payload);
 
         if (! $sync->wasRecentlyCreated) {
+            $this->logPayloadMismatchIfNeeded($sync, $payload);
+
             if ($sync->status === 'synced') {
                 return $sync->response;
             }
 
             if ($sync->status === 'processing') {
-                return [
-                    'success' => false,
-                    'status' => 'processing',
+                if (! $this->isStaleProcessing($sync)) {
+                    return [
+                        'success' => false,
+                        'status' => 'processing',
+                        'local_order_id' => $payload['local_order_id'],
+                        'backend_order_id' => $sync->backend_order_id,
+                        'message' => 'Offline order sync is already processing',
+                    ];
+                }
+
+                Observability::logInfo('offline.sync.stale_processing_retried', [
+                    'tenant_id' => $tenant->id,
                     'local_order_id' => $payload['local_order_id'],
                     'backend_order_id' => $sync->backend_order_id,
-                    'message' => 'Offline order sync is already processing',
-                ];
+                    'stale_after_minutes' => self::STALE_PROCESSING_MINUTES,
+                    'updated_at' => optional($sync->updated_at)->toISOString(),
+                ]);
             }
 
             $sync->update([
@@ -84,6 +91,83 @@ class OfflineOrderSyncService
 
             throw $e;
         }
+    }
+
+    private function firstOrCreateSyncRecord($tenant, array $payload): OfflineOrderSync
+    {
+        try {
+            return OfflineOrderSync::firstOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'local_order_id' => $payload['local_order_id'],
+                ],
+                [
+                    'status' => 'processing',
+                    'payload' => $payload,
+                ]
+            );
+        } catch (QueryException $e) {
+            $sync = OfflineOrderSync::where('tenant_id', $tenant->id)
+                ->where('local_order_id', $payload['local_order_id'])
+                ->first();
+
+            if (! $sync) {
+                throw $e;
+            }
+
+            Observability::logWarning('offline.sync.unique_collision_recovered', $e, [
+                'tenant_id' => $tenant->id,
+                'local_order_id' => $payload['local_order_id'],
+                'status' => $sync->status,
+                'backend_order_id' => $sync->backend_order_id,
+            ]);
+
+            $sync->wasRecentlyCreated = false;
+
+            return $sync;
+        }
+    }
+
+    private function isStaleProcessing(OfflineOrderSync $sync): bool
+    {
+        return $sync->updated_at
+            && $sync->updated_at->lt(now()->subMinutes(self::STALE_PROCESSING_MINUTES));
+    }
+
+    private function logPayloadMismatchIfNeeded(OfflineOrderSync $sync, array $payload): void
+    {
+        $existingPayload = $sync->payload ?? [];
+
+        if ($this->payloadHash($existingPayload) === $this->payloadHash($payload)) {
+            return;
+        }
+
+        Observability::logInfo('offline.sync.payload_hash_mismatch', [
+            'tenant_id' => $sync->tenant_id,
+            'local_order_id' => $sync->local_order_id,
+            'status' => $sync->status,
+            'backend_order_id' => $sync->backend_order_id,
+            'existing_payload_hash' => $this->payloadHash($existingPayload),
+            'incoming_payload_hash' => $this->payloadHash($payload),
+        ]);
+    }
+
+    private function payloadHash(array $payload): string
+    {
+        return hash('sha256', json_encode($this->sortPayload($payload)));
+    }
+
+    private function sortPayload(array $payload): array
+    {
+        foreach ($payload as $key => $value) {
+            if (is_array($value)) {
+                $payload[$key] = $this->sortPayload($value);
+            }
+        }
+
+        ksort($payload);
+
+        return $payload;
     }
 
     private function replayOrder(array $payload): array

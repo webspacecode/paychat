@@ -19,6 +19,7 @@ use App\Support\Observability;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Throwable;
 
 class OrderController extends Controller
@@ -117,7 +118,29 @@ class OrderController extends Controller
         $startedAt = microtime(true);
         $order = Order::findOrFail($orderId);
 
-        $service->syncItems($order, $request);
+        try {
+            $service->syncItems($order, $request);
+        } catch (ConflictHttpException $e) {
+            $freshOrder = $order->fresh();
+
+            Observability::logInfo('order.items.locked', [
+                'tenant_slug' => $tenantSlug,
+                'order_id' => $order->id,
+                'location_id' => $order->location_id,
+                'order_status' => $freshOrder?->status,
+                'payment_status' => $freshOrder?->payment_status,
+                'duration_ms' => Observability::durationMs($startedAt),
+            ], $request);
+
+            return response()->json([
+                'message' => $e->getMessage(),
+                'error_code' => 'order_locked',
+                'order_status' => $freshOrder?->status,
+                'payment_status' => $freshOrder?->payment_status,
+                'order_id' => $order->id,
+                'support_code' => Observability::requestId($request),
+            ], 409);
+        }
 
         Observability::logInfo('order.items.synced', [
             'tenant_slug' => $tenantSlug,
@@ -494,7 +517,17 @@ class OrderController extends Controller
             $batch = $service->sendFreshItems($order);
 
             if ($service->shouldBroadcastToKds($batch)) {
-                event(new KitchenBatchCreated($batch));
+                try {
+                    event(new KitchenBatchCreated($batch));
+                } catch (Throwable $e) {
+                    Observability::logFailure('kitchen.batch.broadcast.failed', $e, [
+                        'tenant_slug' => $tenantSlug,
+                        'order_id' => $order->id,
+                        'location_id' => $order->location_id,
+                        'batch_id' => $batch->id,
+                        'error_code' => 'broadcast_failed',
+                    ]);
+                }
             }
 
             Observability::logInfo('kitchen.batch.created', [

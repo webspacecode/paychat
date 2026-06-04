@@ -145,11 +145,21 @@ class InvoiceService
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
         $receipt = $this->buildReceiptData($orderData, $tenant, $uuid, $url, $qr);
 
-        // We will add condition here based on settings 
+        // We will add condition here based on settings
         // It runs only if customer display is on
-        event(new \App\Events\CustomerDisplayUpdated([
-            'uuid' => $uuid,
-        ]));
+        try {
+            event(new \App\Events\CustomerDisplayUpdated([
+                'uuid' => $uuid,
+            ]));
+        } catch (\Throwable $e) {
+            Observability::logWarning('invoice.customer_display_broadcast.failed', $e, [
+                'tenant_id' => $tenant->id,
+                'tenant_slug' => $tenant->slug,
+                'order_id' => $orderId,
+                'invoice_number' => $uuid,
+                'error_code' => 'broadcast_failed',
+            ]);
+        }
 
         Observability::logInfo('invoice.generated', [
             'tenant_id' => $tenant->id,

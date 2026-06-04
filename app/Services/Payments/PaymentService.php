@@ -71,6 +71,14 @@ class PaymentService
             }
 
             if ($existingPayment = $this->findReusablePendingPayment($lockedOrder, $method, $amount, $upiProfileId)) {
+                Observability::logInfo('[Payment Idempotency] duplicate_payment_reused', [
+                    'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                    'order_id' => $lockedOrder->id,
+                    'payment_id' => $existingPayment->id,
+                    'payment_method' => $method,
+                    'payment_status' => $existingPayment->status,
+                ]);
+
                 return $existingPayment->fresh($method === 'upi' ? 'upiProfile' : []);
             }
 
@@ -82,6 +90,15 @@ class PaymentService
             }
 
             if ($method !== 'cash' && $amount > $remaining) {
+                Observability::logInfo('[Payment Idempotency] overpayment_rejected', [
+                    'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                    'order_id' => $lockedOrder->id,
+                    'payment_method' => $method,
+                    'requested_amount' => $amount,
+                    'remaining_amount' => $remaining,
+                    'order_total' => $this->money($lockedOrder->total),
+                ]);
+
                 throw new PaymentException(
                     'Amount exceeds remaining payment',
                     'PAYMENT_AMOUNT_EXCEEDS_REMAINING',
@@ -109,6 +126,14 @@ class PaymentService
 
     private function alreadyPaidResponse(Order $order): array
     {
+        Observability::logInfo('[Payment Idempotency] already_paid_returned', [
+            'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+            'order_id' => $order->id,
+            'order_status' => $order->status,
+            'payment_status' => $order->payment_status,
+            'paid_amount' => $this->money($order->paid_amount ?? $this->successfulPaidAmount($order)),
+        ]);
+
         return [
             'already_paid' => true,
             'message' => 'Order already fully paid',
@@ -501,6 +526,14 @@ class PaymentService
                 || $this->successfulPaidAmount($order) >= $this->money($order->total);
 
             if ($orderWasAlreadyPaid && ! $wasAlreadySuccessful) {
+                Observability::logInfo('[Payment Idempotency] already_paid_returned', [
+                    'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                    'order_id' => $order->id,
+                    'payment_id' => $lockedPayment->id,
+                    'payment_status' => $lockedPayment->status,
+                    'order_status' => $order->status,
+                ]);
+
                 return [
                     'payment' => $lockedPayment->fresh(),
                     'order' => $order->fresh(),
@@ -523,13 +556,24 @@ class PaymentService
             $this->syncOrderAfterPaymentSuccess($order, true);
 
             $freshOrder = $order->fresh();
+            $idempotent = $wasAlreadySuccessful && $orderWasCompleted;
+
+            if ($idempotent) {
+                Observability::logInfo('[Payment Idempotency] duplicate_success_ignored', [
+                    'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                    'order_id' => $freshOrder->id,
+                    'payment_id' => $lockedPayment->id,
+                    'payment_status' => $lockedPayment->status,
+                    'order_status' => $freshOrder->status,
+                ]);
+            }
 
             return [
                 'payment' => $lockedPayment->fresh(),
                 'order' => $freshOrder,
                 'already_successful' => $wasAlreadySuccessful,
                 'already_paid' => $wasAlreadySuccessful && $freshOrder->payment_status === 'paid',
-                'idempotent' => $wasAlreadySuccessful && $orderWasCompleted,
+                'idempotent' => $idempotent,
                 'post_processing_required' => ! $orderWasCompleted && $freshOrder->status === 'completed',
                 'completed_now' => ! $orderWasCompleted && $freshOrder->status === 'completed',
             ];

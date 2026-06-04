@@ -688,8 +688,18 @@ class OrderService
                 'token:id,order_id,token_code,status'
             ]);
 
-            // 🔥 BROADCAST EVENT
-            event(new OrderStatusUpdated($order, $token));
+            DB::afterCommit(function () use ($order, $token) {
+                try {
+                    event(new OrderStatusUpdated($order, $token));
+                } catch (Throwable $e) {
+                    Observability::logWarning('order.status.broadcast.failed', $e, [
+                        'order_id' => $order->id,
+                        'token_id' => $token->id,
+                        'status' => $token->status,
+                        'error_code' => 'broadcast_failed',
+                    ]);
+                }
+            });
 
             return $order;
         });
