@@ -3,13 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PayChat - Smart POS for Cafes, Restaurants & Retail Stores">
+    <meta name="description" content="PayChat is a cloud native POS for shops, cafes and restaurants with billing, payments, QR ordering, inventory, KDS, tokens and reports.">
+    <meta name="keywords" content="cloud native POS, POS for shops, retail POS, restaurant POS, cafe POS, billing software, PayChat POS">
     <meta name="robots" content="index, follow">
-    <meta property="og:title" content="PayChat POS">
-    <meta property="og:description" content="POS & QR Ordering Platform">
+    <link rel="canonical" href="https://paychat.shop/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Cloud Native POS for Shops | PayChat">
+    <meta property="og:description" content="Run billing, payments, QR ordering, inventory, KDS, tokens and reports from one cloud native POS platform.">
     <meta property="og:image" content="https://paychat.shop/og-banner.jpg">
-    <meta property="og:url" content="https://paychat.shop">
-    <title>PayChat - Smart POS for Cafes, Restaurants & Retail Stores</title>
+    <meta property="og:url" content="https://paychat.shop/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Cloud Native POS for Shops | PayChat">
+    <meta name="twitter:description" content="Billing, payments, QR ordering, inventory, KDS, tokens and reports for shops, cafes and restaurants.">
+    <title>Cloud Native POS for Shops | PayChat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
@@ -162,7 +168,7 @@
                     </button>
                     <button onclick="openDemoModal()" 
                             class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
-                            Book Free Demo
+                            Start Free Trial
                         </button>
                 </div>
             </div>
@@ -196,9 +202,9 @@
                     </div>
 
                     <h1 class="text-4xl lg:text-6xl font-bold leading-tight mb-6">
-                        Smart POS for
+                        Cloud Native POS for
                         <span class="text-secondary">
-                            Cafes, Restaurants & Retail Stores
+                            Shops
                         </span>
                     </h1>
 
@@ -213,7 +219,7 @@
 
                         <button onclick="openDemoModal()" 
                             class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
-                            Book Free Demo
+                            Start Free Trial
                         </button>
 
                         <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more"
