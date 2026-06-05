@@ -154,10 +154,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
-                    <button onclick="openDemoModal()" 
-                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                    <a href="{{ url('/start-free-trial') }}" class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
                             Book Free Demo
-                        </button>
+                        </a>
                 </div>
             </div>
             
@@ -196,7 +195,7 @@
                 <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 mb-8 max-w-md mx-auto border border-white border-opacity-20">
                     <h3 class="text-xl font-semibold mb-6">Join the Waitlist</h3>
                     <div class="space-y-4">
-                        <a href="#book-demo"
+                        <a href="{{ url('/start-free-trial') }}"
                         class="gradient-secondary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300">
                             Book A Demo
                         </a>

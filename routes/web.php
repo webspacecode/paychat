@@ -26,6 +26,8 @@ Route::get('/contact', function () {
     return view('contact');
 });
 
+Route::view('/start-free-trial', 'start-free-trial')->name('start-free-trial');
+
 Route::view('/guide', 'guide')->name('guide');
 
 Route::get('/billing/tokens/{uuid}', [PublicBillingController::class, 'token']);

@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PayChat is a cloud native POS for shops, cafes and restaurants with billing, payments, QR ordering, inventory, KDS, tokens and reports.">
-    <meta name="keywords" content="cloud native POS, POS for shops, retail POS, restaurant POS, cafe POS, billing software, PayChat POS">
+    <meta name="description" content="PayChat is a premium POS and business management platform for cafes, restaurants, retail stores and service businesses with billing, payments, QR ordering, inventory, KDS, tokens and reports.">
+    <meta name="keywords" content="PayChat POS, POS software India, retail POS, restaurant POS, cafe POS, billing software, QR ordering, KDS, inventory management">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://paychat.shop/">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Cloud Native POS for Shops | PayChat">
-    <meta property="og:description" content="Run billing, payments, QR ordering, inventory, KDS, tokens and reports from one cloud native POS platform.">
+    <meta property="og:title" content="PayChat - Fast Billing & Reliable Operations">
+    <meta property="og:description" content="Run billing, payments, QR ordering, inventory, KDS, tokens and reports from one premium POS platform.">
     <meta property="og:image" content="https://paychat.shop/og-banner.jpg">
     <meta property="og:url" content="https://paychat.shop/">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Cloud Native POS for Shops | PayChat">
+    <meta name="twitter:title" content="PayChat - Fast Billing & Reliable Operations">
     <meta name="twitter:description" content="Billing, payments, QR ordering, inventory, KDS, tokens and reports for shops, cafes and restaurants.">
-    <title>Cloud Native POS for Shops | PayChat</title>
+    <title>PayChat - Fast Billing & Reliable Operations</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script>
@@ -117,11 +117,36 @@
     @verbatim
     <script type="application/ld+json">
     {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "PayChat Platform",
-    "url": "https://paychat.shop",
-    "logo": "https://paychat.shop/favicon-32x32.png"
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Organization",
+                "@id": "https://paychat.shop/#organization",
+                "name": "PayChat",
+                "url": "https://paychat.shop",
+                "logo": "https://paychat.shop/color-paychat-logo-main.svg"
+            },
+            {
+                "@type": "WebSite",
+                "@id": "https://paychat.shop/#website",
+                "url": "https://paychat.shop",
+                "name": "PayChat",
+                "publisher": {
+                    "@id": "https://paychat.shop/#organization"
+                }
+            },
+            {
+                "@type": "SoftwareApplication",
+                "name": "PayChat POS",
+                "applicationCategory": "BusinessApplication",
+                "operatingSystem": "Web, Android, iOS",
+                "description": "POS, billing, QR ordering, KDS, inventory, token management and reporting software for Indian businesses.",
+                "url": "https://paychat.shop",
+                "publisher": {
+                    "@id": "https://paychat.shop/#organization"
+                }
+            }
+        ]
     }
     </script>
     @endverbatim
@@ -166,10 +191,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
                     </button>
-                    <button onclick="openDemoModal()" 
-                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                    <a href="{{ url('/start-free-trial') }}" class="bg-indigo-600 text-white hover:bg-indigo-700 px-5 lg:px-6 py-3 rounded-xl font-semibold text-center shadow-lg shadow-indigo-600/20">
                             Start Free Trial
-                        </button>
+                        </a>
                 </div>
             </div>
             
@@ -187,205 +211,287 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="gradient-primary text-white py-16 lg:py-24">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section class="relative overflow-hidden bg-[#eef4ff] text-slate-950">
+        <div class="absolute inset-0">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(99,102,241,0.18),transparent_30%),radial-gradient(circle_at_85%_12%,rgba(16,185,129,0.16),transparent_28%),linear-gradient(135deg,#f8fbff_0%,#eef4ff_45%,#fff7ed_100%)]"></div>
+            <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
+        </div>
 
-            <div class="grid lg:grid-cols-2 gap-12 items-center">
-
-                <!-- LEFT -->
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+            <div class="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
                 <div>
-
-                    <div class="inline-flex items-center bg-white/10 px-4 py-2 rounded-full mb-6">
-                        <span class="text-sm font-semibold">
-                            Free 30-Day Trial • Setup Support Included
+                    <div class="inline-flex items-center border border-indigo-100 bg-white/80 px-4 py-2 rounded-full mb-6 shadow-sm">
+                        <span class="text-sm font-semibold text-indigo-700">
+                            POS for billing, tables, QR orders and daily operations
                         </span>
                     </div>
 
-                    <h1 class="text-4xl lg:text-6xl font-bold leading-tight mb-6">
-                        Cloud Native POS for
-                        <span class="text-secondary">
-                            Shops
-                        </span>
+                    <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight mb-6">
+                        Fast Billing.
+                        <span class="text-indigo-600">Reliable Operations.</span>
                     </h1>
 
-                    <p class="text-xl text-blue-100 mb-8 leading-relaxed">
-                        Billing, KOT, QR ordering, inventory, token system,
-                        reports, online orders and customer management —
-                        all in one easy-to-use POS platform.
+                    <p class="text-lg lg:text-xl text-slate-700 mb-8 leading-relaxed max-w-2xl">
+                        Built for cafés, restaurants, salons, and growing businesses.
                     </p>
 
-                    <!-- CTA -->
                     <div class="flex flex-col sm:flex-row gap-4">
-
-                        <button onclick="openDemoModal()" 
-                            class="bg-white text-indigo-700 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold text-center">
+                        <a href="{{ url('/start-free-trial') }}" class="bg-indigo-600 text-white hover:bg-indigo-700 px-8 py-4 rounded-xl font-semibold text-center shadow-xl shadow-indigo-600/20">
                             Start Free Trial
-                        </button>
-
-                        <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more"
-                        target="_blank"
-                        class="bg-green-500 hover:bg-green-600 px-8 py-4 rounded-xl font-semibold text-center">
-                            Chat on WhatsApp
                         </a>
 
+                        <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="bg-green-500 hover:bg-green-600 px-8 py-4 rounded-xl font-semibold text-center shadow-xl shadow-green-950/20">
+                            Chat on WhatsApp
+                        </a>
                     </div>
 
-                    <!-- TRUST -->
-                    <div class="mt-8 flex flex-wrap gap-6 text-sm text-blue-100">
-
-                        <div>✓ No setup fees</div>
-                        <div>✓ Runs on laptop/tablet</div>
-                        <div>✓ Free onboarding</div>
-                        <div>✓ GST-ready billing</div>
-
+                    <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-slate-600">
+                        <div class="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+                            <div class="text-2xl font-extrabold text-slate-950">30</div>
+                            <div>day trial</div>
+                        </div>
+                        <div class="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+                            <div class="text-2xl font-extrabold text-slate-950">GST</div>
+                            <div>ready billing</div>
+                        </div>
+                        <div class="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+                            <div class="text-2xl font-extrabold text-slate-950">KDS</div>
+                            <div>kitchen flow</div>
+                        </div>
+                        <div class="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+                            <div class="text-2xl font-extrabold text-slate-950">QR</div>
+                            <div>self ordering</div>
+                        </div>
                     </div>
-
                 </div>
 
-                <!-- RIGHT -->
                 <div class="relative">
+                    <div class="rounded-[2rem] border border-white bg-white/85 p-4 shadow-2xl shadow-indigo-900/10 backdrop-blur">
+                        <div class="rounded-[1.5rem] bg-slate-950 p-4">
+                            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-indigo-200">Today</p>
+                                    <p class="mt-1 text-xl font-extrabold text-white">Counter Live</p>
+                                </div>
+                                <div class="rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-bold text-emerald-300">Online</div>
+                            </div>
 
-                    <div class="bg-white rounded-3xl shadow-2xl p-6">
+                            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                                <div class="rounded-2xl bg-white p-4">
+                                    <p class="text-xs font-bold uppercase text-slate-400">Orders</p>
+                                    <p class="mt-2 text-3xl font-extrabold text-slate-950">128</p>
+                                    <p class="mt-1 text-sm text-emerald-600">+18% today</p>
+                                </div>
+                                <div class="rounded-2xl bg-white p-4">
+                                    <p class="text-xs font-bold uppercase text-slate-400">Sales</p>
+                                    <p class="mt-2 text-3xl font-extrabold text-slate-950">₹42k</p>
+                                    <p class="mt-1 text-sm text-indigo-600">Live sync</p>
+                                </div>
+                            </div>
 
-                        <img
-                            src="YOUR_POS_SCREENSHOT.png"
-                            class="rounded-2xl w-full"
-                        >
+                            <div class="mt-3 rounded-2xl bg-white p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-bold text-slate-950">Table 6</p>
+                                        <p class="text-sm text-slate-500">KOT sent • payment pending</p>
+                                    </div>
+                                    <div class="rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-700">₹1,240</div>
+                                </div>
+                            </div>
 
+                            <div class="mt-3 rounded-2xl bg-white p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="font-bold text-slate-950">QR Order</p>
+                                        <p class="text-sm text-slate-500">Ready for pickup</p>
+                                    </div>
+                                    <div class="rounded-xl bg-emerald-100 px-3 py-2 text-sm font-bold text-emerald-700">Paid</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
+                    <div class="mt-5 grid grid-cols-2 gap-4">
+                        <div class="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+                            <p class="text-xs uppercase tracking-wide text-indigo-600">Best for</p>
+                            <p class="font-bold text-slate-950">cafes, restaurants, retail and salons</p>
+                        </div>
+                        <div class="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+                            <p class="text-xs uppercase tracking-wide text-indigo-600">Setup</p>
+                            <p class="font-bold text-slate-950">guided onboarding included</p>
+                        </div>
+                    </div>
                 </div>
-
             </div>
-
         </div>
     </section>
-    <section class="py-16 bg-white">
 
-        <div class="max-w-6xl mx-auto px-6">
-
-            <div class="text-center mb-12">
-                <h2 class="text-4xl font-bold text-navy mb-4">
-                    Built for Growing Businesses
-                </h2>
-
-                <p class="text-gray-600 text-lg">
-                    PayChat works best for businesses handling fast orders,
-                    walk-in customers and daily billing.
-                </p>
-            </div>
-
-            <div class="grid md:grid-cols-4 gap-6">
-
-                <div class="bg-gray-50 rounded-2xl p-6 text-center">
-                    ☕
-                    <h3 class="font-bold mt-4">Cafes</h3>
-                </div>
-
-                <div class="bg-gray-50 rounded-2xl p-6 text-center">
-                    🍴
-                    <h3 class="font-bold mt-4">Restaurants</h3>
-                </div>
-
-                <div class="bg-gray-50 rounded-2xl p-6 text-center">
-                    🛍️
-                    <h3 class="font-bold mt-4">Retail Stores</h3>
-                </div>
-
-                <div class="bg-gray-50 rounded-2xl p-6 text-center">
-                    💇
-                    <h3 class="font-bold mt-4">Salons</h3>
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-    <!-- Demo Video Section -->
-    <section class="py-16 bg-gray-50">
-        <div class="max-w-4xl mx-auto text-center px-6">
-
-            <h2 class="text-3xl font-bold text-navy mb-6">See PayChat in Action</h2>
-            <p class="text-gray-600 mb-10">
-            Watch how PayChat handles orders, payments, and inventory in real-time.
-            </p>
-
-            <div class="rounded-2xl overflow-hidden shadow-lg">
-            <iframe 
-                class="w-full h-64 md:h-96"
-                src="https://www.youtube-nocookie.com/embed/HysW5SoROlI"
-                title="PayChat Demo"
-                frameborder="0"
-                allowfullscreen>
-            </iframe>
-            </div>
-
-        </div>
-    </section>
-    
-
-    <!-- Features Section -->
-    <section id="features" class="py-20 bg-white">
+    <section class="bg-white py-14">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-            <!-- Bottom Highlight -->
-            <div class="mt-16 bg-indigo-50 border border-indigo-100 rounded-3xl p-10 text-center">
-
-                <h3 class="text-3xl font-bold text-navy mb-4">
-                    Built For Indian Businesses
-                </h3>
-
-                <p class="text-lg text-gray-600 max-w-4xl mx-auto mb-8">
-                    PayChat is focused on helping small and medium businesses operate faster,
-                    reduce manual work and avoid expensive enterprise software costs.
-                </p>
-
-                <div class="flex flex-wrap justify-center gap-4">
-                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
-                        Cafés
-                    </span>
-
-                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
-                        Restaurants
-                    </span>
-
-                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
-                        Retail Shops
-                    </span>
-
-                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
-                        Salons
-                    </span>
-
-                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
-                        Clinics
-                    </span>
-
-                    <span class="bg-white px-5 py-3 rounded-xl shadow text-sm font-semibold">
-                        Service Businesses
-                    </span>
-                </div>
-
+            <div class="grid gap-4 md:grid-cols-4">
+                <a href="{{ url('/features') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-indigo-200 hover:bg-indigo-50 transition">
+                    <p class="text-sm font-semibold text-indigo-600">Explore</p>
+                    <h2 class="mt-1 text-xl font-bold text-slate-950">POS Features</h2>
+                    <p class="mt-2 text-sm text-slate-600">Billing, QR ordering, KOT, token and inventory tools.</p>
+                </a>
+                <a href="{{ url('/pricing') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-indigo-200 hover:bg-indigo-50 transition">
+                    <p class="text-sm font-semibold text-indigo-600">Plans</p>
+                    <h2 class="mt-1 text-xl font-bold text-slate-950">Pricing</h2>
+                    <p class="mt-2 text-sm text-slate-600">Simple plans for single outlet and growing teams.</p>
+                </a>
+                <a href="{{ url('/guide') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-indigo-200 hover:bg-indigo-50 transition">
+                    <p class="text-sm font-semibold text-indigo-600">Learn</p>
+                    <h2 class="mt-1 text-xl font-bold text-slate-950">Operator Guide</h2>
+                    <p class="mt-2 text-sm text-slate-600">Training resources for billing and daily operations.</p>
+                </a>
+                <a href="{{ url('/start-free-trial') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:border-indigo-200 hover:bg-indigo-50 transition">
+                    <p class="text-sm font-semibold text-indigo-600">Talk</p>
+                    <h2 class="mt-1 text-xl font-bold text-slate-950">Start Free Trial</h2>
+                    <p class="mt-2 text-sm text-slate-600">Get help choosing and setting up the right POS workflow.</p>
+                </a>
             </div>
-
         </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="py-16 bg-gray-50">
+    <section id="features" class="py-20 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-3xl">
+                <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Complete POS suite</p>
+                <h2 class="mt-3 text-3xl lg:text-5xl font-extrabold text-slate-950">
+                    One premium system for sales, service and control.
+                </h2>
+                <p class="mt-5 text-lg text-slate-600">
+                    PayChat connects the front counter, table service, kitchen, payments and reporting
+                    so owners can run faster without juggling separate tools.
+                </p>
+            </div>
+
+            <div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-950">Fast Billing & Checkout</h3>
+                    <p class="mt-3 text-slate-600">Create orders, collect cash or UPI payments, generate invoices and keep every sale traceable.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-950">Dine-In Table Management</h3>
+                    <p class="mt-3 text-slate-600">Assign tables, link tables, send KOT batches and close table-service billing cleanly.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-950">QR Self Ordering</h3>
+                    <p class="mt-3 text-slate-600">Let customers scan, browse and place orders while your team manages approvals and fulfillment.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-950">Inventory & Product Control</h3>
+                    <p class="mt-3 text-slate-600">Track products, stock movement, simple items and recipe-based items from one dashboard.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-950">KDS, Tokens & Queue Flow</h3>
+                    <p class="mt-3 text-slate-600">Keep kitchen teams aligned with order status, token screens and ready-for-pickup workflows.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+                    <h3 class="text-xl font-bold text-slate-950">Reports & Customer Data</h3>
+                    <p class="mt-3 text-slate-600">Review daily sales, payment breakdowns, top products and customer history with less manual work.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] items-center">
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Cloud Native POS</p>
+                    <h2 class="mt-3 text-3xl lg:text-5xl font-extrabold text-slate-950">
+                        Cloud native POS for shops, cafes and restaurants.
+                    </h2>
+                    <p class="mt-5 text-lg text-slate-600">
+                        PayChat works through the browser, supports modern POS screens and keeps the business
+                        ready for multiple counters, branches, customer displays and online ordering.
+                    </p>
+                    <div class="mt-8 flex flex-wrap gap-3">
+                        <a href="{{ url('/features') }}" class="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700">View Features</a>
+                        <a href="{{ url('/pricing') }}" class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-800 hover:bg-slate-50">See Pricing</a>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="rounded-3xl bg-slate-950 p-7 text-white">
+                        <p class="text-4xl font-extrabold">1</p>
+                        <h3 class="mt-4 text-xl font-bold">Single source of truth</h3>
+                        <p class="mt-2 text-slate-300">Orders, payments, inventory and reports stay connected.</p>
+                    </div>
+                    <div class="rounded-3xl bg-indigo-50 p-7">
+                        <p class="text-4xl font-extrabold text-indigo-600">24/7</p>
+                        <h3 class="mt-4 text-xl font-bold text-slate-950">Accessible operations</h3>
+                        <p class="mt-2 text-slate-600">Owners can review sales and activity without waiting for end-of-day files.</p>
+                    </div>
+                    <div class="rounded-3xl bg-amber-50 p-7">
+                        <p class="text-4xl font-extrabold text-amber-600">QR</p>
+                        <h3 class="mt-4 text-xl font-bold text-slate-950">Customer-ready</h3>
+                        <p class="mt-2 text-slate-600">Menus, ordering, invoices and review links can be shared digitally.</p>
+                    </div>
+                    <div class="rounded-3xl bg-emerald-50 p-7">
+                        <p class="text-4xl font-extrabold text-emerald-600">GST</p>
+                        <h3 class="mt-4 text-xl font-bold text-slate-950">India-focused billing</h3>
+                        <p class="mt-2 text-slate-600">Designed around local payment, invoice and operating needs.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto">
+                <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Built for growing businesses</p>
+                <h2 class="mt-3 text-3xl lg:text-5xl font-extrabold text-slate-950">
+                    Premium POS workflows for every busy counter.
+                </h2>
+                <p class="mt-5 text-lg text-slate-600">
+                    Whether you sell coffee, meals, products or appointments, PayChat gives your team a clearer way to bill,
+                    track and serve customers.
+                </p>
+            </div>
+
+            <div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <article class="rounded-3xl border border-slate-200 bg-white p-7">
+                    <h3 class="text-xl font-bold text-slate-950">Cafes</h3>
+                    <p class="mt-3 text-slate-600">Quick billing, tokens, QR ordering and customer-friendly invoices.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7">
+                    <h3 class="text-xl font-bold text-slate-950">Restaurants</h3>
+                    <p class="mt-3 text-slate-600">Table-service, KOT, kitchen batches, split workflows and final billing.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7">
+                    <h3 class="text-xl font-bold text-slate-950">Retail Stores</h3>
+                    <p class="mt-3 text-slate-600">Product catalog, inventory, payments, customers and sales reports.</p>
+                </article>
+                <article class="rounded-3xl border border-slate-200 bg-white p-7">
+                    <h3 class="text-xl font-bold text-slate-950">Salons & Services</h3>
+                    <p class="mt-3 text-slate-600">Simple billing, customer records and repeat-visit friendly operations.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-6">
 
             <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold text-navy">Live Partner Businesses</h2>
-                <p class="text-gray-600">Discover shops using PayChat (early pilot network)</p>
+                <p class="text-sm font-bold uppercase tracking-wide text-indigo-600">Live network</p>
+                <h2 class="mt-3 text-3xl lg:text-5xl font-extrabold text-slate-950">Live Partner Businesses</h2>
+                <p class="mt-4 text-gray-600">Discover shops using PayChat in the early pilot network.</p>
             </div>
 
             <!-- Search -->
             <div class="max-w-md mx-auto mb-8">
-                <input 
-                    placeholder="Search shops..." 
-                    class="w-full border p-4 rounded-xl"
+                <label for="partnerSearch" class="sr-only">Search partner shops</label>
+                <input
+                    id="partnerSearch"
+                    placeholder="Search shops..."
+                    class="w-full border border-slate-200 p-4 rounded-xl"
                 >
             </div>
 
@@ -602,6 +708,30 @@
             </div>
         </div>
     </section>
+
+    <section class="bg-slate-950 py-16 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-wide text-indigo-200">Ready to modernize billing?</p>
+                    <h2 class="mt-3 text-3xl lg:text-5xl font-extrabold">Bring PayChat to your counter this week.</h2>
+                    <p class="mt-4 max-w-2xl text-slate-300">
+                        Get a founder-led walkthrough, setup guidance and a clear plan for billing, QR orders,
+                        kitchen flow, invoices and reporting.
+                    </p>
+                </div>
+                <div class="flex flex-col sm:flex-row lg:flex-col gap-4">
+                    <a href="{{ url('/start-free-trial') }}" class="rounded-xl bg-white px-7 py-4 font-semibold text-indigo-700 hover:bg-indigo-50">
+                        Get Free Demo
+                    </a>
+                    <a href="{{ url('/contact') }}" class="rounded-xl border border-white/20 px-7 py-4 text-center font-semibold text-white hover:bg-white/10">
+                        Contact Sales
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="bg-navy text-white py-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -614,16 +744,16 @@
                             <p class="text-blue-200 text-sm">Launched Beta 0.1</p>
                         </div>
                     </div>
-                    <p class="text-blue-200 mb-6 max-w-md">Revolutionary POS & business management platform. Simplify operations, reduce paper, manage queues smartly, and engage customers through our mobile app—all from one dashboard.</p>
+                    <p class="text-blue-200 mb-6 max-w-md">Fast billing and reliable operations for modern businesses. Simplify orders, reduce paper, manage queues smartly, and engage customers through one dashboard.</p>
                     
                     <div class="flex space-x-4">
-                        <a href="#" class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-500 transition-colors">
+                        <a href="{{ url('/contact') }}" class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-500 transition-colors" aria-label="Contact PayChat">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
                         </a>
-                        <a href="#" class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-500 transition-colors">
+                        <a href="{{ url('/about') }}" class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-500 transition-colors" aria-label="About PayChat">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
                         </a>
-                        <a href="#" class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-500 transition-colors">
+                        <a href="{{ url('/contact') }}" class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-500 transition-colors" aria-label="Contact PayChat support">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                             </svg>
@@ -635,11 +765,12 @@
                 <div>
                     <h4 class="text-lg font-semibold mb-4">Product</h4>
                     <ul class="space-y-2">
-                        <li><a href="#features" class="text-blue-200 hover:text-white transition-colors">Features</a></li>
-                        <li><a href="#benefits" class="text-blue-200 hover:text-white transition-colors">Why PayChat</a></li>
-                        <li><a href="#scanner" class="text-blue-200 hover:text-white transition-colors">QR Scanner</a></li>
+                        <li><a href="{{ url('/features') }}" class="text-blue-200 hover:text-white transition-colors">Features</a></li>
+                        <li><a href="{{ url('/start-free-trial') }}" class="text-blue-200 hover:text-white transition-colors">Start Free Trial</a></li>
+                        <li><a href="{{ url('/about') }}" class="text-blue-200 hover:text-white transition-colors">Why PayChat</a></li>
+                        <li><a href="{{ url('/features') }}" class="text-blue-200 hover:text-white transition-colors">QR Ordering</a></li>
                         <li><a href="{{ url('/guide') }}" class="text-blue-200 hover:text-white transition-colors">Guide</a></li>
-                        <li><a href="login.html" class="text-blue-200 hover:text-white transition-colors">Shop Login</a></li>
+                        <li><a href="{{ url('/login') }}" class="text-blue-200 hover:text-white transition-colors">Shop Login</a></li>
                     </ul>
                 </div>
                 
@@ -649,9 +780,9 @@
                     <ul class="space-y-2">
                         <li><a href="{{ url('/') }}" class="text-blue-200 hover:text-white transition-colors">Home</a></li>
                         <li><a href="{{ url('/about') }}" class="text-blue-200 hover:text-white transition-colors">About Us</a></li>
-                        <li><a href="#" class="text-blue-200 hover:text-white transition-colors">Careers</a></li>
+                        <li><a href="{{ url('/contact') }}" class="text-blue-200 hover:text-white transition-colors">Careers</a></li>
                         <li><a href="{{ url('/contact') }}" class="text-blue-200 hover:text-white transition-colors">Contact</a></li>
-                        <li><a href="#" class="text-blue-200 hover:text-white transition-colors">Press Kit</a></li>
+                        <li><a href="{{ url('/contact') }}" class="text-blue-200 hover:text-white transition-colors">Press Kit</a></li>
                     </ul>
                 </div>
             </div>
