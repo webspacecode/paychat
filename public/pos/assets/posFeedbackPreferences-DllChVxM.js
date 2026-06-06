@@ -1,1 +1,0 @@
-const t="paychat_pos_audio_feedback_enabled",o=()=>typeof window>"u"?null:window.localStorage||null,a=()=>o()?.getItem(t)!=="false",s=n=>{const e=!!n;return o()?.setItem(t,e?"true":"false"),e};export{a as g,s};
