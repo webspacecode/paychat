@@ -16,6 +16,7 @@ use Throwable;
 class OperationalLogService
 {
     private const ALLOWED_EVENTS = [
+        'api.exception.rendered',
         'payment.create.failed',
         'payment.success.failed',
         'table_service.invoice.failed',

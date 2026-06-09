@@ -105,16 +105,7 @@ class DashboardController extends Controller
 
     public function tenantLogs(Request $request, Tenant $tenant, TenantOperationalLogReader $reader): JsonResponse
     {
-        $validated = $request->validate([
-            'date' => ['nullable', 'date_format:Y-m-d'],
-            'module' => ['nullable', 'string', 'max:50'],
-            'level' => ['nullable', 'string', 'max:20'],
-            'severity' => ['nullable', 'string', 'max:20'],
-            'event' => ['nullable', 'string', 'max:100'],
-            'support_code' => ['nullable', 'string', 'max:120'],
-            'page' => ['nullable', 'integer', 'min:1'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
-        ]);
+        $validated = $this->validateLogFilters($request);
 
         return response()->json($reader->read($tenant, $validated));
     }
@@ -123,6 +114,34 @@ class DashboardController extends Controller
     {
         return response()->json([
             'data' => $reader->availableDates($tenant),
+        ]);
+    }
+
+    public function systemLogs(Request $request, TenantOperationalLogReader $reader): JsonResponse
+    {
+        $validated = $this->validateLogFilters($request);
+
+        return response()->json($reader->readSystem($validated));
+    }
+
+    public function systemLogDates(TenantOperationalLogReader $reader): JsonResponse
+    {
+        return response()->json([
+            'data' => $reader->availableSystemDates(),
+        ]);
+    }
+
+    private function validateLogFilters(Request $request): array
+    {
+        return $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'module' => ['nullable', 'string', 'max:50'],
+            'level' => ['nullable', 'string', 'max:20'],
+            'severity' => ['nullable', 'string', 'max:20'],
+            'event' => ['nullable', 'string', 'max:100'],
+            'support_code' => ['nullable', 'string', 'max:120'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
     }
 }

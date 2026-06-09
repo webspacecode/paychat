@@ -63,6 +63,10 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware(['auth', 'master'])->prefix('master')->name('master.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'master'])->name('dashboard');
+    Route::get('/logs/system', [DashboardController::class, 'systemLogs'])
+        ->name('logs.system');
+    Route::get('/logs/system/available-dates', [DashboardController::class, 'systemLogDates'])
+        ->name('logs.system.dates');
     Route::get('/tenants/{tenant}/logs', [DashboardController::class, 'tenantLogs'])
         ->name('tenants.logs');
     Route::get('/tenants/{tenant}/logs/available-dates', [DashboardController::class, 'tenantLogDates'])

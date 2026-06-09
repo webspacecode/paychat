@@ -14,14 +14,39 @@ class TenantOperationalLogReader
         $date = $this->date($filters['date'] ?? null);
         $page = max(1, (int) ($filters['page'] ?? 1));
         $perPage = min(50, max(1, (int) ($filters['per_page'] ?? 25)));
-        $path = $this->path($tenant, $date);
 
-        if (! File::exists($path)) {
+        return $this->readPaths([$this->path($tenant, $date)], $filters, $date, $page, $perPage);
+    }
+
+    public function readSystem(array $filters = []): array
+    {
+        $date = $this->date($filters['date'] ?? null);
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $perPage = min(50, max(1, (int) ($filters['per_page'] ?? 25)));
+
+        return $this->readPaths([
+            $this->bucketPath('system', $date),
+            $this->bucketPath('unknown', $date),
+        ], $filters, $date, $page, $perPage);
+    }
+
+    private function readPaths(array $paths, array $filters, string $date, int $page, int $perPage): array
+    {
+        $rows = [];
+
+        foreach ($paths as $path) {
+            if (! File::exists($path)) {
+                continue;
+            }
+
+            $rows = array_merge($rows, $this->readRows($path));
+        }
+
+        if ($rows === []) {
             return $this->empty($date, $page, $perPage);
         }
 
-        $rows = $this->readRows($path);
-        $rows = array_reverse($rows);
+        usort($rows, fn ($a, $b) => (int) ($b['logged_at_unix'] ?? 0) <=> (int) ($a['logged_at_unix'] ?? 0));
         $rows = array_values(array_filter($rows, fn ($row) => $this->matches($row, $filters)));
 
         $total = count($rows);
@@ -42,13 +67,26 @@ class TenantOperationalLogReader
     public function availableDates(Tenant $tenant, int $limit = 30): array
     {
         $dir = storage_path('logs/tenant-errors/tenant-'.$tenant->id);
-        if (! File::isDirectory($dir)) {
-            return [];
-        }
 
-        return collect(File::files($dir))
+        return $this->datesFromDirectories([$dir], $limit);
+    }
+
+    public function availableSystemDates(int $limit = 30): array
+    {
+        return $this->datesFromDirectories([
+            storage_path('logs/tenant-errors/system'),
+            storage_path('logs/tenant-errors/unknown'),
+        ], $limit);
+    }
+
+    private function datesFromDirectories(array $directories, int $limit): array
+    {
+        return collect($directories)
+            ->filter(fn ($dir) => File::isDirectory($dir))
+            ->flatMap(fn ($dir) => File::files($dir))
             ->map(fn ($file) => pathinfo($file->getFilename(), PATHINFO_FILENAME))
             ->filter(fn ($date) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $date))
+            ->unique()
             ->sortDesc()
             ->take($limit)
             ->values()
@@ -162,7 +200,12 @@ class TenantOperationalLogReader
 
     private function path(Tenant $tenant, string $date): string
     {
-        return storage_path('logs/tenant-errors/tenant-'.$tenant->id.'/'.$date.'.log');
+        return $this->bucketPath('tenant-'.$tenant->id, $date);
+    }
+
+    private function bucketPath(string $bucket, string $date): string
+    {
+        return storage_path('logs/tenant-errors/'.$bucket.'/'.$date.'.log');
     }
 
     private function empty(string $date, int $page, int $perPage): array

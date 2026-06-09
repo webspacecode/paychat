@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Services\OperationalLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class Observability
@@ -108,6 +109,33 @@ class Observability
         }
     }
 
+    public static function logRenderedApiException(Throwable $exception, int $statusCode, string $safeMessage, Request $request): void
+    {
+        if ($exception instanceof \Illuminate\Validation\ValidationException) {
+            return;
+        }
+
+        try {
+            $level = $statusCode >= 500 ? 'error' : 'warning';
+            $context = self::context([
+                'status_code' => $statusCode,
+                'exception_class' => $exception::class,
+                'exception_message' => self::safeExceptionMessage($exception->getMessage() ?: $safeMessage),
+                'safe_message' => self::safeExceptionMessage($safeMessage),
+            ], $request);
+
+            if ($statusCode >= 500 || app()->environment(['local', 'development'])) {
+                $context['file'] = self::safeRelativePath($exception->getFile());
+                $context['line'] = $exception->getLine();
+            }
+
+            Log::log($level, 'api.exception.rendered', $context);
+            self::writeOperational($level, 'api.exception.rendered', $context, $request);
+        } catch (Throwable) {
+            // Observability must never interrupt billing or order flow.
+        }
+    }
+
     private static function writeOperational(string $level, string $event, array $context, ?Request $request = null): void
     {
         try {
@@ -115,5 +143,17 @@ class Observability
         } catch (Throwable) {
             // Tenant operational logs are best-effort only.
         }
+    }
+
+    private static function safeExceptionMessage(string $message): string
+    {
+        return Str::limit($message, 500, '');
+    }
+
+    private static function safeRelativePath(string $path): string
+    {
+        $base = base_path().DIRECTORY_SEPARATOR;
+
+        return str_starts_with($path, $base) ? substr($path, strlen($base)) : basename($path);
     }
 }

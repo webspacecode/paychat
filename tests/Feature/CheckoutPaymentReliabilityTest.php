@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Api\Tenant\OrderController;
 use App\Http\Controllers\Api\Tenant\PaymentController;
+use App\Models\Invoice;
 use App\Models\OfflineOrderSync;
 use App\Models\Tenant\Order;
 use App\Models\Tenant\OrderItem;
@@ -242,6 +243,111 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame(1, Order::where('status', 'completed')->count());
     }
 
+    public function test_offline_sync_creates_invoice_when_missing(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+
+        $response = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $this->offlinePayload('local-invoice-1', $product));
+
+        $order = Order::findOrFail($response['backend_order_id']);
+
+        $this->assertTrue($response['success']);
+        $this->assertSame(1, Invoice::on('mysql')->count());
+        $this->assertNotNull($order->invoice_id);
+        $this->assertNotNull($order->invoice_no);
+        $this->assertSame($order->invoice_no, $response['invoice_number']);
+        $this->assertSame($order->invoice_no, $response['invoice_uuid']);
+        $this->assertSame(data_get($order->meta, 'invoice.url'), $response['invoice_url']);
+    }
+
+    public function test_offline_sync_reuses_existing_invoice(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+
+        $first = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $this->offlinePayload('local-invoice-2', $product));
+        $second = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $this->offlinePayload('local-invoice-2', $product));
+
+        $this->assertSame(1, Invoice::on('mysql')->count());
+        $this->assertSame($first['backend_order_id'], $second['backend_order_id']);
+        $this->assertSame($first['invoice_number'], $second['invoice_number']);
+        $this->assertSame($first['invoice_id'], $second['invoice_id']);
+    }
+
+    public function test_duplicate_offline_sync_does_not_create_duplicate_invoice(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+        $payload = $this->offlinePayload('local-invoice-3', $product);
+
+        app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+        app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+
+        $this->assertSame(1, Invoice::on('mysql')->count());
+        $this->assertSame(1, Order::count());
+        $this->assertSame(1, Payment::count());
+    }
+
+    public function test_invoice_generation_failure_does_not_duplicate_order_or_payment(): void
+    {
+        $this->bindOfflineInvoiceService(fail: true);
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+        $payload = $this->offlinePayload('local-invoice-failure', $product);
+
+        $first = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+        $second = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+
+        $this->assertTrue($first['success']);
+        $this->assertNull($first['invoice_number']);
+        $this->assertSame($first['backend_order_id'], $second['backend_order_id']);
+        $this->assertSame($first['payment_id'], $second['payment_id']);
+        $this->assertNull($second['invoice_number']);
+        $this->assertSame(0, Invoice::on('mysql')->count());
+        $this->assertSame(1, Order::count());
+        $this->assertSame(1, Payment::count());
+        $this->assertSame('completed', Order::first()->status);
+        $this->assertSame('paid', Order::first()->payment_status);
+    }
+
+    public function test_online_checkout_behavior_remains_unchanged(): void
+    {
+        $order = $this->order(total: 180, orderType: 'dine_in', diningFlow: 'table_service');
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'upi',
+            'amount' => 180,
+            'status' => 'pending',
+        ]);
+
+        app()->instance(InvoiceService::class, new class extends InvoiceService {
+            public function generate($order, $tenant, $industry, $paper)
+            {
+                throw new \RuntimeException('Online invoice failure remains a side effect');
+            }
+        });
+
+        $response = app(PaymentController::class)->markSuccess(
+            'demo',
+            (string) $payment->id,
+            app(PaymentService::class),
+            app(OrderKitchenDispatchService::class)
+        );
+        $payload = $response->getData(true);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertTrue($payload['success']);
+        $this->assertSame('success', $payload['payment_status']);
+        $this->assertSame('failed', $payload['side_effects']['invoice']);
+        $this->assertArrayHasKey('invoice_generated', $payload);
+        $this->assertSame('completed', $payment->fresh()->order->status);
+        $this->assertSame('paid', $payment->fresh()->order->payment_status);
+    }
+
     public function test_payment_success_survives_invoice_failure_after_payment_commit(): void
     {
         $order = $this->order(total: 180, orderType: 'dine_in', diningFlow: 'table_service');
@@ -371,6 +477,93 @@ class CheckoutPaymentReliabilityTest extends TestCase
         ]);
 
         return $order;
+    }
+
+    private function offlineProduct(): Product
+    {
+        return Product::create([
+            'name' => 'Coffee',
+            'sku' => 'COF-'.str()->random(6),
+            'type' => 'simple',
+            'price' => 90,
+            'track_inventory' => false,
+        ]);
+    }
+
+    private function offlinePayload(string $localOrderId, Product $product): array
+    {
+        return [
+            'local_order_id' => $localOrderId,
+            'location_id' => 1,
+            'order_type' => 'takeaway',
+            'offline_created_at' => now()->subMinutes(30)->toISOString(),
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+            'totals' => [
+                'subtotal' => 90,
+                'tax_total' => 0,
+                'discount_total' => 0,
+                'grand_total' => 90,
+                'paid_amount' => 90,
+                'balance_amount' => 0,
+            ],
+            'payment' => [
+                'method' => 'cash',
+                'amount' => 90,
+                'reference' => 'offline-ref-'.$localOrderId,
+            ],
+        ];
+    }
+
+    private function bindOfflineInvoiceService(bool $fail = false): void
+    {
+        app()->instance(InvoiceService::class, new class($fail) extends InvoiceService {
+            public function __construct(private bool $fail)
+            {
+            }
+
+            public function generate($order, $tenant, $industry, $paper)
+            {
+                if ($this->fail) {
+                    throw new \RuntimeException('Simulated offline invoice failure');
+                }
+
+                $orderId = data_get($order, 'id');
+                $invoice = Invoice::on('mysql')
+                    ->where('tenant_id', $tenant->id)
+                    ->where('order_id', $orderId)
+                    ->first();
+
+                if (! $invoice) {
+                    $invoice = Invoice::on('mysql')->create([
+                        'tenant_id' => $tenant->id,
+                        'order_id' => $orderId,
+                        'uuid' => 'PC26-O'.$orderId,
+                        'industry' => $industry,
+                        'paper_size' => $paper,
+                        'order_data' => $order,
+                    ]);
+                }
+
+                $url = url("/billing/invoices/{$invoice->uuid}");
+                $tenantOrder = Order::findOrFail($orderId);
+                $meta = $tenantOrder->meta ?? [];
+                $meta['invoice'] = [
+                    'id' => $invoice->id,
+                    'number' => $invoice->uuid,
+                    'url' => $url,
+                ];
+
+                $tenantOrder->update([
+                    'invoice_id' => $invoice->id,
+                    'invoice_no' => $invoice->uuid,
+                    'meta' => $meta,
+                ]);
+
+                return ['url' => $url];
+            }
+        });
     }
 
     private function createTenantSchema(): void
@@ -527,6 +720,17 @@ class CheckoutPaymentReliabilityTest extends TestCase
 
     private function createCentralSchema(): void
     {
+        Schema::connection('mysql')->create('invoices', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('tenant_id');
+            $table->unsignedBigInteger('order_id')->nullable();
+            $table->string('uuid')->unique();
+            $table->string('industry');
+            $table->string('paper_size');
+            $table->json('order_data');
+            $table->timestamps();
+        });
+
         Schema::connection('mysql')->create('tax_configs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id');

@@ -13,6 +13,7 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 use App\Http\Middleware\ApiKeyMiddleware;
 use App\Http\Middleware\RequestIdMiddleware;
+use App\Support\Observability;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -116,6 +117,8 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof ValidationException) {
                 $payload['errors'] = $e->errors();
             }
+
+            Observability::logRenderedApiException($e, $status, $message, $request);
 
             return response()
                 ->json($payload, $status)

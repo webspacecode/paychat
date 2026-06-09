@@ -9,6 +9,7 @@ use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
 use App\Services\Orders\OrderService;
 use App\Services\Payments\PaymentService;
+use App\Support\IndustryNormalizer;
 use App\Support\Observability;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
@@ -23,7 +24,8 @@ class OfflineOrderSyncService
     public function __construct(
         private OrderService $orderService,
         private PaymentService $paymentService,
-        private OrderKitchenDispatchService $kitchenDispatch
+        private OrderKitchenDispatchService $kitchenDispatch,
+        private InvoiceService $invoiceService
     ) {
     }
 
@@ -72,7 +74,8 @@ class OfflineOrderSyncService
                 return $this->replayOrder($payload);
             });
 
-            $response = $this->buildResponse($payload, $result['order'], $result['payment']);
+            $order = $this->generateInvoiceAfterSync($tenant, $payload, $result['order']);
+            $response = $this->buildResponse($payload, $order, $result['payment']);
 
             $sync->update([
                 'backend_order_id' => $result['order']->id,
@@ -337,19 +340,60 @@ class OfflineOrderSyncService
     private function buildResponse(array $payload, Order $order, Payment $payment): array
     {
         $orderResource = (new OrderResource($order))->resolve();
+        $invoiceUrl = data_get($order->meta, 'invoice.url');
 
         return [
             'success' => true,
             'status' => 'synced',
             'local_order_id' => $payload['local_order_id'],
             'backend_order_id' => $order->id,
-            'invoice_id' => null,
+            'invoice_id' => $order->invoice_id,
             'invoice_number' => $order->invoice_no,
+            'invoice_uuid' => $order->invoice_no,
+            'invoice_url' => $invoiceUrl,
             'payment_id' => $payment->id,
             'token_id' => $order->token?->id,
             'token_number' => $order->token?->token_code,
             'message' => 'Offline order synced successfully',
             'order' => $orderResource,
         ];
+    }
+
+    private function generateInvoiceAfterSync($tenant, array $payload, Order $order): Order
+    {
+        $order = $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'token');
+
+        if ($order->invoice_id || $order->invoice_no) {
+            return $order;
+        }
+
+        try {
+            $this->invoiceService->generate(
+                (new OrderResource($order))->resolve(),
+                $tenant,
+                $tenant->industry,
+                $this->defaultInvoicePaperSize((string) $tenant->industry)
+            );
+
+            return $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'token');
+        } catch (\Throwable $e) {
+            Observability::logWarning('offline.sync.invoice.failed', $e, [
+                'tenant_id' => $tenant->id,
+                'local_order_id' => $payload['local_order_id'],
+                'backend_order_id' => $order->id,
+            ]);
+
+            return $order;
+        }
+    }
+
+    private function defaultInvoicePaperSize(string $industry): string
+    {
+        $industry = IndustryNormalizer::normalize($industry);
+        $templates = config("invoice.industries.{$industry}.templates", []);
+
+        return array_key_exists('80mm', $templates)
+            ? '80mm'
+            : ((string) array_key_first($templates) ?: 'a4');
     }
 }
