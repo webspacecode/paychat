@@ -35,10 +35,7 @@
         }
         html { scroll-behavior: smooth; }
         body {
-            background:
-                radial-gradient(circle at 24% -10%, rgba(31, 94, 255, .18), transparent 34rem),
-                radial-gradient(circle at 88% 4%, rgba(31, 94, 255, .09), transparent 30rem),
-                linear-gradient(180deg, #ffffff 0%, #f6f9ff 48%, #ffffff 100%);
+            background: linear-gradient(180deg, #ffffff 0%, #f7faff 44%, #ffffff 100%);
             color: var(--pc-ink);
             text-rendering: geometricPrecision;
         }
@@ -78,10 +75,10 @@
         }
         .pc-card {
             border: 1px solid var(--pc-line);
-            border-radius: 1.25rem;
-            background: rgba(255, 255, 255, .76);
-            box-shadow: 0 20px 60px rgba(31, 94, 255, .08);
-            backdrop-filter: blur(22px);
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, .92);
+            box-shadow: 0 18px 46px rgba(8, 17, 31, .06);
+            backdrop-filter: blur(18px);
         }
         .pc-panel {
             border: 1px solid var(--pc-line);
@@ -110,6 +107,29 @@
         .pc-button-primary:hover { background: var(--pc-blue-dark); }
         .pc-button-secondary { border: 1px solid rgba(31, 94, 255, .16); background: rgba(255, 255, 255, .88); color: #08111F; }
         .pc-button-secondary:hover { border-color: rgba(31, 94, 255, .32); background: #fff; }
+        .pc-site-nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            border-bottom: 1px solid rgba(8, 17, 31, .08);
+            background: rgba(255, 255, 255, .88);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 12px 35px rgba(8, 17, 31, .05);
+            backdrop-filter: saturate(180%) blur(22px);
+            -webkit-backdrop-filter: saturate(180%) blur(22px);
+        }
+        .pc-nav-pill {
+            border: 1px solid rgba(8, 17, 31, .08);
+            background: rgba(255, 255, 255, .76);
+            box-shadow: 0 10px 28px rgba(8, 17, 31, .05);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .pc-site-nav,
+            .pc-nav-pill {
+                background: rgba(255, 255, 255, .98);
+            }
+        }
         .pc-input {
             width: 100%;
             border-radius: 1rem;
@@ -170,13 +190,13 @@
     @stack('head')
 </head>
 <body class="font-sans antialiased">
-    <nav class="sticky top-0 z-50 border-b border-white/50 bg-white/55 shadow-[0_1px_0_rgba(255,255,255,.65)_inset,0_16px_40px_rgba(31,94,255,.07)] backdrop-blur-2xl">
+    <nav class="pc-site-nav">
         <div class="pc-container flex h-16 items-center justify-between lg:h-[4.35rem]">
             <a href="{{ url('/') }}" class="flex items-center gap-3" aria-label="PayChat home">
                 <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat Logo" class="h-8 w-auto lg:h-10">
             </a>
 
-            <div class="hidden items-center gap-1 rounded-full border border-white/70 bg-white/58 p-1 text-sm font-semibold text-ink/62 shadow-[0_10px_30px_rgba(31,94,255,0.08)] backdrop-blur-2xl lg:flex">
+            <div class="pc-nav-pill hidden items-center gap-1 rounded-full p-1 text-sm font-semibold text-ink/62 lg:flex">
                 <a href="{{ url('/features') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">Features</a>
                 <a href="{{ url('/pricing') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">Pricing</a>
                 <a href="{{ url('/guide') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">Guide</a>
@@ -188,7 +208,7 @@
                 <a href="{{ url('/start-free-trial') }}" class="hidden rounded-full bg-primary px-5 py-3 text-sm font-bold text-white shadow-[0_16px_38px_rgba(31,94,255,.22)] transition hover:-translate-y-0.5 hover:bg-[#174bd2] sm:inline-flex">
                     Start Free Trial
                 </a>
-                <button type="button" onclick="openDrawer()" class="rounded-full border border-black/10 bg-white/80 p-2 text-ink shadow-soft transition hover:bg-white lg:hidden" aria-label="Open navigation">
+                <button type="button" onclick="openDrawer()" class="rounded-full border border-black/10 bg-white p-2 text-ink shadow-soft transition hover:bg-white lg:hidden" aria-label="Open navigation">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/>
                     </svg>
@@ -199,7 +219,7 @@
 
     <div id="mobileDrawer" class="pc-drawer fixed inset-0 z-[60] lg:hidden" aria-hidden="true">
         <button type="button" onclick="closeDrawer()" class="pc-drawer-backdrop absolute inset-0 bg-ink/45 backdrop-blur-sm" aria-label="Close navigation"></button>
-        <aside class="pc-drawer-panel absolute bottom-0 right-0 top-0 flex w-[min(88vw,24rem)] flex-col border-l border-black/10 bg-paper shadow-lift">
+        <aside class="pc-drawer-panel absolute bottom-0 right-0 top-0 flex w-[min(88vw,24rem)] flex-col border-l border-black/10 bg-white shadow-lift">
             <div class="flex h-16 items-center justify-between border-b border-black/10 px-5">
                 <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat Logo" class="h-9 w-auto">
                 <button type="button" onclick="closeDrawer()" class="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-ink" aria-label="Close navigation">
@@ -245,6 +265,9 @@
                     </p>
                     <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more%20about%20your%20POS" target="_blank" rel="noopener noreferrer" class="mt-5 inline-flex text-sm font-bold text-primary hover:text-ink">
                         WhatsApp: +91 98349 69229
+                    </a>
+                    <a href="mailto:hello@paychat.shop" class="mt-2 block text-sm font-bold text-ink/60 hover:text-primary">
+                        Email: hello@paychat.shop
                     </a>
                 </div>
 

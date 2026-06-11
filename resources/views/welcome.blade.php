@@ -13,51 +13,29 @@
                         <span class="pc-dot"></span>
                         Cloud native POS for growing counters
                     </p>
-                    <h1>Premium POS that feels calm at rush hour.</h1>
+                    <h1>One clean POS for your daily counter.</h1>
                     <p class="pc-hero-lede">
-                        PayChat brings billing, payments, order flow, invoices and reports into one smooth workspace for cafes, restaurants, salons and service businesses.
+                        PayChat brings billing, payments, orders, invoices and reports into one simple cloud workspace for cafes, restaurants, salons, bakeries and service businesses.
                     </p>
                     <div class="pc-hero-actions">
                         <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
-                        <a href="{{ url('/contact') }}" class="pc-button pc-button-secondary">Book Founder Demo</a>
+                        <a href="{{ url('/contact') }}" class="pc-button pc-button-secondary">Talk to PayChat</a>
                     </div>
                 </div>
 
-                <div class="pc-hero-board" aria-label="PayChat billing preview">
-                    <div class="pc-glass-card pc-pos-card">
-                        <div class="pc-card-top">
+                <div class="pc-product-showcase" aria-label="PayChat POS product screenshot">
+                    <div class="pc-device-frame">
+                        <div class="pc-device-top">
                             <span></span><span></span><span></span>
                             <strong>PayChat POS</strong>
                         </div>
-                        <div class="pc-bill-total pc-workspace-total">
-                            <span>Counter workspace</span>
-                            <strong>Billing</strong>
-                        </div>
-                        <div class="pc-bill-list">
-                            @foreach([
-                                ['Order entry', 'Fast counter flow'],
-                                ['Payment modes', 'UPI, cash and records'],
-                                ['Customer invoice', 'QR-ready sharing'],
-                            ] as [$item, $meta])
-                                <div>
-                                    <span>{{ $item }}</span>
-                                    <strong>{{ $meta }}</strong>
-                                </div>
-                            @endforeach
-                        </div>
-                        <div class="pc-payment-row">
-                            <span>Cash payment</span>
-                            <strong>Confirmed</strong>
-                        </div>
+                        <img src="{{ asset('YOUR_POS_SCREENSHOT.png') }}" alt="PayChat POS dashboard screen" loading="eager">
                     </div>
-
-                    <div class="pc-floating-card pc-floating-one">
-                        <span>Owner view</span>
-                        <strong>Daily reports</strong>
-                    </div>
-                    <div class="pc-floating-card pc-floating-two">
-                        <span>Service flow</span>
-                        <strong>Orders, tokens, tables</strong>
+                    <div class="pc-showcase-strip">
+                        <span>Billing</span>
+                        <span>Orders</span>
+                        <span>Payments</span>
+                        <span>Reports</span>
                     </div>
                 </div>
             </div>
@@ -74,7 +52,7 @@
         <div class="pc-container">
             <div class="pc-section-head">
                 <p class="pc-eyebrow">The operating layer</p>
-                <h2>Everything the counter needs, without the heavy software feeling.</h2>
+                <h2>Everything your counter needs, explained clearly.</h2>
             </div>
 
             <div class="pc-home-grid">
@@ -115,6 +93,57 @@
 
     <section class="pc-section bg-white">
         <div class="pc-container">
+            <div class="pc-section-head">
+                <p class="pc-eyebrow">Stores on PayChat</p>
+                <h2>Real business storefronts powered by PayChat.</h2>
+                <p class="mt-4 text-lg leading-8 text-ink/62">Browse live tenant store pages connected to the PayChat platform.</p>
+            </div>
+
+            <div class="pc-store-grid">
+                @forelse($tenants as $tenant)
+                    @php
+                        $branding = $tenant->branding;
+                        $name = $tenant->name ?? 'PayChat Store';
+                        $industry = $tenant->industry ?? 'Local business';
+                        $address = $branding->address ?? $tenant->address ?? 'Store details available on page';
+                        $logo = $branding && $branding->logo && !str_contains($branding->logo, 'dummyimage.com')
+                            ? $branding->logo
+                            : null;
+                        $shopUrl = url('/store/' . \Illuminate\Support\Str::slug($name));
+                        $rating = (float) ($tenant->reviews_avg_rating ?? 0);
+                        $reviewCount = (int) ($tenant->reviews_count ?? 0);
+                    @endphp
+                    <article class="pc-store-card">
+                        <div class="pc-store-logo">
+                            @if($logo)
+                                <img src="{{ $logo }}" alt="{{ $name }} logo" loading="lazy">
+                            @else
+                                <span>{{ strtoupper(substr($name, 0, 1)) }}</span>
+                            @endif
+                        </div>
+                        <div class="pc-store-body">
+                            <p class="pc-store-kicker">{{ $industry }}</p>
+                            <h3>{{ $name }}</h3>
+                            <p>{{ $address }}</p>
+                        </div>
+                        <div class="pc-store-meta">
+                            <span>{{ $reviewCount > 0 ? number_format($rating, 1) . ' rating' : 'New on PayChat' }}</span>
+                            <span>{{ $reviewCount }} reviews</span>
+                        </div>
+                        <a href="{{ $shopUrl }}" class="pc-store-link" target="_blank" rel="noopener noreferrer">Visit store</a>
+                    </article>
+                @empty
+                    <div class="pc-empty-store">
+                        <h3>Tenant stores will appear here after onboarding.</h3>
+                        <p>No placeholder stores are shown.</p>
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </section>
+
+    <section class="pc-section bg-white">
+        <div class="pc-container">
             <div class="pc-final-panel">
                 <div>
                     <p class="pc-eyebrow">Start clean</p>
@@ -130,25 +159,24 @@
 @push('head')
     <style>
         .pc-home-hero {
-            padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(3rem, 6vw, 5rem);
+            padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(3.5rem, 7vw, 6rem);
         }
 
         .pc-hero-banner {
             position: relative;
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(22rem, .8fr);
-            gap: clamp(2rem, 5vw, 4rem);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(2.2rem, 5vw, 4rem);
             align-items: center;
             overflow: hidden;
-            min-height: clamp(36rem, 70vh, 46rem);
-            border: 1px solid rgba(31, 94, 255, .12);
-            border-radius: clamp(1.4rem, 3vw, 2.4rem);
+            min-height: auto;
             background:
-                radial-gradient(circle at 20% 12%, rgba(255, 255, 255, .95), transparent 22rem),
-                radial-gradient(circle at 74% 30%, rgba(31, 94, 255, .18), transparent 24rem),
-                linear-gradient(135deg, #ffffff 0%, #eef5ff 48%, #dfeeff 100%);
-            padding: clamp(1.4rem, 5vw, 4rem);
-            box-shadow: 0 34px 110px rgba(31, 94, 255, .14);
+                radial-gradient(circle at 50% 0%, rgba(31, 94, 255, .13), transparent 30rem),
+                linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+            border: 1px solid rgba(31, 94, 255, .1);
+            border-radius: clamp(1.25rem, 3vw, 2rem);
+            padding: clamp(2rem, 6vw, 5.5rem) clamp(1rem, 4vw, 3rem);
+            box-shadow: 0 34px 100px rgba(8, 17, 31, .08);
         }
 
         .pc-hero-banner::before {
@@ -164,23 +192,32 @@
         }
 
         .pc-hero-copy,
-        .pc-hero-board {
+        .pc-product-showcase {
             position: relative;
             z-index: 1;
         }
 
+        .pc-hero-copy {
+            max-width: 58rem;
+            text-align: center;
+        }
+
         .pc-hero-copy h1 {
-            max-width: 12ch;
+            max-width: 14ch;
+            margin-left: auto;
+            margin-right: auto;
             margin-top: 1.25rem;
             color: #111827;
-            font-size: clamp(3.6rem, 7.4vw, 6.7rem);
+            font-size: clamp(3rem, 7vw, 6.25rem);
             font-weight: 900;
-            letter-spacing: -.065em;
-            line-height: .88;
+            letter-spacing: -.055em;
+            line-height: .92;
         }
 
         .pc-hero-lede {
-            max-width: 43rem;
+            max-width: 46rem;
+            margin-left: auto;
+            margin-right: auto;
             margin-top: 1.5rem;
             color: rgba(17, 24, 39, .66);
             font-size: clamp(1.05rem, 1.5vw, 1.25rem);
@@ -190,16 +227,76 @@
         .pc-hero-actions {
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
             gap: .8rem;
             margin-top: 2rem;
         }
 
-        .pc-hero-board {
-            min-height: 31rem;
+        .pc-product-showcase {
+            width: min(100%, 68rem);
         }
 
-        .pc-glass-card,
-        .pc-floating-card,
+        .pc-device-frame {
+            overflow: hidden;
+            border: 1px solid rgba(8, 17, 31, .08);
+            border-radius: clamp(1rem, 2.5vw, 1.65rem);
+            background: rgba(255, 255, 255, .94);
+            box-shadow: 0 34px 90px rgba(8, 17, 31, .16);
+        }
+
+        .pc-device-frame img {
+            width: 100%;
+            aspect-ratio: 1536 / 1024;
+            object-fit: cover;
+            object-position: top center;
+        }
+
+        .pc-device-top {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            border-bottom: 1px solid rgba(8, 17, 31, .08);
+            background: rgba(255, 255, 255, .9);
+            padding: .85rem 1rem;
+        }
+
+        .pc-device-top span {
+            width: .68rem;
+            height: .68rem;
+            border-radius: 999px;
+            background: rgba(31, 94, 255, .2);
+        }
+
+        .pc-device-top span:first-child {
+            background: #1F5EFF;
+        }
+
+        .pc-device-top strong {
+            margin-left: auto;
+            color: rgba(17, 24, 39, .48);
+            font-size: .74rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .pc-showcase-strip {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: .65rem;
+            margin-top: 1rem;
+        }
+
+        .pc-showcase-strip span {
+            border: 1px solid rgba(31, 94, 255, .12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .82);
+            padding: .55rem .85rem;
+            color: rgba(17, 24, 39, .62);
+            font-size: .8rem;
+            font-weight: 850;
+        }
+
         .pc-home-card,
         .pc-final-panel {
             border: 1px solid rgba(255, 255, 255, .72);
@@ -208,115 +305,6 @@
                 0 24px 80px rgba(31, 94, 255, .13),
                 inset 0 1px 0 rgba(255, 255, 255, .85);
             backdrop-filter: blur(24px);
-        }
-
-        .pc-pos-card {
-            overflow: hidden;
-            border-radius: 1.55rem;
-        }
-
-        .pc-card-top {
-            display: flex;
-            align-items: center;
-            gap: .45rem;
-            border-bottom: 1px solid rgba(31, 94, 255, .1);
-            padding: 1rem;
-        }
-
-        .pc-card-top span {
-            width: .68rem;
-            height: .68rem;
-            border-radius: 999px;
-            background: rgba(31, 94, 255, .2);
-        }
-
-        .pc-card-top span:first-child {
-            background: #1F5EFF;
-        }
-
-        .pc-card-top strong {
-            margin-left: auto;
-            color: rgba(17, 24, 39, .48);
-            font-size: .75rem;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-        }
-
-        .pc-bill-total {
-            margin: 1rem;
-            border-radius: 1.2rem;
-            background: #1F5EFF;
-            padding: 1.35rem;
-            color: white;
-        }
-
-        .pc-bill-total span,
-        .pc-floating-card span,
-        .pc-payment-row span {
-            display: block;
-            font-size: .78rem;
-            font-weight: 800;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            opacity: .68;
-        }
-
-        .pc-bill-total strong {
-            display: block;
-            margin-top: .35rem;
-            font-size: clamp(2.4rem, 5vw, 4.2rem);
-            font-weight: 900;
-            letter-spacing: -.055em;
-            line-height: .9;
-        }
-
-        .pc-bill-list {
-            display: grid;
-            gap: .65rem;
-            padding: 0 1rem 1rem;
-        }
-
-        .pc-bill-list div,
-        .pc-payment-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            border: 1px solid rgba(31, 94, 255, .1);
-            border-radius: 1rem;
-            background: rgba(255, 255, 255, .68);
-            padding: .95rem 1rem;
-            color: rgba(17, 24, 39, .72);
-            font-size: .94rem;
-            font-weight: 750;
-        }
-
-        .pc-bill-list strong,
-        .pc-payment-row strong,
-        .pc-floating-card strong {
-            color: #111827;
-            font-weight: 900;
-        }
-
-        .pc-payment-row {
-            margin: 0 1rem 1rem;
-            background: rgba(31, 94, 255, .07);
-        }
-
-        .pc-floating-card {
-            position: absolute;
-            border-radius: 1.1rem;
-            padding: 1rem 1.15rem;
-        }
-
-        .pc-floating-one {
-            right: -1rem;
-            top: 3rem;
-        }
-
-        .pc-floating-two {
-            bottom: 1.2rem;
-            left: -1.4rem;
         }
 
         .pc-cloud-strip {
@@ -357,7 +345,7 @@
         }
 
         .pc-home-card {
-            min-height: 15rem;
+            min-height: 14rem;
             border-color: rgba(31, 94, 255, .12);
             border-radius: 1.25rem;
             padding: 1.35rem;
@@ -433,8 +421,123 @@
             padding: clamp(1.4rem, 4vw, 3rem);
         }
 
+        .pc-store-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        .pc-store-card {
+            display: flex;
+            min-height: 22rem;
+            flex-direction: column;
+            border: 1px solid rgba(31, 94, 255, .1);
+            border-radius: 1.25rem;
+            background: #fff;
+            padding: 1.2rem;
+            box-shadow: 0 18px 50px rgba(8, 17, 31, .06);
+        }
+
+        .pc-store-logo {
+            display: flex;
+            height: 4.25rem;
+            width: 4.25rem;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid rgba(31, 94, 255, .12);
+            border-radius: 1rem;
+            background: #f6f9ff;
+            color: #1F5EFF;
+            font-size: 1.5rem;
+            font-weight: 900;
+        }
+
+        .pc-store-logo img {
+            height: 100%;
+            width: 100%;
+            object-fit: cover;
+        }
+
+        .pc-store-body {
+            margin-top: 1.35rem;
+        }
+
+        .pc-store-kicker {
+            color: rgba(31, 94, 255, .72);
+            font-size: .75rem;
+            font-weight: 900;
+            letter-spacing: .11em;
+            text-transform: uppercase;
+        }
+
+        .pc-store-body h3 {
+            margin-top: .35rem;
+            color: #111827;
+            font-size: 1.35rem;
+            font-weight: 900;
+            letter-spacing: -.025em;
+        }
+
+        .pc-store-body p {
+            margin-top: .65rem;
+            color: rgba(17, 24, 39, .58);
+            font-size: .94rem;
+            line-height: 1.65;
+        }
+
+        .pc-store-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: auto;
+            border-top: 1px solid rgba(8, 17, 31, .08);
+            padding-top: 1rem;
+            color: rgba(17, 24, 39, .5);
+            font-size: .82rem;
+            font-weight: 800;
+        }
+
+        .pc-store-link {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+            border-radius: .85rem;
+            background: #111827;
+            padding: .9rem 1rem;
+            color: #fff;
+            font-size: .9rem;
+            font-weight: 900;
+            transition: transform .2s ease, background .2s ease;
+        }
+
+        .pc-store-link:hover {
+            transform: translateY(-1px);
+            background: #1F5EFF;
+        }
+
+        .pc-empty-store {
+            grid-column: 1 / -1;
+            border: 1px solid rgba(31, 94, 255, .1);
+            border-radius: 1rem;
+            background: #fff;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 18px 50px rgba(8, 17, 31, .06);
+        }
+
+        .pc-empty-store h3 {
+            color: #111827;
+            font-size: 1.2rem;
+            font-weight: 900;
+        }
+
+        .pc-empty-store p {
+            margin-top: .5rem;
+            color: rgba(17, 24, 39, .54);
+        }
+
         @media (max-width: 1024px) {
-            .pc-hero-banner,
             .pc-split,
             .pc-final-panel {
                 grid-template-columns: 1fr;
@@ -444,26 +547,19 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .pc-floating-one {
-                right: 1rem;
-            }
-
-            .pc-floating-two {
-                left: 1rem;
+            .pc-store-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
         @media (max-width: 640px) {
-            .pc-hero-banner {
-                min-height: auto;
-            }
-
             .pc-hero-copy h1 {
-                max-width: 10ch;
+                max-width: 12ch;
+                font-size: clamp(2.65rem, 14vw, 4rem);
             }
 
-            .pc-hero-board {
-                min-height: 29rem;
+            .pc-hero-banner {
+                padding: 2rem 1rem;
             }
 
             .pc-home-grid {
@@ -472,6 +568,14 @@
 
             .pc-home-card {
                 min-height: 12rem;
+            }
+
+            .pc-store-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pc-store-card {
+                min-height: auto;
             }
         }
     </style>

@@ -4,11 +4,11 @@
 
     $branding = $tenant->branding;
 
-    $logo = $branding?->logo
-        ?: 'https://dummyimage.com/300x300/e5e7eb/111827&text=' . urlencode($tenant->name);
+    $logo = $branding?->logo && !str_contains($branding->logo, 'dummyimage.com')
+        ? $branding->logo
+        : asset('color-paychat-logo-main.svg');
 
-    $cover = $branding?->cover_image
-        ?: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1600&auto=format&fit=crop';
+    $cover = $branding?->cover_image;
 
     $address = $branding?->address ?: 'Partner Store';
 
@@ -79,24 +79,29 @@
     content="Order online from {{ $tenant->name }}"
 >
 <script type="application/ld+json">
-{!! json_encode([
-    '@context' => 'https://schema.org',
-    '@type' => 'Restaurant',
-    'name' => $tenant->name,
-    'image' => null,
-    'url' => request()->url(),
-    'logo' => $logo,
-    'description' => 'Order online from ' . $tenant->name . ' using PayChat POS.',
-    'address' => [
-        '@type' => 'PostalAddress',
-        'streetAddress' => $address,
-    ],
-    'aggregateRating' => [
-        '@type' => 'AggregateRating',
-        'ratingValue' => $avgRating ?: 5,
-        'reviewCount' => $totalReviews,
-    ],
-]) !!}
+@php
+    $schema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'LocalBusiness',
+        'name' => $tenant->name,
+        'url' => request()->url(),
+        'logo' => $logo,
+        'description' => 'Order online from ' . $tenant->name . ' using PayChat POS.',
+        'address' => [
+            '@type' => 'PostalAddress',
+            'streetAddress' => $address,
+        ],
+    ];
+
+    if ($totalReviews > 0) {
+        $schema['aggregateRating'] = [
+            '@type' => 'AggregateRating',
+            'ratingValue' => $avgRating,
+            'reviewCount' => $totalReviews,
+        ];
+    }
+@endphp
+{!! json_encode($schema) !!}
 </script>
 
     <title>
@@ -108,7 +113,7 @@
         content="Order online from {{ $tenant->name }} using PayChat POS."
     >
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -133,11 +138,15 @@
     <!-- COVER -->
     <div class="h-[320px] md:h-[420px] relative">
 
-        <img
-            src="{{ $cover }}"
-            alt="{{ $tenant->name }}"
-            class="absolute inset-0 w-full h-full object-cover"
-        >
+        @if($cover)
+            <img
+                src="{{ $cover }}"
+                alt="{{ $tenant->name }}"
+                class="absolute inset-0 w-full h-full object-cover"
+            >
+        @else
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(31,94,255,.24),transparent_32rem),linear-gradient(135deg,#ffffff_0%,#eef5ff_52%,#dfeeff_100%)]"></div>
+        @endif
 
         <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/20"></div>
 
@@ -191,7 +200,7 @@
 
                                 <!-- INDUSTRY -->
                                 <p class="text-lg text-indigo-600 font-medium mt-3">
-                                    {{ $tenant->industry ?? 'Restaurant & Cafe' }}
+                                    {{ $tenant->industry ?? 'Local business' }}
                                 </p>
 
                                 <!-- ADDRESS -->
@@ -204,13 +213,23 @@
 
                                     <div class="flex items-center gap-2">
 
-                                        <div class="flex text-amber-400 text-lg">
-                                            ★ ★ ★ ★ ★
-                                        </div>
+                                        @if($totalReviews > 0)
+                                            <div class="flex text-amber-400 text-lg">
+                                                @for($i = 1; $i <= 5; $i++)
+                                                    @if($i <= round($avgRating))
+                                                        ★
+                                                    @else
+                                                        <span class="text-gray-200">★</span>
+                                                    @endif
+                                                @endfor
+                                            </div>
 
-                                        <span class="font-bold text-slate-800">
-                                            {{ $avgRating ?: 'New' }}
-                                        </span>
+                                            <span class="font-bold text-slate-800">
+                                                {{ $avgRating }}
+                                            </span>
+                                        @else
+                                            <span class="font-bold text-slate-800">New on PayChat</span>
+                                        @endif
 
                                     </div>
 
@@ -251,12 +270,13 @@
                                 </p>
 
                                 <h3 class="text-3xl font-bold leading-tight mt-3">
-                                    Fresh food.
-                                    Fast ordering.
+                                    Browse.
+                                    Order.
+                                    Pay faster.
                                 </h3>
 
                                 <p class="text-indigo-100 mt-4 leading-relaxed">
-                                    Browse menu, place orders and enjoy seamless checkout directly from your phone.
+                                    Open the store page, browse available items and continue to the PayChat ordering flow.
                                 </p>
 
                                 <a
@@ -366,9 +386,17 @@
 
             <div>
 
-                <div class="text-amber-400">
-                    ★★★★★
-                </div>
+                @if($totalReviews > 0)
+                    <div class="text-amber-400">
+                        @for($i = 1; $i <= 5; $i++)
+                            @if($i <= round($avgRating))
+                                ★
+                            @else
+                                <span class="text-gray-200">★</span>
+                            @endif
+                        @endfor
+                    </div>
+                @endif
 
                 <p class="text-sm text-gray-500">
                     {{ $totalReviews }} reviews
@@ -441,7 +469,7 @@
                     <!-- REVIEW -->
                     <p class="text-gray-600 leading-relaxed mt-5">
 
-                        {{ $review->review_text ?: 'Great experience with fast ordering and smooth checkout.' }}
+                        {{ $review->review_text ?: 'No written comment provided.' }}
 
                     </p>
 
