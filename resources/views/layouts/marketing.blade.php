@@ -149,6 +149,96 @@
                 display: inline-flex;
             }
         }
+        .pc-footer {
+            border-top: 1px solid rgba(31, 94, 255, .1);
+            background: #f6f9ff;
+            padding: 3.5rem 0;
+        }
+        .pc-footer-grid {
+            display: grid;
+            grid-template-columns: 1.4fr .8fr .8fr .8fr;
+            gap: 2.25rem;
+            align-items: start;
+        }
+        .pc-footer-brand img {
+            height: 2.75rem;
+            width: auto;
+        }
+        .pc-footer-brand p {
+            max-width: 28rem;
+            margin-top: 1.25rem;
+            color: rgba(17, 24, 39, .62);
+            font-size: .875rem;
+            line-height: 1.75;
+        }
+        .pc-footer-brand a,
+        .pc-footer-links a,
+        .pc-footer-links button {
+            color: rgba(17, 24, 39, .62);
+            font-size: .875rem;
+            font-weight: 700;
+            transition: color .2s ease;
+        }
+        .pc-footer-brand a:hover,
+        .pc-footer-links a:hover,
+        .pc-footer-links button:hover {
+            color: #111827;
+        }
+        .pc-footer-brand .pc-footer-contact {
+            display: block;
+            margin-top: .75rem;
+            color: var(--pc-blue);
+            font-weight: 800;
+        }
+        .pc-footer-brand .pc-footer-email {
+            margin-top: .45rem;
+            color: rgba(17, 24, 39, .62);
+        }
+        .pc-footer-title {
+            color: #111827;
+            font-size: .875rem;
+            font-weight: 900;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+        .pc-footer-links {
+            display: grid;
+            gap: .85rem;
+            margin-top: 1rem;
+        }
+        .pc-footer-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 3rem;
+            border-top: 1px solid rgba(8, 17, 31, .1);
+            padding-top: 1.5rem;
+            color: rgba(17, 24, 39, .5);
+            font-size: .875rem;
+        }
+        .pc-footer-bottom p:last-child {
+            color: rgba(17, 24, 39, .45);
+            font-weight: 700;
+        }
+        @media (max-width: 900px) {
+            .pc-footer-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 640px) {
+            .pc-footer {
+                padding: 3rem 0;
+            }
+            .pc-footer-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+            .pc-footer-bottom {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
         @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
             .pc-site-nav,
             .pc-nav-pill {
@@ -280,25 +370,25 @@
         @yield('content')
     </main>
 
-    <footer class="border-t border-primary/10 bg-[#f6f9ff] py-14">
+    <footer class="pc-footer">
         <div class="pc-container">
-            <div class="grid gap-9 md:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr]">
-                <div>
+            <div class="pc-footer-grid">
+                <div class="pc-footer-brand">
                     <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat Logo" class="h-11 w-auto">
-                    <p class="mt-5 max-w-md text-sm leading-7 text-ink/62">
+                    <p>
                         Reliable billing software for cafes, restaurants, bakeries, salons and retail stores.
                     </p>
-                    <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more%20about%20your%20POS" target="_blank" rel="noopener noreferrer" class="mt-5 inline-flex text-sm font-bold text-primary hover:text-ink">
+                    <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more%20about%20your%20POS" target="_blank" rel="noopener noreferrer" class="pc-footer-contact">
                         WhatsApp: +91 98349 69229
                     </a>
-                    <a href="mailto:hello@paychat.shop" class="mt-2 block text-sm font-bold text-ink/60 hover:text-primary">
+                    <a href="mailto:hello@paychat.shop" class="pc-footer-contact pc-footer-email">
                         Email: hello@paychat.shop
                     </a>
                 </div>
 
                 <div>
-                    <h4 class="text-sm font-black uppercase tracking-wide text-ink">Product</h4>
-                    <ul class="mt-4 space-y-3 text-sm font-medium text-ink/58">
+                    <h4 class="pc-footer-title">Product</h4>
+                    <ul class="pc-footer-links">
                         <li><a href="{{ url('/features') }}" class="hover:text-ink">Features</a></li>
                         <li><a href="{{ url('/pricing') }}" class="hover:text-ink">Pricing</a></li>
                         <li><a href="{{ url('/guide') }}" class="hover:text-ink">Guide</a></li>
@@ -308,8 +398,8 @@
                 </div>
 
                 <div>
-                    <h4 class="text-sm font-black uppercase tracking-wide text-ink">For</h4>
-                    <ul class="mt-4 space-y-3 text-sm font-medium text-ink/58">
+                    <h4 class="pc-footer-title">For</h4>
+                    <ul class="pc-footer-links">
                         <li><a href="{{ url('/features') }}" class="hover:text-ink">Cafes</a></li>
                         <li><a href="{{ url('/features') }}" class="hover:text-ink">Restaurants</a></li>
                         <li><a href="{{ url('/features') }}" class="hover:text-ink">Bakeries</a></li>
@@ -319,8 +409,8 @@
                 </div>
 
                 <div>
-                    <h4 class="text-sm font-black uppercase tracking-wide text-ink">Company</h4>
-                    <ul class="mt-4 space-y-3 text-sm font-medium text-ink/58">
+                    <h4 class="pc-footer-title">Company</h4>
+                    <ul class="pc-footer-links">
                         <li><a href="{{ url('/about') }}" class="hover:text-ink">About</a></li>
                         <li><a href="{{ url('/contact') }}" class="hover:text-ink">Contact</a></li>
                         <li><button type="button" onclick="openModal('privacyModal')" class="hover:text-ink">Privacy Policy</button></li>
@@ -329,9 +419,9 @@
                 </div>
             </div>
 
-            <div class="mt-12 flex flex-col gap-4 border-t border-black/10 pt-6 text-sm text-ink/50 md:flex-row md:items-center md:justify-between">
+            <div class="pc-footer-bottom">
                 <p>&copy; 2026 PayChat. All rights reserved by Webspace Studio Pvt Ltd.</p>
-                <p class="font-medium text-ink/45">Built for everyday Indian counters.</p>
+                <p>Built for everyday Indian counters.</p>
             </div>
         </div>
     </footer>
