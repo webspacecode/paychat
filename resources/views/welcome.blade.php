@@ -171,12 +171,12 @@
             overflow: hidden;
             min-height: auto;
             background:
-                radial-gradient(circle at 50% 0%, rgba(31, 94, 255, .13), transparent 30rem),
-                linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
-            border: 1px solid rgba(31, 94, 255, .1);
+                radial-gradient(circle at 50% 0%, rgba(36, 99, 255, .1), transparent 30rem),
+                linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
+            border: 1px solid rgba(29, 29, 31, .08);
             border-radius: clamp(1.25rem, 3vw, 2rem);
             padding: clamp(2rem, 6vw, 5.5rem) clamp(1rem, 4vw, 3rem);
-            box-shadow: 0 34px 100px rgba(8, 17, 31, .08);
+            box-shadow: 0 28px 80px rgba(29, 29, 31, .06);
         }
 
         .pc-hero-banner::before {
@@ -184,8 +184,8 @@
             position: absolute;
             inset: 0;
             background-image:
-                linear-gradient(rgba(31, 94, 255, .08) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(31, 94, 255, .08) 1px, transparent 1px);
+                linear-gradient(rgba(36, 99, 255, .055) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(36, 99, 255, .055) 1px, transparent 1px);
             background-size: 54px 54px;
             mask-image: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent 72%);
             pointer-events: none;
@@ -207,11 +207,11 @@
             margin-left: auto;
             margin-right: auto;
             margin-top: 1.25rem;
-            color: #111827;
+            color: #1d1d1f;
             font-size: clamp(3rem, 7vw, 6.25rem);
-            font-weight: 900;
-            letter-spacing: -.055em;
-            line-height: .92;
+            font-weight: 700;
+            letter-spacing: 0;
+            line-height: 1.02;
         }
 
         .pc-hero-lede {
@@ -219,7 +219,7 @@
             margin-left: auto;
             margin-right: auto;
             margin-top: 1.5rem;
-            color: rgba(17, 24, 39, .66);
+            color: rgba(29, 29, 31, .66);
             font-size: clamp(1.05rem, 1.5vw, 1.25rem);
             line-height: 1.7;
         }
@@ -238,10 +238,10 @@
 
         .pc-device-frame {
             overflow: hidden;
-            border: 1px solid rgba(8, 17, 31, .08);
+            border: 1px solid rgba(29, 29, 31, .08);
             border-radius: clamp(1rem, 2.5vw, 1.65rem);
             background: rgba(255, 255, 255, .94);
-            box-shadow: 0 34px 90px rgba(8, 17, 31, .16);
+            box-shadow: 0 30px 70px rgba(29, 29, 31, .12);
         }
 
         .pc-device-frame img {
@@ -255,7 +255,7 @@
             display: flex;
             align-items: center;
             gap: .45rem;
-            border-bottom: 1px solid rgba(8, 17, 31, .08);
+            border-bottom: 1px solid rgba(29, 29, 31, .08);
             background: rgba(255, 255, 255, .9);
             padding: .85rem 1rem;
         }
@@ -273,9 +273,9 @@
 
         .pc-device-top strong {
             margin-left: auto;
-            color: rgba(17, 24, 39, .48);
+            color: rgba(29, 29, 31, .48);
             font-size: .74rem;
-            letter-spacing: .12em;
+            letter-spacing: 0;
             text-transform: uppercase;
         }
 
@@ -292,9 +292,9 @@
             border-radius: 999px;
             background: rgba(255, 255, 255, .82);
             padding: .55rem .85rem;
-            color: rgba(17, 24, 39, .62);
+            color: rgba(29, 29, 31, .62);
             font-size: .8rem;
-            font-weight: 850;
+            font-weight: 700;
         }
 
         .pc-home-card,
@@ -302,8 +302,8 @@
             border: 1px solid rgba(255, 255, 255, .72);
             background: rgba(255, 255, 255, .7);
             box-shadow:
-                0 24px 80px rgba(31, 94, 255, .13),
-                inset 0 1px 0 rgba(255, 255, 255, .85);
+                0 18px 54px rgba(29, 29, 31, .06),
+                inset 0 1px 0 rgba(255, 255, 255, .9);
             backdrop-filter: blur(24px);
         }
 
@@ -315,10 +315,10 @@
         }
 
         .pc-cloud-strip p {
-            color: rgba(17, 24, 39, .68);
+            color: rgba(29, 29, 31, .68);
             font-size: clamp(1rem, 1.6vw, 1.25rem);
-            font-weight: 800;
-            letter-spacing: -.01em;
+            font-weight: 600;
+            letter-spacing: 0;
             text-align: center;
         }
 
@@ -331,11 +331,11 @@
         .pc-split h2,
         .pc-final-panel h2 {
             margin-top: 1rem;
-            color: #111827;
+            color: #1d1d1f;
             font-size: clamp(2.5rem, 5vw, 4.6rem);
-            font-weight: 900;
-            letter-spacing: -.055em;
-            line-height: .95;
+            font-weight: 700;
+            letter-spacing: 0;
+            line-height: 1.05;
         }
 
         .pc-home-grid {
@@ -354,7 +354,7 @@
 
         .pc-home-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 30px 90px rgba(31, 94, 255, .14);
+            box-shadow: 0 22px 60px rgba(29, 29, 31, .08);
         }
 
         .pc-home-card > span {
@@ -367,22 +367,22 @@
 
         .pc-home-card h3 {
             margin-top: 3.2rem;
-            color: #111827;
+            color: #1d1d1f;
             font-size: 1.35rem;
-            font-weight: 900;
-            letter-spacing: -.03em;
+            font-weight: 700;
+            letter-spacing: 0;
         }
 
         .pc-home-card p,
         .pc-split p,
         .pc-final-panel p {
             margin-top: .8rem;
-            color: rgba(17, 24, 39, .62);
+            color: rgba(29, 29, 31, .62);
             line-height: 1.7;
         }
 
         .pc-soft-section {
-            background: linear-gradient(180deg, #f6f9ff, #ffffff);
+            background: linear-gradient(180deg, #f5f5f7, #ffffff);
         }
 
         .pc-split {
@@ -402,9 +402,9 @@
             border-radius: 1rem;
             background: rgba(255, 255, 255, .76);
             padding: 1rem 1.1rem;
-            color: rgba(17, 24, 39, .76);
-            font-weight: 900;
-            box-shadow: 0 18px 60px rgba(31, 94, 255, .07);
+            color: rgba(29, 29, 31, .76);
+            font-weight: 700;
+            box-shadow: 0 14px 42px rgba(29, 29, 31, .05);
             backdrop-filter: blur(18px);
         }
 
@@ -413,10 +413,10 @@
             grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
             gap: 2rem;
-            border-color: rgba(31, 94, 255, .12);
+            border-color: rgba(29, 29, 31, .08);
             border-radius: 1.6rem;
             background:
-                radial-gradient(circle at 16% 0%, rgba(31, 94, 255, .14), transparent 24rem),
+                radial-gradient(circle at 16% 0%, rgba(36, 99, 255, .1), transparent 24rem),
                 rgba(255, 255, 255, .78);
             padding: clamp(1.4rem, 4vw, 3rem);
         }
@@ -431,11 +431,11 @@
             display: flex;
             min-height: 22rem;
             flex-direction: column;
-            border: 1px solid rgba(31, 94, 255, .1);
+            border: 1px solid rgba(29, 29, 31, .08);
             border-radius: 1.25rem;
             background: #fff;
             padding: 1.2rem;
-            box-shadow: 0 18px 50px rgba(8, 17, 31, .06);
+            box-shadow: 0 14px 42px rgba(29, 29, 31, .05);
         }
 
         .pc-store-logo {
@@ -450,7 +450,7 @@
             background: #f6f9ff;
             color: #1F5EFF;
             font-size: 1.5rem;
-            font-weight: 900;
+            font-weight: 700;
         }
 
         .pc-store-logo img {
@@ -464,24 +464,24 @@
         }
 
         .pc-store-kicker {
-            color: rgba(31, 94, 255, .72);
+            color: rgba(36, 99, 255, .72);
             font-size: .75rem;
-            font-weight: 900;
-            letter-spacing: .11em;
+            font-weight: 700;
+            letter-spacing: 0;
             text-transform: uppercase;
         }
 
         .pc-store-body h3 {
             margin-top: .35rem;
-            color: #111827;
+            color: #1d1d1f;
             font-size: 1.35rem;
-            font-weight: 900;
-            letter-spacing: -.025em;
+            font-weight: 700;
+            letter-spacing: 0;
         }
 
         .pc-store-body p {
             margin-top: .65rem;
-            color: rgba(17, 24, 39, .58);
+            color: rgba(29, 29, 31, .58);
             font-size: .94rem;
             line-height: 1.65;
         }
@@ -491,11 +491,11 @@
             justify-content: space-between;
             gap: 1rem;
             margin-top: auto;
-            border-top: 1px solid rgba(8, 17, 31, .08);
+            border-top: 1px solid rgba(29, 29, 31, .08);
             padding-top: 1rem;
-            color: rgba(17, 24, 39, .5);
+            color: rgba(29, 29, 31, .5);
             font-size: .82rem;
-            font-weight: 800;
+            font-weight: 600;
         }
 
         .pc-store-link {
@@ -503,17 +503,17 @@
             justify-content: center;
             margin-top: 1rem;
             border-radius: .85rem;
-            background: #111827;
+            background: var(--pc-blue);
             padding: .9rem 1rem;
             color: #fff;
             font-size: .9rem;
-            font-weight: 900;
+            font-weight: 700;
             transition: transform .2s ease, background .2s ease;
         }
 
         .pc-store-link:hover {
             transform: translateY(-1px);
-            background: #1F5EFF;
+            background: var(--pc-blue-dark);
         }
 
         .pc-empty-store {
@@ -527,14 +527,14 @@
         }
 
         .pc-empty-store h3 {
-            color: #111827;
+            color: #1d1d1f;
             font-size: 1.2rem;
-            font-weight: 900;
+            font-weight: 700;
         }
 
         .pc-empty-store p {
             margin-top: .5rem;
-            color: rgba(17, 24, 39, .54);
+            color: rgba(29, 29, 31, .54);
         }
 
         @media (max-width: 1024px) {

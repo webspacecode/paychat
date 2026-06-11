@@ -21,23 +21,24 @@
     <meta name="twitter:description" content="{{ $description }}">
     <title>{{ $title }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --pc-blue: #1F5EFF;
-            --pc-blue-dark: #174BD2;
-            --pc-ink: #111827;
-            --pc-muted: rgba(17, 24, 39, .62);
-            --pc-line: rgba(31, 94, 255, .12);
-            --pc-paper: #F6F9FF;
-            --pc-bone: #EEF5FF;
+            --pc-blue: #2463ff;
+            --pc-blue-dark: #174ee6;
+            --pc-ink: #1d1d1f;
+            --pc-muted: rgba(29, 29, 31, .66);
+            --pc-line: rgba(29, 29, 31, .1);
+            --pc-paper: #f5f5f7;
+            --pc-bone: #fbfbfd;
             --pc-glass: rgba(255, 255, 255, .68);
         }
         html { scroll-behavior: smooth; }
         body {
-            background: linear-gradient(180deg, #ffffff 0%, #f7faff 44%, #ffffff 100%);
+            background: #fff;
             color: var(--pc-ink);
-            text-rendering: geometricPrecision;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
         }
         .pc-container { width: 100%; max-width: 80rem; margin-left: auto; margin-right: auto; padding-left: 1rem; padding-right: 1rem; }
         @media (min-width: 640px) { .pc-container { padding-left: 1.5rem; padding-right: 1.5rem; } }
@@ -52,17 +53,17 @@
             background: rgba(255, 255, 255, .72);
             padding: .55rem .85rem;
             border-radius: 999px;
-            color: rgba(17, 24, 39, .62);
-            font-size: .68rem;
-            font-weight: 800;
+            color: rgba(29, 29, 31, .58);
+            font-size: .72rem;
+            font-weight: 700;
             line-height: 1;
-            letter-spacing: .14em;
+            letter-spacing: 0;
             text-transform: uppercase;
             box-shadow: 0 10px 28px rgba(31, 94, 255, .06);
         }
-        .pc-title { font-size: 2.65rem; line-height: .98; font-weight: 850; letter-spacing: -.045em; }
-        .pc-page-title { font-size: 2.35rem; line-height: 1.02; font-weight: 850; letter-spacing: -.04em; }
-        .pc-section-title { font-size: 2.05rem; line-height: 1.05; font-weight: 850; letter-spacing: -.035em; }
+        .pc-title { font-size: 2.65rem; line-height: 1.03; font-weight: 700; letter-spacing: 0; }
+        .pc-page-title { font-size: 2.35rem; line-height: 1.05; font-weight: 700; letter-spacing: 0; }
+        .pc-section-title { font-size: 2.05rem; line-height: 1.08; font-weight: 700; letter-spacing: 0; }
         @media (min-width: 640px) {
             .pc-title { font-size: 4rem; }
             .pc-page-title { font-size: 3.35rem; }
@@ -75,9 +76,9 @@
         }
         .pc-card {
             border: 1px solid var(--pc-line);
-            border-radius: 1rem;
-            background: rgba(255, 255, 255, .92);
-            box-shadow: 0 18px 46px rgba(8, 17, 31, .06);
+            border-radius: 1.25rem;
+            background: rgba(255, 255, 255, .96);
+            box-shadow: 0 16px 40px rgba(29, 29, 31, .05);
             backdrop-filter: blur(18px);
         }
         .pc-panel {
@@ -95,7 +96,7 @@
             border-radius: 999px;
             padding: .9rem 1.3rem;
             font-size: .875rem;
-            font-weight: 800;
+            font-weight: 700;
             transition: transform .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
         }
         .pc-button:hover { transform: translateY(-1px); }
@@ -103,9 +104,9 @@
             outline: 3px solid rgba(31, 94, 255, .24);
             outline-offset: 2px;
         }
-        .pc-button-primary { background: var(--pc-blue); color: white; box-shadow: 0 18px 44px rgba(31, 94, 255, .24); }
+        .pc-button-primary { background: var(--pc-blue); color: white; box-shadow: 0 14px 34px rgba(36, 99, 255, .2); }
         .pc-button-primary:hover { background: var(--pc-blue-dark); }
-        .pc-button-secondary { border: 1px solid rgba(31, 94, 255, .16); background: rgba(255, 255, 255, .88); color: #08111F; }
+        .pc-button-secondary { border: 1px solid rgba(29, 29, 31, .12); background: rgba(255, 255, 255, .92); color: #1d1d1f; }
         .pc-button-secondary:hover { border-color: rgba(31, 94, 255, .32); background: #fff; }
         .pc-site-nav {
             position: sticky;
@@ -113,14 +114,14 @@
             z-index: 50;
             border-bottom: 1px solid rgba(8, 17, 31, .08);
             background: rgba(255, 255, 255, .88);
-            box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 12px 35px rgba(8, 17, 31, .05);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 10px 30px rgba(29, 29, 31, .04);
             backdrop-filter: saturate(180%) blur(22px);
             -webkit-backdrop-filter: saturate(180%) blur(22px);
         }
         .pc-nav-pill {
             border: 1px solid rgba(8, 17, 31, .08);
             background: rgba(255, 255, 255, .76);
-            box-shadow: 0 10px 28px rgba(8, 17, 31, .05);
+            box-shadow: 0 10px 28px rgba(29, 29, 31, .04);
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
         }
@@ -134,10 +135,10 @@
             padding: .75rem 1.25rem;
             color: #fff;
             font-size: .875rem;
-            font-weight: 800;
+            font-weight: 700;
             line-height: 1;
             white-space: nowrap;
-            box-shadow: 0 16px 38px rgba(31, 94, 255, .22);
+            box-shadow: 0 14px 34px rgba(36, 99, 255, .2);
             transition: transform .2s ease, background .2s ease;
         }
         .pc-nav-cta:hover {
@@ -151,7 +152,7 @@
         }
         .pc-footer {
             border-top: 1px solid rgba(31, 94, 255, .1);
-            background: #f6f9ff;
+            background: #f5f5f7;
             padding: 3.5rem 0;
         }
         .pc-footer-grid {
@@ -167,14 +168,14 @@
         .pc-footer-brand p {
             max-width: 28rem;
             margin-top: 1.25rem;
-            color: rgba(17, 24, 39, .62);
+            color: rgba(29, 29, 31, .64);
             font-size: .875rem;
             line-height: 1.75;
         }
         .pc-footer-brand a,
         .pc-footer-links a,
         .pc-footer-links button {
-            color: rgba(17, 24, 39, .62);
+            color: rgba(29, 29, 31, .62);
             font-size: .875rem;
             font-weight: 700;
             transition: color .2s ease;
@@ -182,23 +183,23 @@
         .pc-footer-brand a:hover,
         .pc-footer-links a:hover,
         .pc-footer-links button:hover {
-            color: #111827;
+            color: #1d1d1f;
         }
         .pc-footer-brand .pc-footer-contact {
             display: block;
             margin-top: .75rem;
             color: var(--pc-blue);
-            font-weight: 800;
+            font-weight: 700;
         }
         .pc-footer-brand .pc-footer-email {
             margin-top: .45rem;
-            color: rgba(17, 24, 39, .62);
+            color: rgba(29, 29, 31, .62);
         }
         .pc-footer-title {
-            color: #111827;
+            color: #1d1d1f;
             font-size: .875rem;
-            font-weight: 900;
-            letter-spacing: .05em;
+            font-weight: 700;
+            letter-spacing: 0;
             text-transform: uppercase;
         }
         .pc-footer-links {
@@ -214,11 +215,11 @@
             margin-top: 3rem;
             border-top: 1px solid rgba(8, 17, 31, .1);
             padding-top: 1.5rem;
-            color: rgba(17, 24, 39, .5);
+            color: rgba(29, 29, 31, .5);
             font-size: .875rem;
         }
         .pc-footer-bottom p:last-child {
-            color: rgba(17, 24, 39, .45);
+            color: rgba(29, 29, 31, .45);
             font-weight: 700;
         }
         @media (max-width: 900px) {
