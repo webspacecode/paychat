@@ -5,6 +5,14 @@
 
     RewriteEngine On
 
+    # Canonical marketing URLs
+    RewriteRule ^index\.html$ / [L,R=301]
+    RewriteRule ^features\.html$ /features [L,R=301]
+    RewriteRule ^pricing\.html$ /pricing [L,R=301]
+    RewriteRule ^about\.html$ /about [L,R=301]
+    RewriteRule ^contact\.html$ /contact [L,R=301]
+    RewriteRule ^login\.html$ /login [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

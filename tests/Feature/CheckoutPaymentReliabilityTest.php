@@ -262,6 +262,28 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame(data_get($order->meta, 'invoice.url'), $response['invoice_url']);
     }
 
+    public function test_offline_sync_preserves_offline_invoice_number(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+
+        $response = app(OfflineOrderSyncService::class)->sync(
+            app('currentTenant'),
+            $this->offlinePayload('local-preserve-invoice-1', $product, 'PC-OFF-000001')
+        );
+
+        $order = Order::findOrFail($response['backend_order_id']);
+        $invoice = Invoice::on('mysql')->where('uuid', 'PC-OFF-000001')->firstOrFail();
+
+        $this->assertTrue($response['success']);
+        $this->assertSame('PC-OFF-000001', $invoice->uuid);
+        $this->assertSame('PC-OFF-000001', $order->invoice_no);
+        $this->assertSame('PC-OFF-000001', data_get($order->meta, 'invoice.number'));
+        $this->assertSame('PC-OFF-000001', $response['invoice_number']);
+        $this->assertSame($invoice->id, $response['invoice_id']);
+    }
+
     public function test_offline_sync_reuses_existing_invoice(): void
     {
         $this->bindOfflineInvoiceService();
@@ -290,6 +312,73 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame(1, Invoice::on('mysql')->count());
         $this->assertSame(1, Order::count());
         $this->assertSame(1, Payment::count());
+    }
+
+    public function test_duplicate_offline_sync_with_preserved_invoice_returns_cached_response(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+        $payload = $this->offlinePayload('local-preserve-invoice-2', $product, 'PC-OFF-000002');
+
+        $first = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+        $second = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+
+        $this->assertSame(1, Invoice::on('mysql')->where('uuid', 'PC-OFF-000002')->count());
+        $this->assertSame(1, Order::count());
+        $this->assertSame(1, Payment::count());
+        $this->assertSame($first['backend_order_id'], $second['backend_order_id']);
+        $this->assertSame('PC-OFF-000002', $second['invoice_number']);
+        $this->assertSame($first['invoice_id'], $second['invoice_id']);
+        $this->assertSame($first['payment_id'], $second['payment_id']);
+        $this->assertSame($first['token_id'], $second['token_id']);
+    }
+
+    public function test_different_offline_order_cannot_reuse_existing_offline_invoice_number(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+
+        app(OfflineOrderSyncService::class)->sync(
+            app('currentTenant'),
+            $this->offlinePayload('local-preserve-conflict-1', $product, 'PC-OFF-CONFLICT')
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Offline invoice number already exists. Cannot change customer-facing invoice number.');
+
+        try {
+            app(OfflineOrderSyncService::class)->sync(
+                app('currentTenant'),
+                $this->offlinePayload('local-preserve-conflict-2', $product, 'PC-OFF-CONFLICT')
+            );
+        } finally {
+            $this->assertSame(1, Invoice::on('mysql')->where('uuid', 'PC-OFF-CONFLICT')->count());
+            $this->assertSame(1, Order::count());
+            $this->assertSame(1, Payment::count());
+        }
+    }
+
+    public function test_invalid_offline_invoice_number_fails_without_creating_order_payment_or_invoice(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = $this->offlineProduct();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid offline invoice number.');
+
+        try {
+            app(OfflineOrderSyncService::class)->sync(
+                app('currentTenant'),
+                $this->offlinePayload('local-invalid-invoice', $product, 'BAD NUMBER!')
+            );
+        } finally {
+            $this->assertSame(0, Invoice::on('mysql')->count());
+            $this->assertSame(0, Order::count());
+            $this->assertSame(0, Payment::count());
+        }
     }
 
     public function test_invoice_generation_failure_does_not_duplicate_order_or_payment(): void
@@ -490,9 +579,9 @@ class CheckoutPaymentReliabilityTest extends TestCase
         ]);
     }
 
-    private function offlinePayload(string $localOrderId, Product $product): array
+    private function offlinePayload(string $localOrderId, Product $product, ?string $offlineInvoiceNumber = null): array
     {
-        return [
+        $payload = [
             'local_order_id' => $localOrderId,
             'location_id' => 1,
             'order_type' => 'takeaway',
@@ -514,6 +603,14 @@ class CheckoutPaymentReliabilityTest extends TestCase
                 'reference' => 'offline-ref-'.$localOrderId,
             ],
         ];
+
+        if ($offlineInvoiceNumber !== null) {
+            $payload['invoice'] = [
+                'offline_invoice_number' => $offlineInvoiceNumber,
+            ];
+        }
+
+        return $payload;
     }
 
     private function bindOfflineInvoiceService(bool $fail = false): void
@@ -530,16 +627,51 @@ class CheckoutPaymentReliabilityTest extends TestCase
                 }
 
                 $orderId = data_get($order, 'id');
+                return $this->generateUsingNumber($order, $tenant, $industry, $paper, 'PC26-O'.$orderId);
+            }
+
+            public function generateWithPreferredInvoiceNumber($order, $tenant, $industry, $paper, string $preferredInvoiceNumber)
+            {
+                if ($this->fail) {
+                    throw new \RuntimeException('Simulated offline invoice failure');
+                }
+
+                return $this->generateUsingNumber($order, $tenant, $industry, $paper, $preferredInvoiceNumber);
+            }
+
+            private function generateUsingNumber($order, $tenant, $industry, $paper, string $invoiceNumber)
+            {
+                $orderId = data_get($order, 'id');
                 $invoice = Invoice::on('mysql')
                     ->where('tenant_id', $tenant->id)
                     ->where('order_id', $orderId)
                     ->first();
 
+                if ($invoice && $invoice->uuid !== $invoiceNumber) {
+                    throw new \RuntimeException('Offline invoice number already exists. Cannot change customer-facing invoice number.');
+                }
+
+                if (! $invoice) {
+                    $invoice = Invoice::on('mysql')->where('uuid', $invoiceNumber)->first();
+
+                    if ($invoice) {
+                        $invoiceLocalOrderId = data_get($invoice->order_data, 'meta.local_order_id');
+                        $incomingLocalOrderId = data_get($order, 'meta.local_order_id');
+
+                        if (
+                            (int) $invoice->tenant_id !== (int) $tenant->id ||
+                            ((int) $invoice->order_id !== (int) $orderId && (! $invoiceLocalOrderId || $invoiceLocalOrderId !== $incomingLocalOrderId))
+                        ) {
+                            throw new \RuntimeException('Offline invoice number already exists. Cannot change customer-facing invoice number.');
+                        }
+                    }
+                }
+
                 if (! $invoice) {
                     $invoice = Invoice::on('mysql')->create([
                         'tenant_id' => $tenant->id,
                         'order_id' => $orderId,
-                        'uuid' => 'PC26-O'.$orderId,
+                        'uuid' => $invoiceNumber,
                         'industry' => $industry,
                         'paper_size' => $paper,
                         'order_data' => $order,

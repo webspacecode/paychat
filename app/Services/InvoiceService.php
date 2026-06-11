@@ -18,11 +18,22 @@ class InvoiceService
 {
     public function generate($order,$tenant,$industry,$paper)
     {
+        return $this->generateInternal($order, $tenant, $industry, $paper);
+    }
+
+    public function generateWithPreferredInvoiceNumber($order, $tenant, $industry, $paper, string $preferredInvoiceNumber)
+    {
+        return $this->generateInternal($order, $tenant, $industry, $paper, $preferredInvoiceNumber);
+    }
+
+    private function generateInternal($order, $tenant, $industry, $paper, ?string $preferredInvoiceNumber = null)
+    {
         $startedAt = microtime(true);
         [$config, $template] = $this->resolveInvoiceTemplate($industry, $paper);
 
         $orderData = $this->normalizeOrder($order);
         $orderId = $this->extractOrderId($orderData);
+        $preferredInvoiceNumber = $this->normalizePreferredInvoiceNumber($preferredInvoiceNumber);
 
         if (!$orderId) {
             throw new \Exception("Order id missing");
@@ -45,12 +56,30 @@ class InvoiceService
         $existingInvoice = $this->findExistingInvoice($tenant->id, $orderId);
 
         if ($existingInvoice) {
+            if ($preferredInvoiceNumber && $existingInvoice->uuid !== $preferredInvoiceNumber) {
+                throw new \RuntimeException('Offline invoice number already exists. Cannot change customer-facing invoice number.');
+            }
+
             $this->attachExistingInvoiceToOrder($orderId, $existingInvoice);
 
             return $this->generatedView($existingInvoice->uuid);
         }
 
-        $uuid = $this->generateInvoiceNumber();
+        if ($preferredInvoiceNumber) {
+            $existingPreferredInvoice = $this->findInvoiceByNumber($preferredInvoiceNumber);
+
+            if ($existingPreferredInvoice) {
+                if ($this->canReusePreferredInvoice($existingPreferredInvoice, $tenant->id, $orderId, $orderData)) {
+                    $this->attachExistingInvoiceToOrder($orderId, $existingPreferredInvoice);
+
+                    return $this->generatedView($existingPreferredInvoice->uuid);
+                }
+
+                throw new \RuntimeException('Offline invoice number already exists. Cannot change customer-facing invoice number.');
+            }
+        }
+
+        $uuid = $preferredInvoiceNumber ?: $this->generateInvoiceNumber();
         $reviewToken = 'PCRV-' . strtoupper(Str::uuid()->toString());
 
         $orderData['review_token'] =  $reviewToken;
@@ -300,6 +329,57 @@ class InvoiceService
             })
             ->oldest()
             ->first();
+    }
+
+    private function findInvoiceByNumber(string $invoiceNumber): ?Invoice
+    {
+        return $this->invoiceQuery()
+            ->where('uuid', $invoiceNumber)
+            ->first();
+    }
+
+    private function canReusePreferredInvoice(Invoice $invoice, int $tenantId, int $orderId, array $orderData): bool
+    {
+        if ((int) $invoice->tenant_id !== $tenantId) {
+            return false;
+        }
+
+        if ((int) $invoice->order_id === $orderId) {
+            return true;
+        }
+
+        $invoiceOrderId = data_get($invoice->order_data, 'id');
+
+        if (is_numeric($invoiceOrderId) && (int) $invoiceOrderId === $orderId) {
+            return true;
+        }
+
+        $incomingLocalOrderId = data_get($orderData, 'meta.local_order_id');
+        $invoiceLocalOrderId = data_get($invoice->order_data, 'meta.local_order_id');
+
+        return $incomingLocalOrderId
+            && $invoiceLocalOrderId
+            && (string) $incomingLocalOrderId === (string) $invoiceLocalOrderId
+            && empty($invoice->order_id);
+    }
+
+    private function normalizePreferredInvoiceNumber(?string $invoiceNumber): ?string
+    {
+        if ($invoiceNumber === null) {
+            return null;
+        }
+
+        $invoiceNumber = trim($invoiceNumber);
+
+        if ($invoiceNumber === '') {
+            return null;
+        }
+
+        if (strlen($invoiceNumber) > 50 || ! preg_match('/^[A-Za-z0-9_\/-]+$/', $invoiceNumber)) {
+            throw new \InvalidArgumentException('Invalid offline invoice number.');
+        }
+
+        return $invoiceNumber;
     }
 
     private function invoiceQuery()

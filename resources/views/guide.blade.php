@@ -19,7 +19,7 @@
         <div class="pc-container py-14 lg:py-20">
             <div class="max-w-3xl">
                 <p class="pc-eyebrow">Training library</p>
-                <h1 class="pc-page-title mt-4 text-ink">PayChat POS Guide</h1>
+                <h1 class="pc-page-title mt-4 text-ink">PayChat POS guide.</h1>
                 <p class="mt-6 text-lg leading-8 text-ink/64">Short training videos for operators and cashiers covering billing, takeaway, delivery, dine-in tables and daily operations.</p>
             </div>
         </div>
@@ -28,8 +28,8 @@
     <section class="pc-section bg-white">
         <div class="pc-container grid gap-6 lg:grid-cols-2">
             @foreach ($videos as [$title, $description, $embed, $watch])
-                <article class="overflow-hidden rounded-xl border border-black/10 bg-white shadow-soft">
-                    <div class="aspect-video bg-ink">
+                <article class="overflow-hidden rounded-[1.6rem] border border-black/10 bg-white shadow-soft">
+                    <div class="aspect-video bg-[#eef5ff]">
                         <iframe class="h-full w-full" src="{{ $embed }}" title="{{ $title }}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
                     </div>
                     <div class="p-6">
@@ -44,12 +44,12 @@
 
     <section class="pb-20">
         <div class="pc-container">
-            <div class="rounded-xl border border-black/10 bg-ink p-6 text-white shadow-lift lg:p-10">
+            <div class="rounded-[2rem] border border-primary/10 bg-white/75 p-6 text-ink shadow-lift backdrop-blur lg:p-10">
                 <h2 class="pc-section-title">Need help getting started?</h2>
-                <p class="mt-4 max-w-2xl text-lg leading-8 text-white/64">Contact PayChat support or request a demo for guided setup.</p>
+                <p class="mt-4 max-w-2xl text-lg leading-8 text-ink/64">Contact PayChat support or request a demo for guided setup.</p>
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <a href="{{ url('/start-free-trial') }}" class="pc-button bg-white text-ink hover:bg-paper">Book Free Demo</a>
-                    <a href="{{ url('/login') }}" class="pc-button border border-white/15 text-white hover:bg-white/10">Open Login</a>
+                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
+                    <a href="{{ url('/login') }}" class="pc-button pc-button-secondary">Open Login</a>
                 </div>
             </div>
         </div>

@@ -80,7 +80,7 @@ class SyncOfflineOrderRequest extends FormRequest
             'totals.balance_amount' => ['nullable', 'numeric'],
 
             'invoice' => ['nullable', 'array'],
-            'invoice.offline_invoice_number' => ['nullable', 'string', 'max:100'],
+            'invoice.offline_invoice_number' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9_\/-]+$/'],
             'invoice.should_generate' => ['nullable', 'boolean'],
 
             'token' => ['nullable', 'array'],

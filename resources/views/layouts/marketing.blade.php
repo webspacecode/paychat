@@ -20,102 +20,119 @@
     <meta name="twitter:title" content="{{ $title }}">
     <meta name="twitter:description" content="{{ $description }}">
     <title>{{ $title }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3457d5',
-                        ink: '#090d18',
-                        paper: '#f8f8f3',
-                        bone: '#f1f0e8',
-                        line: '#e3e1d8',
-                        muted: '#606879',
-                        gold: '#b8914f'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    boxShadow: {
-                        soft: '0 18px 55px rgba(9, 13, 24, 0.07)',
-                        lift: '0 26px 90px rgba(9, 13, 24, 0.14)',
-                        glow: '0 20px 70px rgba(52, 87, 213, 0.16)'
-                    }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --pc-blue: #1F5EFF;
+            --pc-blue-dark: #174BD2;
+            --pc-ink: #111827;
+            --pc-muted: rgba(17, 24, 39, .62);
+            --pc-line: rgba(31, 94, 255, .12);
+            --pc-paper: #F6F9FF;
+            --pc-bone: #EEF5FF;
+            --pc-glass: rgba(255, 255, 255, .68);
+        }
         html { scroll-behavior: smooth; }
         body {
             background:
-                radial-gradient(circle at 18% -8%, rgba(52, 87, 213, .10), transparent 31rem),
-                radial-gradient(circle at 82% -10%, rgba(184, 145, 79, .10), transparent 28rem),
-                linear-gradient(180deg, #fbfbf7 0%, #f7f7f0 44%, #ffffff 100%);
-            color: #090d18;
+                radial-gradient(circle at 24% -10%, rgba(31, 94, 255, .18), transparent 34rem),
+                radial-gradient(circle at 88% 4%, rgba(31, 94, 255, .09), transparent 30rem),
+                linear-gradient(180deg, #ffffff 0%, #f6f9ff 48%, #ffffff 100%);
+            color: var(--pc-ink);
+            text-rendering: geometricPrecision;
         }
         .pc-container { width: 100%; max-width: 80rem; margin-left: auto; margin-right: auto; padding-left: 1rem; padding-right: 1rem; }
         @media (min-width: 640px) { .pc-container { padding-left: 1.5rem; padding-right: 1.5rem; } }
         @media (min-width: 1024px) { .pc-container { padding-left: 2rem; padding-right: 2rem; } }
-        .pc-section { padding-top: 5rem; padding-bottom: 5rem; }
-        @media (max-width: 640px) { .pc-section { padding-top: 3.5rem; padding-bottom: 3.5rem; } }
+        .pc-section { padding-top: 5.75rem; padding-bottom: 5.75rem; }
+        @media (max-width: 640px) { .pc-section { padding-top: 4rem; padding-bottom: 4rem; } }
         .pc-eyebrow {
             display: inline-flex;
             align-items: center;
             gap: .5rem;
-            border: 1px solid rgba(9, 13, 24, .1);
-            background: rgba(255, 255, 255, .74);
-            padding: .45rem .8rem;
+            border: 1px solid var(--pc-line);
+            background: rgba(255, 255, 255, .72);
+            padding: .55rem .85rem;
             border-radius: 999px;
-            color: rgba(9, 13, 24, .62);
+            color: rgba(17, 24, 39, .62);
             font-size: .68rem;
             font-weight: 800;
             line-height: 1;
             letter-spacing: .14em;
             text-transform: uppercase;
-            box-shadow: 0 10px 28px rgba(9, 13, 24, .045);
+            box-shadow: 0 10px 28px rgba(31, 94, 255, .06);
         }
-        .pc-title { font-size: 2.35rem; line-height: 1.04; font-weight: 850; }
-        .pc-page-title { font-size: 2.2rem; line-height: 1.08; font-weight: 850; }
-        .pc-section-title { font-size: 2rem; line-height: 1.12; font-weight: 850; }
+        .pc-title { font-size: 2.65rem; line-height: .98; font-weight: 850; letter-spacing: -.045em; }
+        .pc-page-title { font-size: 2.35rem; line-height: 1.02; font-weight: 850; letter-spacing: -.04em; }
+        .pc-section-title { font-size: 2.05rem; line-height: 1.05; font-weight: 850; letter-spacing: -.035em; }
         @media (min-width: 640px) {
-            .pc-title { font-size: 3.7rem; }
-            .pc-page-title { font-size: 3.25rem; }
-            .pc-section-title { font-size: 2.8rem; }
+            .pc-title { font-size: 4rem; }
+            .pc-page-title { font-size: 3.35rem; }
+            .pc-section-title { font-size: 2.95rem; }
         }
         @media (min-width: 1024px) {
-            .pc-title { font-size: 4.9rem; }
-            .pc-page-title { font-size: 4rem; }
-            .pc-section-title { font-size: 3.75rem; }
+            .pc-title { font-size: 5.25rem; }
+            .pc-page-title { font-size: 4.2rem; }
+            .pc-section-title { font-size: 3.8rem; }
         }
         .pc-card {
-            border: 1px solid rgba(9, 13, 24, .1);
-            background: rgba(255, 255, 255, .82);
-            box-shadow: 0 12px 36px rgba(9, 13, 24, .052);
-            backdrop-filter: blur(18px);
+            border: 1px solid var(--pc-line);
+            border-radius: 1.25rem;
+            background: rgba(255, 255, 255, .76);
+            box-shadow: 0 20px 60px rgba(31, 94, 255, .08);
+            backdrop-filter: blur(22px);
+        }
+        .pc-panel {
+            border: 1px solid var(--pc-line);
+            border-radius: 1.5rem;
+            background: rgba(255, 255, 255, .8);
+            box-shadow: 0 24px 80px rgba(31, 94, 255, .1);
+            backdrop-filter: blur(22px);
         }
         .pc-button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 3.25rem;
-            border-radius: .55rem;
-            padding: .85rem 1.15rem;
+            min-height: 3.35rem;
+            border-radius: 999px;
+            padding: .9rem 1.3rem;
             font-size: .875rem;
             font-weight: 800;
             transition: transform .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
         }
         .pc-button:hover { transform: translateY(-1px); }
         .pc-button:focus-visible {
-            outline: 3px solid rgba(52, 87, 213, .24);
+            outline: 3px solid rgba(31, 94, 255, .24);
             outline-offset: 2px;
         }
-        .pc-button-primary { background: #090d18; color: white; box-shadow: 0 18px 44px rgba(9, 13, 24, .16); }
-        .pc-button-primary:hover { background: #000; }
-        .pc-button-secondary { border: 1px solid rgba(9, 13, 24, .1); background: rgba(255, 255, 255, .88); color: #090d18; }
-        .pc-button-secondary:hover { border-color: rgba(9, 13, 24, .22); }
+        .pc-button-primary { background: var(--pc-blue); color: white; box-shadow: 0 18px 44px rgba(31, 94, 255, .24); }
+        .pc-button-primary:hover { background: var(--pc-blue-dark); }
+        .pc-button-secondary { border: 1px solid rgba(31, 94, 255, .16); background: rgba(255, 255, 255, .88); color: #08111F; }
+        .pc-button-secondary:hover { border-color: rgba(31, 94, 255, .32); background: #fff; }
+        .pc-input {
+            width: 100%;
+            border-radius: 1rem;
+            border: 1px solid rgba(8, 17, 31, .1);
+            background: #fff;
+            padding: 1rem 1.1rem;
+            font-size: .95rem;
+            font-weight: 600;
+            outline: none;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+        .pc-input:focus {
+            border-color: rgba(31, 94, 255, .58);
+            box-shadow: 0 0 0 4px rgba(31, 94, 255, .1);
+        }
+        .pc-dot {
+            display: inline-flex;
+            width: .55rem;
+            height: .55rem;
+            border-radius: 999px;
+            background: var(--pc-blue);
+            box-shadow: 0 0 0 5px rgba(31, 94, 255, .12);
+        }
         .pc-drawer {
             visibility: hidden;
             pointer-events: none;
@@ -139,7 +156,7 @@
             opacity: 1;
         }
         @media (max-width: 380px) {
-            .pc-title { font-size: 2.1rem; }
+            .pc-title { font-size: 2.25rem; }
             .pc-page-title { font-size: 2rem; }
             .pc-section-title { font-size: 1.85rem; }
             .pc-button { width: 100%; }
@@ -153,25 +170,25 @@
     @stack('head')
 </head>
 <body class="font-sans antialiased">
-    <nav class="sticky top-0 z-50 border-b border-black/10 bg-[#fbfbf7]/86 backdrop-blur-2xl">
-        <div class="pc-container flex h-16 items-center justify-between lg:h-[4.5rem]">
+    <nav class="sticky top-0 z-50 border-b border-white/50 bg-white/55 shadow-[0_1px_0_rgba(255,255,255,.65)_inset,0_16px_40px_rgba(31,94,255,.07)] backdrop-blur-2xl">
+        <div class="pc-container flex h-16 items-center justify-between lg:h-[4.35rem]">
             <a href="{{ url('/') }}" class="flex items-center gap-3" aria-label="PayChat home">
-                <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat Logo" class="h-9 w-auto lg:h-11">
+                <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat Logo" class="h-8 w-auto lg:h-10">
             </a>
 
-            <div class="hidden items-center gap-1 rounded-full border border-black/10 bg-white/68 p-1 text-sm font-semibold text-ink/62 shadow-[0_10px_30px_rgba(9,13,24,0.045)] lg:flex">
-                <a href="{{ url('/features') }}" class="rounded-full px-4 py-2 transition hover:bg-ink hover:text-white">Features</a>
-                <a href="{{ url('/pricing') }}" class="rounded-full px-4 py-2 transition hover:bg-ink hover:text-white">Pricing</a>
-                <a href="{{ url('/guide') }}" class="rounded-full px-4 py-2 transition hover:bg-ink hover:text-white">Guide</a>
-                <a href="{{ url('/about') }}" class="rounded-full px-4 py-2 transition hover:bg-ink hover:text-white">About</a>
-                <a href="{{ url('/contact') }}" class="rounded-full px-4 py-2 transition hover:bg-ink hover:text-white">Contact</a>
+            <div class="hidden items-center gap-1 rounded-full border border-white/70 bg-white/58 p-1 text-sm font-semibold text-ink/62 shadow-[0_10px_30px_rgba(31,94,255,0.08)] backdrop-blur-2xl lg:flex">
+                <a href="{{ url('/features') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">Features</a>
+                <a href="{{ url('/pricing') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">Pricing</a>
+                <a href="{{ url('/guide') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">Guide</a>
+                <a href="{{ url('/about') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">About</a>
+                <a href="{{ url('/contact') }}" class="rounded-full px-4 py-2 transition hover:bg-white hover:text-primary hover:shadow-[0_8px_24px_rgba(31,94,255,.08)]">Contact</a>
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="{{ url('/start-free-trial') }}" class="hidden rounded-md bg-ink px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-black sm:inline-flex">
-                    Book Free Demo
+                <a href="{{ url('/start-free-trial') }}" class="hidden rounded-full bg-primary px-5 py-3 text-sm font-bold text-white shadow-[0_16px_38px_rgba(31,94,255,.22)] transition hover:-translate-y-0.5 hover:bg-[#174bd2] sm:inline-flex">
+                    Start Free Trial
                 </a>
-                <button type="button" onclick="openDrawer()" class="rounded-md border border-black/10 bg-white/70 p-2 text-ink shadow-soft transition hover:bg-white lg:hidden" aria-label="Open navigation">
+                <button type="button" onclick="openDrawer()" class="rounded-full border border-black/10 bg-white/80 p-2 text-ink shadow-soft transition hover:bg-white lg:hidden" aria-label="Open navigation">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/>
                     </svg>
@@ -185,7 +202,7 @@
         <aside class="pc-drawer-panel absolute bottom-0 right-0 top-0 flex w-[min(88vw,24rem)] flex-col border-l border-black/10 bg-paper shadow-lift">
             <div class="flex h-16 items-center justify-between border-b border-black/10 px-5">
                 <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat Logo" class="h-9 w-auto">
-                <button type="button" onclick="closeDrawer()" class="flex h-10 w-10 items-center justify-center rounded-md border border-black/10 bg-white text-ink" aria-label="Close navigation">
+                <button type="button" onclick="closeDrawer()" class="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-ink" aria-label="Close navigation">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M18 6L6 18"/>
                     </svg>
@@ -200,7 +217,7 @@
                         ['About', '/about', 'Founder-led product'],
                         ['Contact', '/contact', 'Talk to PayChat'],
                     ] as [$label, $path, $hint])
-                        <a href="{{ url($path) }}" class="block rounded-lg border border-black/10 bg-white/80 p-4 shadow-soft transition hover:border-black/20">
+                        <a href="{{ url($path) }}" class="block rounded-2xl border border-primary/10 bg-white/82 p-4 shadow-soft transition hover:border-primary/30 hover:bg-white">
                             <span class="block text-base font-black text-ink">{{ $label }}</span>
                             <span class="mt-1 block text-sm font-medium text-ink/54">{{ $hint }}</span>
                         </a>
@@ -208,7 +225,7 @@
                 </div>
             </div>
             <div class="border-t border-black/10 p-5">
-                <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary w-full">Book Free Demo</a>
+                <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary w-full">Start Free Trial</a>
                 <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more" target="_blank" rel="noopener noreferrer" class="pc-button pc-button-secondary mt-3 w-full">WhatsApp PayChat</a>
             </div>
         </aside>
@@ -218,15 +235,17 @@
         @yield('content')
     </main>
 
-    <footer class="border-t border-black/10 bg-paper py-14">
+    <footer class="border-t border-primary/10 bg-[#f6f9ff] py-14">
         <div class="pc-container">
-            <div class="grid gap-8 md:grid-cols-4">
-                <div class="md:col-span-2">
+            <div class="grid gap-9 md:grid-cols-[1.4fr_0.8fr_0.8fr_0.8fr]">
+                <div>
                     <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat Logo" class="h-11 w-auto">
                     <p class="mt-5 max-w-md text-sm leading-7 text-ink/62">
-                        Simple POS for everyday business. Billing, orders, tokens, paperless invoices and reports in one clean system.
+                        Reliable billing software for cafes, restaurants, bakeries, salons and retail stores.
                     </p>
-                    <p class="mt-5 text-xs font-bold uppercase tracking-wide text-ink/38">Built by Webspace Studio Pvt Ltd</p>
+                    <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more%20about%20your%20POS" target="_blank" rel="noopener noreferrer" class="mt-5 inline-flex text-sm font-bold text-primary hover:text-ink">
+                        WhatsApp: +91 98349 69229
+                    </a>
                 </div>
 
                 <div>
@@ -235,8 +254,19 @@
                         <li><a href="{{ url('/features') }}" class="hover:text-ink">Features</a></li>
                         <li><a href="{{ url('/pricing') }}" class="hover:text-ink">Pricing</a></li>
                         <li><a href="{{ url('/guide') }}" class="hover:text-ink">Guide</a></li>
-                        <li><a href="{{ url('/start-free-trial') }}" class="hover:text-ink">Book Free Demo</a></li>
+                        <li><a href="{{ url('/start-free-trial') }}" class="hover:text-ink">Start Free Trial</a></li>
                         <li><a href="{{ url('/login') }}" class="hover:text-ink">Shop Login</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-black uppercase tracking-wide text-ink">For</h4>
+                    <ul class="mt-4 space-y-3 text-sm font-medium text-ink/58">
+                        <li><a href="{{ url('/features') }}" class="hover:text-ink">Cafes</a></li>
+                        <li><a href="{{ url('/features') }}" class="hover:text-ink">Restaurants</a></li>
+                        <li><a href="{{ url('/features') }}" class="hover:text-ink">Bakeries</a></li>
+                        <li><a href="{{ url('/features') }}" class="hover:text-ink">Salons</a></li>
+                        <li><a href="{{ url('/features') }}" class="hover:text-ink">Retail shops</a></li>
                     </ul>
                 </div>
 
@@ -252,10 +282,8 @@
             </div>
 
             <div class="mt-12 flex flex-col gap-4 border-t border-black/10 pt-6 text-sm text-ink/50 md:flex-row md:items-center md:justify-between">
-                <p>&copy; 2026 PayChat. All rights reserved.</p>
-                <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more%20about%20your%20POS" target="_blank" rel="noopener noreferrer" class="font-semibold text-ink hover:text-primary">
-                    WhatsApp: +91 98349 69229
-                </a>
+                <p>&copy; 2026 PayChat. All rights reserved by Webspace Studio Pvt Ltd.</p>
+                <p class="font-medium text-ink/45">Built for everyday Indian counters.</p>
             </div>
         </div>
     </footer>

@@ -12,18 +12,18 @@
                 <h1 class="pc-page-title mt-6 text-ink">Start your PayChat POS trial.</h1>
                 <p class="mt-6 max-w-xl text-lg leading-8 text-ink/64">Get a walkthrough for fast billing, QR ordering, dine-in table service, KOT, payments, invoices, inventory and reports.</p>
                 <div class="mt-8 grid gap-3 sm:grid-cols-2">
-                    <div class="pc-card rounded-lg p-5">
-                        <p class="text-3xl font-black text-ink">30</p>
-                        <p class="mt-1 text-sm font-semibold text-ink/55">day trial access</p>
+                    <div class="pc-card p-5">
+                        <p class="text-3xl font-black text-ink">Fit</p>
+                        <p class="mt-1 text-sm font-semibold text-ink/55">check before setup</p>
                     </div>
-                    <div class="pc-card rounded-lg p-5">
-                        <p class="text-3xl font-black text-ink">GST</p>
-                        <p class="mt-1 text-sm font-semibold text-ink/55">ready invoice flow</p>
+                    <div class="pc-card p-5">
+                        <p class="text-3xl font-black text-ink">Flow</p>
+                        <p class="mt-1 text-sm font-semibold text-ink/55">mapped to your counter</p>
                     </div>
                 </div>
             </div>
 
-            <section class="pc-card rounded-xl p-6 lg:p-8" aria-labelledby="trial-form-title">
+            <section class="pc-card p-6 lg:p-8" aria-labelledby="trial-form-title">
                 <div class="mb-7">
                     <h2 id="trial-form-title" class="text-2xl font-black text-ink">Tell us about your business</h2>
                     <p class="mt-2 text-sm font-medium text-ink/55">We usually respond within a few hours via WhatsApp or phone.</p>
@@ -32,24 +32,24 @@
                 <form id="trialForm" class="space-y-5">
                     <div>
                         <label for="demoName" class="mb-2 block text-sm font-bold text-ink/70">Name *</label>
-                        <input id="demoName" name="name" type="text" required placeholder="Your name" class="w-full rounded-md border border-black/10 px-4 py-4 outline-none transition focus:border-ink">
+                        <input id="demoName" name="name" type="text" required placeholder="Your name" class="pc-input">
                     </div>
                     <div>
                         <label for="demoBusiness" class="mb-2 block text-sm font-bold text-ink/70">Business Name *</label>
-                        <input id="demoBusiness" name="business_name" type="text" required placeholder="Cafe Mocha" class="w-full rounded-md border border-black/10 px-4 py-4 outline-none transition focus:border-ink">
+                        <input id="demoBusiness" name="business_name" type="text" required placeholder="Cafe Mocha" class="pc-input">
                     </div>
                     <div>
                         <label for="demoPhone" class="mb-2 block text-sm font-bold text-ink/70">Phone Number *</label>
-                        <input id="demoPhone" name="phone" type="tel" required placeholder="+91 XXXXX XXXXX" class="w-full rounded-md border border-black/10 px-4 py-4 outline-none transition focus:border-ink">
+                        <input id="demoPhone" name="phone" type="tel" required placeholder="+91 XXXXX XXXXX" class="pc-input">
                     </div>
                     <div>
                         <label for="demoEmail" class="mb-2 block text-sm font-bold text-ink/70">Email</label>
-                        <input id="demoEmail" name="email" type="email" placeholder="you@example.com" class="w-full rounded-md border border-black/10 px-4 py-4 outline-none transition focus:border-ink">
+                        <input id="demoEmail" name="email" type="email" placeholder="you@example.com" class="pc-input">
                     </div>
                     <div class="grid gap-5 md:grid-cols-2">
                         <div>
                             <label for="demoBusinessType" class="mb-2 block text-sm font-bold text-ink/70">Business Type</label>
-                            <select id="demoBusinessType" name="business_type" class="w-full rounded-md border border-black/10 px-4 py-4 outline-none transition focus:border-ink">
+                            <select id="demoBusinessType" name="business_type" class="pc-input">
                                 <option value="">Select</option>
                                 <option>Cafe</option>
                                 <option>Restaurant</option>
@@ -62,7 +62,7 @@
                         </div>
                         <div>
                             <label for="demoCounters" class="mb-2 block text-sm font-bold text-ink/70">Number of Counters</label>
-                            <select id="demoCounters" name="counters" class="w-full rounded-md border border-black/10 px-4 py-4 outline-none transition focus:border-ink">
+                            <select id="demoCounters" name="counters" class="pc-input">
                                 <option value="">Select</option>
                                 <option>1 Counter</option>
                                 <option>2-3 Counters</option>
@@ -73,7 +73,7 @@
                     </div>
                     <div>
                         <label for="demoDate" class="mb-2 block text-sm font-bold text-ink/70">Preferred Demo Time *</label>
-                        <input id="demoDate" name="preferred_demo_time" type="datetime-local" required class="w-full rounded-md border border-black/10 px-4 py-4 outline-none transition focus:border-ink">
+                        <input id="demoDate" name="preferred_demo_time" type="datetime-local" required class="pc-input">
                     </div>
                     <div id="trialMessage" class="hidden rounded-md p-4 text-sm font-semibold"></div>
                     <button id="trialSubmitBtn" type="submit" class="pc-button pc-button-primary w-full">Start Free Trial</button>

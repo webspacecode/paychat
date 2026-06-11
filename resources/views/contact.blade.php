@@ -11,19 +11,19 @@
                 <p class="pc-eyebrow">Contact</p>
                 <h1 class="pc-page-title mt-4 text-ink">Talk to PayChat.</h1>
                 <p class="mt-6 max-w-xl text-lg leading-8 text-ink/64">Tell us about your business and we will help you understand the right billing, ordering, token and invoice setup.</p>
-                <div class="pc-card mt-8 rounded-lg p-5">
+                <div class="pc-card mt-8 p-5">
                     <p class="text-sm font-black uppercase tracking-wide text-ink/40">Direct WhatsApp</p>
                     <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex text-lg font-black text-ink hover:text-primary">+91 98349 69229</a>
                 </div>
             </div>
 
-            <section class="pc-card rounded-xl p-6 lg:p-8" aria-labelledby="contact-form-title">
+            <section class="pc-card p-6 lg:p-8" aria-labelledby="contact-form-title">
                 <h2 id="contact-form-title" class="text-2xl font-black text-ink">Send your details</h2>
                 <p class="mt-2 text-sm leading-6 text-ink/55">This opens WhatsApp with your message ready to send.</p>
                 <div class="mt-7 space-y-4">
-                    <input id="name" placeholder="Your name *" class="w-full rounded-md border border-black/10 bg-white px-4 py-4 text-sm font-medium outline-none transition focus:border-ink">
-                    <input id="phone" placeholder="Phone number *" class="w-full rounded-md border border-black/10 bg-white px-4 py-4 text-sm font-medium outline-none transition focus:border-ink">
-                    <input id="business" placeholder="Business name" class="w-full rounded-md border border-black/10 bg-white px-4 py-4 text-sm font-medium outline-none transition focus:border-ink">
+                    <input id="name" placeholder="Your name *" class="pc-input">
+                    <input id="phone" placeholder="Phone number *" class="pc-input">
+                    <input id="business" placeholder="Business name" class="pc-input">
                     <button type="button" onclick="sendWhatsApp()" class="pc-button w-full bg-[#25D366] text-white hover:bg-[#1fb95a]">Send on WhatsApp</button>
                 </div>
             </section>

@@ -9,8 +9,8 @@
         <div class="pc-container py-14 lg:py-20">
             <div class="max-w-3xl">
                 <p class="pc-eyebrow">Pricing</p>
-                <h1 class="pc-page-title mt-4 text-ink">Simple plans based on how your counter works.</h1>
-                <p class="mt-6 text-lg leading-8 text-ink/64">Start with the workflow you need today. PayChat can support single counters, QR ordering, inventory, tokens and multi-branch operations as your business grows.</p>
+                <h1 class="pc-page-title mt-4 text-ink">Simple pricing, matched to your counter.</h1>
+                <p class="mt-6 text-lg leading-8 text-ink/64">PayChat is still founder-led, so we confirm the right plan after understanding your outlet, counters and workflows. Clear pricing follows a real fit check.</p>
             </div>
         </div>
     </section>
@@ -19,26 +19,26 @@
         <div class="pc-container">
             <div class="grid gap-4 lg:grid-cols-3">
                 @foreach([
-                    ['Starter', 'For small shops starting with billing.', ['Limited orders', 'Vendor POS', 'Basic reports', 'Guided setup']],
-                    ['Growth', 'For busier outlets adding ordering and stock.', ['Higher order limits', 'QR self ordering', 'Inventory management', 'Sales reports']],
-                    ['Pro', 'For multi-counter and scaling teams.', ['Unlimited order workflows', 'Multi-branch support', 'Token system', 'Custom feature guidance']],
+                    ['Starter', 'For a single outlet that needs clean billing first.', ['Counter POS setup', 'Payment tracking', 'Basic reports', 'Guided onboarding']],
+                    ['Growth', 'For busier outlets adding ordering and stock control.', ['QR or table ordering', 'Inventory workflow', 'Invoices and tokens', 'Sales reports']],
+                    ['Pro', 'For teams with multiple counters or more complex service flow.', ['Multi-counter workflow', 'KOT and table flow', 'Customer records', 'Custom setup guidance']],
                 ] as [$plan, $summary, $features])
-                    <article class="rounded-xl border {{ $plan === 'Growth' ? 'border-ink bg-ink text-white shadow-lift' : 'border-black/10 bg-white/88 text-ink shadow-soft' }} p-6 backdrop-blur lg:p-8">
+                    <article class="rounded-[1.6rem] border {{ $plan === 'Growth' ? 'border-primary bg-[#eef5ff] text-ink shadow-lift' : 'border-primary/10 bg-white/90 text-ink shadow-soft' }} p-6 backdrop-blur lg:p-8">
                         @if($plan === 'Growth')
-                            <p class="mb-4 inline-flex rounded-full border border-white/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white/65">Often a good fit</p>
+                            <p class="mb-4 inline-flex rounded-full border border-primary/15 bg-white/70 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary/70">Often a good fit</p>
                         @endif
                         <h2 class="text-2xl font-black">{{ $plan }}</h2>
-                        <p class="mt-3 text-sm leading-6 {{ $plan === 'Growth' ? 'text-white/64' : 'text-ink/62' }}">{{ $summary }}</p>
-                        <ul class="mt-6 space-y-3 text-sm font-semibold {{ $plan === 'Growth' ? 'text-white/78' : 'text-ink/68' }}">
+                        <p class="mt-3 text-sm leading-6 text-ink/62">{{ $summary }}</p>
+                        <ul class="mt-6 space-y-3 text-sm font-semibold text-ink/68">
                             @foreach($features as $feature)
-                                <li class="flex gap-3"><span class="{{ $plan === 'Growth' ? 'text-white' : 'text-primary' }}">✓</span>{{ $feature }}</li>
+                                <li class="flex gap-3"><span class="text-primary">✓</span>{{ $feature }}</li>
                             @endforeach
                         </ul>
-                        <a href="{{ url('/contact') }}" class="pc-button mt-8 w-full {{ $plan === 'Growth' ? 'bg-white text-ink hover:bg-paper' : 'bg-ink text-white hover:bg-black' }}">Contact Sales</a>
+                        <a href="{{ url('/contact') }}" class="pc-button mt-8 w-full pc-button-primary">Contact Sales</a>
                     </article>
                 @endforeach
             </div>
-            <p class="mt-8 text-center text-sm leading-6 text-ink/55">Pricing is confirmed after understanding counters, order volume and required modules. No fake calculator, just a clear conversation.</p>
+            <p class="mt-8 text-center text-sm leading-6 text-ink/55">Pricing is shared after a short fit check so the plan reflects your real counter, menu, service flow and modules.</p>
         </div>
     </section>
 @endsection

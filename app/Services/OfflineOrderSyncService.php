@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Http\Resources\Tenant\OrderResource;
+use App\Models\Invoice;
 use App\Models\OfflineOrderSync;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Order;
@@ -31,6 +32,7 @@ class OfflineOrderSyncService
 
     public function sync($tenant, array $payload): array
     {
+        $preferredInvoiceNumber = $this->normalizeOfflineInvoiceNumber($payload);
         $sync = $this->firstOrCreateSyncRecord($tenant, $payload);
 
         if (! $sync->wasRecentlyCreated) {
@@ -70,11 +72,13 @@ class OfflineOrderSyncService
         }
 
         try {
+            $this->assertPreferredInvoiceNumberAvailable($tenant, $payload, $preferredInvoiceNumber, $sync);
+
             $result = DB::transaction(function () use ($payload) {
                 return $this->replayOrder($payload);
             });
 
-            $order = $this->generateInvoiceAfterSync($tenant, $payload, $result['order']);
+            $order = $this->generateInvoiceAfterSync($tenant, $payload, $result['order'], $preferredInvoiceNumber);
             $response = $this->buildResponse($payload, $order, $result['payment']);
 
             $sync->update([
@@ -359,12 +363,76 @@ class OfflineOrderSyncService
         ];
     }
 
-    private function generateInvoiceAfterSync($tenant, array $payload, Order $order): Order
+    private function normalizeOfflineInvoiceNumber(array $payload): ?string
+    {
+        $invoiceNumber = $payload['invoice']['offline_invoice_number'] ?? null;
+
+        if ($invoiceNumber === null) {
+            return null;
+        }
+
+        $invoiceNumber = trim((string) $invoiceNumber);
+
+        if ($invoiceNumber === '') {
+            return null;
+        }
+
+        if (strlen($invoiceNumber) > 50 || ! preg_match('/^[A-Za-z0-9_\/-]+$/', $invoiceNumber)) {
+            throw new \InvalidArgumentException('Invalid offline invoice number.');
+        }
+
+        return $invoiceNumber;
+    }
+
+    private function assertPreferredInvoiceNumberAvailable($tenant, array $payload, ?string $preferredInvoiceNumber, OfflineOrderSync $sync): void
+    {
+        if (! $preferredInvoiceNumber) {
+            return;
+        }
+
+        $existingInvoice = Invoice::on(Invoice::CENTRAL_CONNECTION)
+            ->where('uuid', $preferredInvoiceNumber)
+            ->first();
+
+        if (! $existingInvoice) {
+            return;
+        }
+
+        if ((int) $existingInvoice->tenant_id !== (int) $tenant->id) {
+            throw new \RuntimeException('Offline invoice number already exists. Cannot change customer-facing invoice number.');
+        }
+
+        if ($sync->backend_order_id && (int) $existingInvoice->order_id === (int) $sync->backend_order_id) {
+            return;
+        }
+
+        $invoiceLocalOrderId = data_get($existingInvoice->order_data, 'meta.local_order_id');
+
+        if ($invoiceLocalOrderId && (string) $invoiceLocalOrderId === (string) $payload['local_order_id']) {
+            return;
+        }
+
+        throw new \RuntimeException('Offline invoice number already exists. Cannot change customer-facing invoice number.');
+    }
+
+    private function generateInvoiceAfterSync($tenant, array $payload, Order $order, ?string $preferredInvoiceNumber = null): Order
     {
         $order = $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'token');
 
         if ($order->invoice_id || $order->invoice_no) {
             return $order;
+        }
+
+        if ($preferredInvoiceNumber) {
+            $this->invoiceService->generateWithPreferredInvoiceNumber(
+                (new OrderResource($order))->resolve(),
+                $tenant,
+                $tenant->industry,
+                $this->defaultInvoicePaperSize((string) $tenant->industry),
+                $preferredInvoiceNumber
+            );
+
+            return $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'token');
         }
 
         try {

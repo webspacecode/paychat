@@ -9,10 +9,10 @@
         <div class="pc-container py-14 lg:py-20">
             <div class="max-w-3xl">
                 <p class="pc-eyebrow">Features</p>
-                <h1 class="pc-page-title mt-4 text-ink">Everything a busy counter needs to bill clearly.</h1>
-                <p class="mt-6 text-lg leading-8 text-ink/64">PayChat keeps billing, orders, tokens, customer invoices and reports in one practical POS system for cafes, salons, restaurants and local shops.</p>
+                <h1 class="pc-page-title mt-4 text-ink">Clean POS tools for busy counters.</h1>
+                <p class="mt-6 text-lg leading-8 text-ink/64">PayChat keeps billing, orders, tokens, customer invoices and reports in one practical system for cafes, salons, restaurants and local shops.</p>
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Book Free Demo</a>
+                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
                     <a href="{{ url('/contact') }}" class="pc-button pc-button-secondary">Talk to PayChat</a>
                 </div>
             </div>
@@ -33,8 +33,8 @@
                     ['Dine-In Flow', 'Support table orders, KOT batches and final billing for restaurants.'],
                     ['Customer Records', 'Keep useful customer details for repeat visits and invoice history.'],
                 ] as [$title, $body])
-                    <article class="pc-card rounded-lg p-6">
-                        <div class="mb-5 h-1.5 w-10 rounded-full bg-primary/80"></div>
+                    <article class="pc-card p-6">
+                        <div class="mb-5 h-2 w-12 rounded-full bg-primary"></div>
                         <h2 class="text-xl font-black text-ink">{{ $title }}</h2>
                         <p class="mt-3 text-sm leading-6 text-ink/62">{{ $body }}</p>
                     </article>
@@ -43,17 +43,17 @@
         </div>
     </section>
 
-    <section class="border-y border-black/10 bg-ink py-16 text-white">
+    <section class="border-y border-primary/10 bg-[#eef5ff] py-16 text-ink">
         <div class="pc-container grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <div>
-                <p class="text-sm font-black uppercase tracking-[0.18em] text-white/55">Daily workflows</p>
+                <p class="text-sm font-black uppercase tracking-[0.18em] text-primary/65">Daily workflows</p>
                 <h2 class="pc-section-title mt-4">Built for real counters, not just dashboards.</h2>
-                <p class="mt-5 text-lg leading-8 text-white/64">Staff get simple screens for billing and orders. Owners get reports and control without adding separate tools for every small workflow.</p>
+                <p class="mt-5 text-lg leading-8 text-ink/64">Staff get simple screens for billing and orders. Owners get reports and control without adding separate tools for every small workflow.</p>
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
                 @foreach(['Setup business', 'Add products or menu', 'Start billing', 'Share invoice and manage orders'] as $step)
-                    <div class="rounded-lg border border-white/15 bg-white/[0.07] p-6">
-                        <p class="text-sm font-black uppercase tracking-wide text-white/45">Step</p>
+                    <div class="rounded-3xl border border-primary/10 bg-white/70 p-6 shadow-soft backdrop-blur">
+                        <p class="text-sm font-black uppercase tracking-wide text-primary/55">Step</p>
                         <h3 class="mt-3 text-xl font-black">{{ $step }}</h3>
                     </div>
                 @endforeach
@@ -63,13 +63,13 @@
 
     <section class="pc-section bg-paper">
         <div class="pc-container">
-            <div class="pc-card rounded-xl p-6 lg:p-10">
+            <div class="pc-card p-6 lg:p-10">
                 <div class="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div>
                         <h2 class="pc-section-title text-ink">See the right PayChat setup for your business.</h2>
                         <p class="mt-4 max-w-2xl text-lg leading-8 text-ink/62">A short founder-led walkthrough is usually the easiest way to map billing, QR ordering, tokens and reports to your current counter.</p>
                     </div>
-                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Book Free Demo</a>
+                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
                 </div>
             </div>
         </div>

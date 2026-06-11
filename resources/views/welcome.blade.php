@@ -1,333 +1,478 @@
 @extends('layouts.marketing', [
-    'title' => 'PayChat - Fast Billing for Cafes, Salons and Shops',
-    'description' => 'PayChat is a simple POS for everyday business with billing, orders, tokens, paperless invoices, UPI and cash tracking, reports and QR ordering.',
+    'title' => 'PayChat - Cloud Native POS for Cafes, Restaurants and Salons',
+    'description' => 'PayChat is a cloud native POS for cafes, restaurants, salons, bakeries, retail and service businesses with billing, UPI payments, QR invoices, order flow and reports.',
     'canonical' => url('/'),
 ])
 
 @section('content')
-    <section class="relative overflow-hidden border-b border-black/10 bg-transparent">
-        <div class="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0)),radial-gradient(circle_at_24%_8%,rgba(52,87,213,0.13),transparent_28rem),radial-gradient(circle_at_88%_12%,rgba(184,145,79,0.10),transparent_25rem)]"></div>
-        <div class="pc-container relative grid gap-10 py-11 sm:py-14 md:gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center lg:py-16 xl:py-20">
-            <div class="max-w-2xl">
-                <p class="pc-eyebrow">
-                    <span class="h-2 w-2 rounded-full bg-primary"></span>
-                    POS for busy Indian counters
-                </p>
-
-                <h1 class="pc-title mt-6 max-w-3xl text-ink">
-                    Fast billing for cafes, salons and local shops.
-                </h1>
-
-                <p class="mt-5 max-w-xl text-base leading-7 text-ink/64 sm:text-lg sm:leading-8">
-                    Billing, orders, tokens and customer invoices in one clean system. Built for real counters, not just dashboards.
-                </p>
-
-                <div class="mt-7 flex flex-col gap-3 sm:flex-row">
-                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">
-                        Book Free Demo
-                    </a>
-                    <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more" target="_blank" rel="noopener noreferrer" class="pc-button pc-button-secondary">
-                        Chat on WhatsApp
-                    </a>
-                </div>
-
-                <div class="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    @foreach([
-                        ['Fast billing', 'Fewer clicks at the counter'],
-                        ['Paperless invoices', 'Share bills digitally'],
-                        ['Token queue', 'Keep pickup flow clear'],
-                        ['Cafe / Salon / Retail ready', 'Works for everyday shops'],
-                    ] as [$title, $label])
-                        <div class="flex min-h-[4.5rem] items-start gap-3 rounded-lg border border-black/10 bg-white/68 p-4 shadow-[0_10px_30px_rgba(9,13,24,0.04)] backdrop-blur">
-                            <span class="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary/15 bg-primary/[0.08]">
-                                <span class="h-2 w-2 rounded-full bg-primary"></span>
-                            </span>
-                            <div>
-                                <p class="text-sm font-extrabold leading-5 text-ink">{{ $title }}</p>
-                                <p class="mt-1 text-sm leading-5 text-ink/54">{{ $label }}</p>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
-            <div class="relative">
-                <div class="absolute -inset-3 rounded-3xl bg-primary/[0.08] blur-3xl"></div>
-                <div class="relative overflow-hidden rounded-2xl border border-black/10 bg-white/82 p-2 shadow-[0_26px_90px_rgba(9,13,24,0.12)] backdrop-blur">
-                    <div class="flex items-center justify-between border-b border-black/10 px-3 py-2.5">
-                        <div class="flex gap-1.5">
-                            <span class="h-2.5 w-2.5 rounded-full bg-ink/16"></span>
-                            <span class="h-2.5 w-2.5 rounded-full bg-ink/16"></span>
-                            <span class="h-2.5 w-2.5 rounded-full bg-ink/16"></span>
-                        </div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-ink/36">Counter preview</p>
+    <section class="pc-home-hero">
+        <div class="pc-container">
+            <div class="pc-hero-banner">
+                <div class="pc-hero-copy">
+                    <p class="pc-eyebrow">
+                        <span class="pc-dot"></span>
+                        Cloud native POS for growing counters
+                    </p>
+                    <h1>Premium POS that feels calm at rush hour.</h1>
+                    <p class="pc-hero-lede">
+                        PayChat brings billing, payments, order flow, invoices and reports into one smooth workspace for cafes, restaurants, salons and service businesses.
+                    </p>
+                    <div class="pc-hero-actions">
+                        <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
+                        <a href="{{ url('/contact') }}" class="pc-button pc-button-secondary">Book Founder Demo</a>
                     </div>
-                    <div class="grid gap-3 p-2 lg:grid-cols-[minmax(0,1fr)_13.5rem]">
-                        <div class="overflow-hidden rounded-xl border border-black/10 bg-[#f7f7f2]">
-                            <img src="{{ asset('YOUR_POS_SCREENSHOT.png') }}" alt="PayChat POS interface preview" class="aspect-[4/3] w-full object-cover object-left-top" loading="eager">
+                </div>
+
+                <div class="pc-hero-board" aria-label="PayChat billing preview">
+                    <div class="pc-glass-card pc-pos-card">
+                        <div class="pc-card-top">
+                            <span></span><span></span><span></span>
+                            <strong>PayChat POS</strong>
                         </div>
-                        <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+                        <div class="pc-bill-total pc-workspace-total">
+                            <span>Counter workspace</span>
+                            <strong>Billing</strong>
+                        </div>
+                        <div class="pc-bill-list">
                             @foreach([
-                                ['Payments', 'UPI and cash tracked'],
-                                ['Queue', 'Tokens stay visible'],
-                                ['Invoice', 'Digital sharing ready'],
-                            ] as [$label, $value])
-                                <div class="rounded-lg border border-black/10 bg-white p-4">
-                                    <p class="text-[0.68rem] font-extrabold uppercase tracking-wide text-ink/38">{{ $label }}</p>
-                                    <p class="mt-2 text-sm font-bold leading-5 text-ink/82">{{ $value }}</p>
+                                ['Order entry', 'Fast counter flow'],
+                                ['Payment modes', 'UPI, cash and records'],
+                                ['Customer invoice', 'QR-ready sharing'],
+                            ] as [$item, $meta])
+                                <div>
+                                    <span>{{ $item }}</span>
+                                    <strong>{{ $meta }}</strong>
                                 </div>
                             @endforeach
                         </div>
+                        <div class="pc-payment-row">
+                            <span>Cash payment</span>
+                            <strong>Confirmed</strong>
+                        </div>
+                    </div>
+
+                    <div class="pc-floating-card pc-floating-one">
+                        <span>Owner view</span>
+                        <strong>Daily reports</strong>
+                    </div>
+                    <div class="pc-floating-card pc-floating-two">
+                        <span>Service flow</span>
+                        <strong>Orders, tokens, tables</strong>
                     </div>
                 </div>
-                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div class="rounded-lg border border-black/10 bg-white/72 p-4 backdrop-blur">
-                        <p class="text-[0.68rem] font-extrabold uppercase tracking-wide text-ink/42">Best for</p>
-                        <p class="mt-1 text-sm font-bold leading-5 text-ink/82">cafes, restaurants, retail and salons</p>
-                    </div>
-                    <div class="rounded-lg border border-black/10 bg-white/72 p-4 backdrop-blur">
-                        <p class="text-[0.68rem] font-extrabold uppercase tracking-wide text-ink/42">Setup</p>
-                        <p class="mt-1 text-sm font-bold leading-5 text-ink/82">guided onboarding included</p>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 
-    <section class="border-b border-black/10 bg-white/72 py-10">
-        <div class="pc-container grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            @foreach([
-                ['Fast billing', 'Create bills with fewer clicks and clear payment tracking.'],
-                ['Paperless invoice', 'Share digital invoices and print only when needed.'],
-                ['Token/KDS', 'Keep kitchen and pickup queues easier to manage.'],
-                ['For local teams', 'Useful for cafes, salons, restaurants and retail shops.'],
-            ] as [$title, $body])
-                <article class="rounded-lg border border-black/10 bg-white p-5 shadow-[0_10px_30px_rgba(9,13,24,0.035)]">
-                    <h2 class="text-base font-extrabold text-ink">{{ $title }}</h2>
-                    <p class="mt-2 text-sm leading-6 text-ink/62">{{ $body }}</p>
-                </article>
-            @endforeach
-        </div>
-    </section>
-
-    <section class="pc-section bg-paper">
+    <section class="pc-cloud-strip">
         <div class="pc-container">
-            <div class="mx-auto max-w-3xl text-center">
-                <p class="pc-eyebrow">Business types</p>
-                <h2 class="pc-section-title mt-4 text-ink">Simple POS for everyday service.</h2>
-                <p class="mt-5 text-lg leading-8 text-ink/64">Whether you sell coffee, meals, products or appointments, PayChat keeps billing and orders clear for your staff.</p>
-            </div>
-
-            <div class="mt-12 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                @foreach([
-                    ['Cafes', 'Quick billing, tokens, QR ordering and customer-friendly invoices.'],
-                    ['Restaurants', 'Table service, KOT, order queues and final billing.'],
-                    ['Salons', 'Simple billing, customer records and repeat-visit friendly operations.'],
-                    ['Retail shops', 'Product catalog, payments, customers and sales reports.'],
-                ] as [$title, $body])
-                    <article class="pc-card rounded-lg p-6 transition hover:-translate-y-1">
-                        <h3 class="text-2xl font-black text-ink">{{ $title }}</h3>
-                        <p class="mt-3 text-sm leading-6 text-ink/62">{{ $body }}</p>
-                    </article>
-                @endforeach
-            </div>
+            <p>Built for cafes, restaurants, salons, bakeries, retail counters and service teams that need smooth daily control.</p>
         </div>
     </section>
 
-    <section id="features" class="border-y border-black/10 bg-white py-20">
-        <div class="pc-container grid gap-10 lg:grid-cols-[0.85fr_1.15fr]">
-            <div>
-                <p class="pc-eyebrow">Core features</p>
-                <h2 class="pc-section-title mt-4 text-ink">One clean system for billing, orders and reports.</h2>
-                <p class="mt-5 text-lg leading-8 text-ink/64">PayChat connects your front counter, payment collection, queue flow and owner reporting without visual clutter.</p>
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-2">
-                @foreach([
-                    ['POS billing', 'Fast checkout for dine-in, takeaway and retail sales.'],
-                    ['UPI/cash tracking', 'Record payment modes clearly for daily closing.'],
-                    ['Token/order queue', 'Keep service and pickup status visible.'],
-                    ['Paperless invoice', 'Share invoices digitally with customers.'],
-                    ['Reports', 'Review sales and product movement.'],
-                    ['Inventory support', 'Manage catalog and stock workflows where enabled.'],
-                ] as [$title, $body])
-                    <article class="pc-card rounded-lg p-6">
-                        <div class="mb-5 h-1.5 w-10 rounded-full bg-primary/80"></div>
-                        <h3 class="text-xl font-black text-ink">{{ $title }}</h3>
-                        <p class="mt-3 text-sm leading-6 text-ink/62">{{ $body }}</p>
-                    </article>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
-    <section class="border-b border-black/10 bg-ink py-20 text-white">
-        <div class="pc-container grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <div>
-                <p class="text-sm font-black uppercase tracking-[0.18em] text-white/50">How it works</p>
-                <h2 class="pc-section-title mt-4">From setup to first bill.</h2>
-                <p class="mt-5 max-w-2xl text-lg leading-8 text-white/64">We help map the software to your real counter flow, then your team can start billing with a clearer daily process.</p>
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-2">
-                @foreach([
-                    ['01', 'Setup business', 'Add outlet details, staff access and billing basics.'],
-                    ['02', 'Add products/menu', 'Create your catalog or menu for faster checkout.'],
-                    ['03', 'Start billing', 'Take orders, collect payments and close bills.'],
-                    ['04', 'Share invoice', 'Send invoices and manage order or token status.'],
-                ] as [$number, $title, $body])
-                    <article class="rounded-lg border border-white/15 bg-white/[0.07] p-6 shadow-soft">
-                        <p class="text-4xl font-black text-white/35">{{ $number }}</p>
-                        <h3 class="mt-5 text-xl font-black">{{ $title }}</h3>
-                        <p class="mt-2 text-sm leading-6 text-white/62">{{ $body }}</p>
-                    </article>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
-    <section class="border-b border-black/10 bg-paper py-20">
+    <section class="pc-section bg-white">
         <div class="pc-container">
-            <div class="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+            <div class="pc-section-head">
+                <p class="pc-eyebrow">The operating layer</p>
+                <h2>Everything the counter needs, without the heavy software feeling.</h2>
+            </div>
+
+            <div class="pc-home-grid">
+                @foreach([
+                    ['Counter Billing', 'Create bills quickly for walk-ins, table orders, services and repeat customers.'],
+                    ['Payment Clarity', 'Track UPI, cash and other payment records without confusion at closing time.'],
+                    ['Paperless Invoices', 'Share clean invoices through QR-friendly customer flows.'],
+                    ['Owner Reports', 'See sales, payments and order movement without spreadsheet work.'],
+                ] as [$title, $body])
+                    <article class="pc-home-card">
+                        <span></span>
+                        <h3>{{ $title }}</h3>
+                        <p>{{ $body }}</p>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
+    <section class="pc-section pc-soft-section">
+        <div class="pc-container">
+            <div class="pc-split">
                 <div>
-                    <p class="pc-eyebrow">Live network</p>
-                    <h2 class="pc-section-title mt-4 text-ink">Live Partner Businesses</h2>
-                    <p class="mt-4 text-lg leading-8 text-ink/64">Discover shops using PayChat in the early partner network.</p>
+                    <p class="pc-eyebrow">Startup simple, premium by design</p>
+                    <h2>A focused product, built close to real business counters.</h2>
+                    <p>
+                        PayChat is young and founder-led, with a practical focus: make the daily sale, order and payment flow feel reliable for teams that do not have time for complicated systems.
+                    </p>
                 </div>
-                <div class="lg:justify-self-end">
-                    <label for="partnerSearch" class="sr-only">Search partner shops</label>
-                    <input id="partnerSearch" placeholder="Search shops..." class="w-full rounded-md border border-black/10 bg-white px-4 py-4 text-sm font-medium outline-none transition placeholder:text-ink/35 focus:border-ink lg:w-96">
+                <div class="pc-stack">
+                    @foreach(['Cafes', 'Salons', 'Bakeries', 'Restaurants', 'Retail', 'Service business'] as $business)
+                        <div>{{ $business }}</div>
+                    @endforeach
                 </div>
-            </div>
-
-            <div class="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                @forelse($tenants as $tenant)
-                    @php
-                        $branding = $tenant->branding;
-                        $name = $tenant->name ?? 'Unnamed Business';
-                        $industry = $tenant->industry ?? 'Business';
-                        $address = $branding->address ?? 'Partner Store';
-                        $logo = $branding && $branding->logo ? $branding->logo : null;
-                        $shopUrl = url('/store/' . $tenant->slug);
-                        $avg = round($tenant->reviews_avg_rating ?? 0);
-                    @endphp
-
-                    <article class="partner-card overflow-hidden rounded-lg border border-black/10 bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift">
-                        <div class="border-b border-black/10 bg-ink p-5 text-white">
-                            <div class="flex items-center justify-between gap-4">
-                                <div class="flex h-14 w-14 items-center justify-center rounded-md bg-white p-1.5 text-xl font-black text-ink shadow-soft">
-                                    @if($logo)
-                                        <img src="{{ $logo }}" alt="{{ $name }} logo" class="h-full w-full rounded object-cover" loading="lazy">
-                                    @else
-                                        {{ strtoupper(substr($name, 0, 1)) }}
-                                    @endif
-                                </div>
-                                <div class="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold">
-                                    <span class="h-2 w-2 rounded-full bg-white"></span>
-                                    Live
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-5">
-                            <h3 class="text-xl font-black leading-tight text-ink">{{ $name }}</h3>
-                            <p class="mt-1 text-sm font-bold text-primary">{{ $industry }}</p>
-                            <p class="mt-4 min-h-[44px] text-sm leading-6 text-ink/58">{{ $address }}</p>
-
-                            <div class="mt-5 flex items-center justify-between border-y border-black/10 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="text-sm tracking-tight text-amber-400">
-                                        @for($i = 1; $i <= 5; $i++)
-                                            @if($i <= $avg)
-                                                ★
-                                            @else
-                                                <span class="text-black/15">★</span>
-                                            @endif
-                                        @endfor
-                                    </div>
-                                    <span class="text-sm font-black text-ink">{{ $tenant->reviews_avg_rating ?: 'New' }}</span>
-                                </div>
-                                <div class="text-sm font-medium text-ink/42">{{ $tenant->reviews_count ?? 0 }} reviews</div>
-                            </div>
-
-                            <a href="{{ $shopUrl }}" target="_blank" rel="noopener noreferrer" class="mt-6 flex items-center justify-between rounded-md bg-ink px-5 py-4 text-white transition hover:bg-black">
-                                <div>
-                                    <p class="text-xs font-bold uppercase tracking-wide text-white/45">Powered by PayChat</p>
-                                    <p class="mt-1 font-bold">Visit Store</p>
-                                </div>
-                                <span class="text-xl font-black">→</span>
-                            </a>
-                        </div>
-                    </article>
-                @empty
-                    <div class="col-span-full rounded-lg border border-black/10 bg-white p-10 text-center">
-                        <h3 class="text-xl font-black text-ink">No partner businesses yet</h3>
-                        <p class="mt-2 text-ink/55">PayChat is onboarding early merchants. Stay tuned.</p>
-                    </div>
-                @endforelse
             </div>
         </div>
     </section>
 
-    <section class="bg-white py-16">
+    <section class="pc-section bg-white">
         <div class="pc-container">
-            <div class="overflow-hidden rounded-xl border border-black/10 bg-ink p-6 text-white shadow-lift lg:p-10">
-                <div class="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
-                    <div>
-                        <p class="text-sm font-black uppercase tracking-[0.18em] text-white/45">Founder-led setup</p>
-                        <h2 class="pc-section-title mt-3 max-w-3xl">Bring PayChat to your counter this week.</h2>
-                        <p class="mt-4 max-w-2xl text-lg leading-8 text-white/64">Get a clear walkthrough for billing, QR orders, kitchen flow, invoices and reporting.</p>
-                    </div>
-                    <div class="flex flex-col gap-3 sm:flex-row lg:flex-col">
-                        <a href="{{ url('/start-free-trial') }}" class="pc-button bg-white text-ink hover:bg-paper">Book Free Demo</a>
-                        <a href="{{ url('/contact') }}" class="pc-button border border-white/15 text-white hover:bg-white/10">Contact PayChat</a>
-                    </div>
+            <div class="pc-final-panel">
+                <div>
+                    <p class="pc-eyebrow">Start clean</p>
+                    <h2>Try the workflow with your real menu or services.</h2>
+                    <p>We help you map PayChat to your billing style before you commit.</p>
                 </div>
+                <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
             </div>
         </div>
     </section>
 @endsection
 
 @push('head')
-    @verbatim
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "Organization",
-                "@id": "https://paychat.shop/#organization",
-                "name": "PayChat",
-                "url": "https://paychat.shop",
-                "logo": "https://paychat.shop/color-paychat-logo-main.svg"
-            },
-            {
-                "@type": "SoftwareApplication",
-                "name": "PayChat POS",
-                "applicationCategory": "BusinessApplication",
-                "operatingSystem": "Web",
-                "description": "POS, billing, QR ordering, token management, invoices and reporting software for Indian businesses.",
-                "url": "https://paychat.shop",
-                "publisher": {
-                    "@id": "https://paychat.shop/#organization"
-                }
-            }
-        ]
-    }
-    </script>
-    @endverbatim
-@endpush
-
-@push('scripts')
-    <script>
-        const partnerSearch = document.getElementById('partnerSearch');
-        if (partnerSearch) {
-            partnerSearch.addEventListener('input', function () {
-                const query = this.value.toLowerCase();
-                document.querySelectorAll('.partner-card').forEach((card) => {
-                    card.style.display = card.textContent.toLowerCase().includes(query) ? '' : 'none';
-                });
-            });
+    <style>
+        .pc-home-hero {
+            padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(3rem, 6vw, 5rem);
         }
-    </script>
+
+        .pc-hero-banner {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(22rem, .8fr);
+            gap: clamp(2rem, 5vw, 4rem);
+            align-items: center;
+            overflow: hidden;
+            min-height: clamp(36rem, 70vh, 46rem);
+            border: 1px solid rgba(31, 94, 255, .12);
+            border-radius: clamp(1.4rem, 3vw, 2.4rem);
+            background:
+                radial-gradient(circle at 20% 12%, rgba(255, 255, 255, .95), transparent 22rem),
+                radial-gradient(circle at 74% 30%, rgba(31, 94, 255, .18), transparent 24rem),
+                linear-gradient(135deg, #ffffff 0%, #eef5ff 48%, #dfeeff 100%);
+            padding: clamp(1.4rem, 5vw, 4rem);
+            box-shadow: 0 34px 110px rgba(31, 94, 255, .14);
+        }
+
+        .pc-hero-banner::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(31, 94, 255, .08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(31, 94, 255, .08) 1px, transparent 1px);
+            background-size: 54px 54px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent 72%);
+            pointer-events: none;
+        }
+
+        .pc-hero-copy,
+        .pc-hero-board {
+            position: relative;
+            z-index: 1;
+        }
+
+        .pc-hero-copy h1 {
+            max-width: 12ch;
+            margin-top: 1.25rem;
+            color: #111827;
+            font-size: clamp(3.6rem, 7.4vw, 6.7rem);
+            font-weight: 900;
+            letter-spacing: -.065em;
+            line-height: .88;
+        }
+
+        .pc-hero-lede {
+            max-width: 43rem;
+            margin-top: 1.5rem;
+            color: rgba(17, 24, 39, .66);
+            font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+            line-height: 1.7;
+        }
+
+        .pc-hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .8rem;
+            margin-top: 2rem;
+        }
+
+        .pc-hero-board {
+            min-height: 31rem;
+        }
+
+        .pc-glass-card,
+        .pc-floating-card,
+        .pc-home-card,
+        .pc-final-panel {
+            border: 1px solid rgba(255, 255, 255, .72);
+            background: rgba(255, 255, 255, .7);
+            box-shadow:
+                0 24px 80px rgba(31, 94, 255, .13),
+                inset 0 1px 0 rgba(255, 255, 255, .85);
+            backdrop-filter: blur(24px);
+        }
+
+        .pc-pos-card {
+            overflow: hidden;
+            border-radius: 1.55rem;
+        }
+
+        .pc-card-top {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            border-bottom: 1px solid rgba(31, 94, 255, .1);
+            padding: 1rem;
+        }
+
+        .pc-card-top span {
+            width: .68rem;
+            height: .68rem;
+            border-radius: 999px;
+            background: rgba(31, 94, 255, .2);
+        }
+
+        .pc-card-top span:first-child {
+            background: #1F5EFF;
+        }
+
+        .pc-card-top strong {
+            margin-left: auto;
+            color: rgba(17, 24, 39, .48);
+            font-size: .75rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .pc-bill-total {
+            margin: 1rem;
+            border-radius: 1.2rem;
+            background: #1F5EFF;
+            padding: 1.35rem;
+            color: white;
+        }
+
+        .pc-bill-total span,
+        .pc-floating-card span,
+        .pc-payment-row span {
+            display: block;
+            font-size: .78rem;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            opacity: .68;
+        }
+
+        .pc-bill-total strong {
+            display: block;
+            margin-top: .35rem;
+            font-size: clamp(2.4rem, 5vw, 4.2rem);
+            font-weight: 900;
+            letter-spacing: -.055em;
+            line-height: .9;
+        }
+
+        .pc-bill-list {
+            display: grid;
+            gap: .65rem;
+            padding: 0 1rem 1rem;
+        }
+
+        .pc-bill-list div,
+        .pc-payment-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            border: 1px solid rgba(31, 94, 255, .1);
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, .68);
+            padding: .95rem 1rem;
+            color: rgba(17, 24, 39, .72);
+            font-size: .94rem;
+            font-weight: 750;
+        }
+
+        .pc-bill-list strong,
+        .pc-payment-row strong,
+        .pc-floating-card strong {
+            color: #111827;
+            font-weight: 900;
+        }
+
+        .pc-payment-row {
+            margin: 0 1rem 1rem;
+            background: rgba(31, 94, 255, .07);
+        }
+
+        .pc-floating-card {
+            position: absolute;
+            border-radius: 1.1rem;
+            padding: 1rem 1.15rem;
+        }
+
+        .pc-floating-one {
+            right: -1rem;
+            top: 3rem;
+        }
+
+        .pc-floating-two {
+            bottom: 1.2rem;
+            left: -1.4rem;
+        }
+
+        .pc-cloud-strip {
+            border-block: 1px solid rgba(31, 94, 255, .1);
+            background: rgba(255, 255, 255, .72);
+            padding: 1.1rem 0;
+            backdrop-filter: blur(20px);
+        }
+
+        .pc-cloud-strip p {
+            color: rgba(17, 24, 39, .68);
+            font-size: clamp(1rem, 1.6vw, 1.25rem);
+            font-weight: 800;
+            letter-spacing: -.01em;
+            text-align: center;
+        }
+
+        .pc-section-head {
+            max-width: 48rem;
+            margin-bottom: 2rem;
+        }
+
+        .pc-section-head h2,
+        .pc-split h2,
+        .pc-final-panel h2 {
+            margin-top: 1rem;
+            color: #111827;
+            font-size: clamp(2.5rem, 5vw, 4.6rem);
+            font-weight: 900;
+            letter-spacing: -.055em;
+            line-height: .95;
+        }
+
+        .pc-home-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        .pc-home-card {
+            min-height: 15rem;
+            border-color: rgba(31, 94, 255, .12);
+            border-radius: 1.25rem;
+            padding: 1.35rem;
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .pc-home-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 30px 90px rgba(31, 94, 255, .14);
+        }
+
+        .pc-home-card > span {
+            display: block;
+            width: 2.2rem;
+            height: .35rem;
+            border-radius: 999px;
+            background: #1F5EFF;
+        }
+
+        .pc-home-card h3 {
+            margin-top: 3.2rem;
+            color: #111827;
+            font-size: 1.35rem;
+            font-weight: 900;
+            letter-spacing: -.03em;
+        }
+
+        .pc-home-card p,
+        .pc-split p,
+        .pc-final-panel p {
+            margin-top: .8rem;
+            color: rgba(17, 24, 39, .62);
+            line-height: 1.7;
+        }
+
+        .pc-soft-section {
+            background: linear-gradient(180deg, #f6f9ff, #ffffff);
+        }
+
+        .pc-split {
+            display: grid;
+            grid-template-columns: minmax(0, .95fr) minmax(20rem, .7fr);
+            align-items: center;
+            gap: clamp(2rem, 5vw, 4rem);
+        }
+
+        .pc-stack {
+            display: grid;
+            gap: .8rem;
+        }
+
+        .pc-stack div {
+            border: 1px solid rgba(31, 94, 255, .12);
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, .76);
+            padding: 1rem 1.1rem;
+            color: rgba(17, 24, 39, .76);
+            font-weight: 900;
+            box-shadow: 0 18px 60px rgba(31, 94, 255, .07);
+            backdrop-filter: blur(18px);
+        }
+
+        .pc-final-panel {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 2rem;
+            border-color: rgba(31, 94, 255, .12);
+            border-radius: 1.6rem;
+            background:
+                radial-gradient(circle at 16% 0%, rgba(31, 94, 255, .14), transparent 24rem),
+                rgba(255, 255, 255, .78);
+            padding: clamp(1.4rem, 4vw, 3rem);
+        }
+
+        @media (max-width: 1024px) {
+            .pc-hero-banner,
+            .pc-split,
+            .pc-final-panel {
+                grid-template-columns: 1fr;
+            }
+
+            .pc-home-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .pc-floating-one {
+                right: 1rem;
+            }
+
+            .pc-floating-two {
+                left: 1rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .pc-hero-banner {
+                min-height: auto;
+            }
+
+            .pc-hero-copy h1 {
+                max-width: 10ch;
+            }
+
+            .pc-hero-board {
+                min-height: 29rem;
+            }
+
+            .pc-home-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pc-home-card {
+                min-height: 12rem;
+            }
+        }
+    </style>
 @endpush
