@@ -124,6 +124,31 @@
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
         }
+        .pc-nav-cta {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            min-height: 3rem;
+            border-radius: 999px;
+            background: var(--pc-blue);
+            padding: .75rem 1.25rem;
+            color: #fff;
+            font-size: .875rem;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+            box-shadow: 0 16px 38px rgba(31, 94, 255, .22);
+            transition: transform .2s ease, background .2s ease;
+        }
+        .pc-nav-cta:hover {
+            background: var(--pc-blue-dark);
+            transform: translateY(-1px);
+        }
+        @media (min-width: 640px) {
+            .pc-nav-cta {
+                display: inline-flex;
+            }
+        }
         @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
             .pc-site-nav,
             .pc-nav-pill {
@@ -205,7 +230,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="{{ url('/start-free-trial') }}" class="hidden rounded-full bg-primary px-5 py-3 text-sm font-bold text-white shadow-[0_16px_38px_rgba(31,94,255,.22)] transition hover:-translate-y-0.5 hover:bg-[#174bd2] sm:inline-flex">
+                <a href="{{ url('/start-free-trial') }}" class="pc-nav-cta">
                     Start Free Trial
                 </a>
                 <button type="button" onclick="openDrawer()" class="rounded-full border border-black/10 bg-white p-2 text-ink shadow-soft transition hover:bg-white lg:hidden" aria-label="Open navigation">
