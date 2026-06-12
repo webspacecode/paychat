@@ -5,7 +5,7 @@
 ])
 
 @section('content')
-    <section class="border-b border-black/10 bg-paper">
+    <section class="pc-surface-hero">
         <div class="pc-container py-14 lg:py-20">
             <div class="max-w-3xl">
                 <p class="pc-eyebrow">Features</p>
@@ -33,7 +33,7 @@
                     ['Dine-In Flow', 'Support table orders, KOT batches and final billing for restaurants.'],
                     ['Customer Records', 'Keep useful customer details for repeat visits and invoice history.'],
                 ] as [$title, $body])
-                    <article class="pc-card p-6">
+                    <article class="pc-soft-card p-6">
                         <div class="mb-5 h-2 w-12 rounded-full bg-primary"></div>
                         <h2 class="text-xl font-black text-ink">{{ $title }}</h2>
                         <p class="mt-3 text-sm leading-6 text-ink/62">{{ $body }}</p>
@@ -43,7 +43,7 @@
         </div>
     </section>
 
-    <section class="border-y border-primary/10 bg-[#eef5ff] py-16 text-ink">
+    <section class="border-y border-primary/10 bg-[#f4faf8] py-16 text-ink">
         <div class="pc-container grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <div>
                 <p class="text-sm font-black uppercase tracking-[0.18em] text-primary/65">Daily workflows</p>
@@ -52,7 +52,7 @@
             </div>
             <div class="grid gap-3 sm:grid-cols-2">
                 @foreach(['Setup business', 'Add products or menu', 'Start billing', 'Share invoice and manage orders'] as $step)
-                    <div class="rounded-3xl border border-primary/10 bg-white/70 p-6 shadow-soft backdrop-blur">
+                    <div class="pc-soft-card p-6">
                         <p class="text-sm font-black uppercase tracking-wide text-primary/55">Step</p>
                         <h3 class="mt-3 text-xl font-black">{{ $step }}</h3>
                     </div>
@@ -63,7 +63,7 @@
 
     <section class="pc-section bg-paper">
         <div class="pc-container">
-            <div class="pc-card p-6 lg:p-10">
+            <div class="pc-soft-card p-6 lg:p-10">
                 <div class="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div>
                         <h2 class="pc-section-title text-ink">See the right PayChat setup for your business.</h2>

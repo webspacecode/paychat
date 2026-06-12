@@ -5,7 +5,7 @@
 ])
 
 @section('content')
-    <section class="border-b border-black/10 bg-paper">
+    <section class="pc-surface-hero">
         <div class="pc-container py-14 lg:py-20">
             <div class="max-w-3xl">
                 <p class="pc-eyebrow">About PayChat</p>
@@ -28,14 +28,14 @@
         </div>
     </section>
 
-    <section class="border-y border-black/10 bg-paper py-16">
+    <section class="border-y border-black/10 bg-[#f4faf8] py-16">
         <div class="pc-container grid gap-3 md:grid-cols-3">
             @foreach([
                 ['Simple to start', 'Guided setup for your business type and counter flow.'],
                 ['Built for India', 'UPI, GST-ready billing needs and local operating habits in mind.'],
                 ['Serious about billing', 'Designed for real sales, staff workflows and owner visibility.'],
             ] as [$title, $body])
-                <article class="pc-card p-6">
+                <article class="pc-soft-card p-6">
                     <div class="mb-5 h-2 w-12 rounded-full bg-primary"></div>
                     <h2 class="text-xl font-black text-ink">{{ $title }}</h2>
                     <p class="mt-3 text-sm leading-6 text-ink/62">{{ $body }}</p>

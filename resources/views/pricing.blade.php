@@ -5,7 +5,7 @@
 ])
 
 @section('content')
-    <section class="border-b border-black/10 bg-paper">
+    <section class="pc-surface-hero">
         <div class="pc-container py-14 lg:py-20">
             <div class="max-w-3xl">
                 <p class="pc-eyebrow">Pricing</p>
@@ -23,7 +23,7 @@
                     ['Growth', 'For busier outlets adding ordering and stock control.', ['QR or table ordering', 'Inventory workflow', 'Invoices and tokens', 'Sales reports']],
                     ['Pro', 'For teams with multiple counters or more complex service flow.', ['Multi-counter workflow', 'KOT and table flow', 'Customer records', 'Custom setup guidance']],
                 ] as [$plan, $summary, $features])
-                    <article class="rounded-[1.6rem] border {{ $plan === 'Growth' ? 'border-primary bg-[#eef5ff] text-ink shadow-lift' : 'border-primary/10 bg-white/90 text-ink shadow-soft' }} p-6 backdrop-blur lg:p-8">
+                    <article class="pc-soft-card {{ $plan === 'Growth' ? 'border-primary bg-[#f4faf8] text-ink shadow-lift' : 'border-primary/10 bg-white/90 text-ink shadow-soft' }} p-6 backdrop-blur lg:p-8">
                         @if($plan === 'Growth')
                             <p class="mb-4 inline-flex rounded-full border border-primary/15 bg-white/70 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary/70">Often a good fit</p>
                         @endif

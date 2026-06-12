@@ -5,25 +5,25 @@
 ])
 
 @section('content')
-    <section class="border-b border-black/10 bg-paper">
+    <section class="pc-surface-hero">
         <div class="pc-container grid gap-10 py-14 lg:grid-cols-[0.9fr_1.1fr] lg:py-20">
             <div class="flex flex-col justify-center">
                 <p class="pc-eyebrow">Free trial with guided setup</p>
                 <h1 class="pc-page-title mt-6 text-ink">Start your PayChat POS trial.</h1>
                 <p class="mt-6 max-w-xl text-lg leading-8 text-ink/64">Get a walkthrough for fast billing, QR ordering, dine-in table service, KOT, payments, invoices, inventory and reports.</p>
                 <div class="mt-8 grid gap-3 sm:grid-cols-2">
-                    <div class="pc-card p-5">
+                    <div class="pc-soft-card p-5">
                         <p class="text-3xl font-black text-ink">Fit</p>
                         <p class="mt-1 text-sm font-semibold text-ink/55">check before setup</p>
                     </div>
-                    <div class="pc-card p-5">
+                    <div class="pc-soft-card p-5">
                         <p class="text-3xl font-black text-ink">Flow</p>
                         <p class="mt-1 text-sm font-semibold text-ink/55">mapped to your counter</p>
                     </div>
                 </div>
             </div>
 
-            <section class="pc-card p-6 lg:p-8" aria-labelledby="trial-form-title">
+            <section class="pc-soft-card p-6 lg:p-8" aria-labelledby="trial-form-title">
                 <div class="mb-7">
                     <h2 id="trial-form-title" class="text-2xl font-black text-ink">Tell us about your business</h2>
                     <p class="mt-2 text-sm font-medium text-ink/55">We usually respond within a few hours via WhatsApp or phone.</p>

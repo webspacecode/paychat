@@ -15,7 +15,7 @@
         ];
     @endphp
 
-    <section class="border-b border-black/10 bg-paper">
+    <section class="pc-surface-hero">
         <div class="pc-container py-14 lg:py-20">
             <div class="max-w-3xl">
                 <p class="pc-eyebrow">Training library</p>
@@ -28,7 +28,7 @@
     <section class="pc-section bg-white">
         <div class="pc-container grid gap-6 lg:grid-cols-2">
             @foreach ($videos as [$title, $description, $embed, $watch])
-                <article class="overflow-hidden rounded-[1.6rem] border border-black/10 bg-white shadow-soft">
+                <article class="pc-soft-card overflow-hidden">
                     <div class="aspect-video bg-[#eef5ff]">
                         <iframe class="h-full w-full" src="{{ $embed }}" title="{{ $title }}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
                     </div>
@@ -44,7 +44,7 @@
 
     <section class="pb-20">
         <div class="pc-container">
-            <div class="rounded-[2rem] border border-primary/10 bg-white/75 p-6 text-ink shadow-lift backdrop-blur lg:p-10">
+            <div class="pc-soft-card p-6 text-ink shadow-lift backdrop-blur lg:p-10">
                 <h2 class="pc-section-title">Need help getting started?</h2>
                 <p class="mt-4 max-w-2xl text-lg leading-8 text-ink/64">Contact PayChat support or request a demo for guided setup.</p>
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">

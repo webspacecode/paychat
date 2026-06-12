@@ -159,7 +159,7 @@
 @push('head')
     <style>
         .pc-home-hero {
-            padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(3.5rem, 7vw, 6rem);
+            padding: clamp(1.5rem, 3vw, 2.75rem) 0 clamp(3.5rem, 7vw, 6rem);
         }
 
         .pc-hero-banner {
@@ -171,12 +171,13 @@
             overflow: hidden;
             min-height: auto;
             background:
-                radial-gradient(circle at 50% 0%, rgba(36, 99, 255, .1), transparent 30rem),
-                linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
-            border: 1px solid rgba(29, 29, 31, .08);
-            border-radius: clamp(1.25rem, 3vw, 2rem);
+                radial-gradient(circle at 18% 4%, rgba(15, 159, 143, .14), transparent 24rem),
+                radial-gradient(circle at 84% 12%, rgba(244, 178, 62, .16), transparent 26rem),
+                linear-gradient(180deg, #ffffff 0%, #f4f8fb 100%);
+            border: 1px solid rgba(29, 29, 31, .06);
+            border-radius: clamp(1rem, 2vw, 1.35rem);
             padding: clamp(2rem, 6vw, 5.5rem) clamp(1rem, 4vw, 3rem);
-            box-shadow: 0 28px 80px rgba(29, 29, 31, .06);
+            box-shadow: 0 26px 74px rgba(29, 29, 31, .055);
         }
 
         .pc-hero-banner::before {
@@ -184,8 +185,8 @@
             position: absolute;
             inset: 0;
             background-image:
-                linear-gradient(rgba(36, 99, 255, .055) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(36, 99, 255, .055) 1px, transparent 1px);
+                linear-gradient(rgba(15, 159, 143, .055) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(36, 99, 255, .05) 1px, transparent 1px);
             background-size: 54px 54px;
             mask-image: linear-gradient(180deg, rgba(0, 0, 0, .55), transparent 72%);
             pointer-events: none;
@@ -239,7 +240,7 @@
         .pc-device-frame {
             overflow: hidden;
             border: 1px solid rgba(29, 29, 31, .08);
-            border-radius: clamp(1rem, 2.5vw, 1.65rem);
+            border-radius: clamp(.8rem, 2vw, 1.1rem);
             background: rgba(255, 255, 255, .94);
             box-shadow: 0 30px 70px rgba(29, 29, 31, .12);
         }
@@ -299,10 +300,10 @@
 
         .pc-home-card,
         .pc-final-panel {
-            border: 1px solid rgba(255, 255, 255, .72);
-            background: rgba(255, 255, 255, .7);
+            border: 1px solid rgba(8, 17, 31, .08);
+            background: rgba(255, 255, 255, .82);
             box-shadow:
-                0 18px 54px rgba(29, 29, 31, .06),
+                0 16px 46px rgba(29, 29, 31, .055),
                 inset 0 1px 0 rgba(255, 255, 255, .9);
             backdrop-filter: blur(24px);
         }
@@ -346,23 +347,24 @@
 
         .pc-home-card {
             min-height: 14rem;
-            border-color: rgba(31, 94, 255, .12);
-            border-radius: 1.25rem;
+            border-color: rgba(8, 17, 31, .08);
+            border-radius: .95rem;
             padding: 1.35rem;
-            transition: transform .25s ease, box-shadow .25s ease;
+            transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
         }
 
         .pc-home-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 22px 60px rgba(29, 29, 31, .08);
+            border-color: rgba(15, 159, 143, .2);
+            box-shadow: 0 22px 58px rgba(29, 29, 31, .075);
         }
 
         .pc-home-card > span {
             display: block;
-            width: 2.2rem;
-            height: .35rem;
+            width: 2.25rem;
+            height: .45rem;
             border-radius: 999px;
-            background: #1F5EFF;
+            background: linear-gradient(90deg, var(--pc-teal), var(--pc-gold));
         }
 
         .pc-home-card h3 {
@@ -398,8 +400,8 @@
         }
 
         .pc-stack div {
-            border: 1px solid rgba(31, 94, 255, .12);
-            border-radius: 1rem;
+            border: 1px solid rgba(8, 17, 31, .08);
+            border-radius: .85rem;
             background: rgba(255, 255, 255, .76);
             padding: 1rem 1.1rem;
             color: rgba(29, 29, 31, .76);
@@ -414,9 +416,10 @@
             align-items: center;
             gap: 2rem;
             border-color: rgba(29, 29, 31, .08);
-            border-radius: 1.6rem;
+            border-radius: 1rem;
             background:
-                radial-gradient(circle at 16% 0%, rgba(36, 99, 255, .1), transparent 24rem),
+                radial-gradient(circle at 12% 0%, rgba(15, 159, 143, .12), transparent 24rem),
+                radial-gradient(circle at 92% 20%, rgba(244, 178, 62, .16), transparent 22rem),
                 rgba(255, 255, 255, .78);
             padding: clamp(1.4rem, 4vw, 3rem);
         }
@@ -432,10 +435,17 @@
             min-height: 22rem;
             flex-direction: column;
             border: 1px solid rgba(29, 29, 31, .08);
-            border-radius: 1.25rem;
+            border-radius: .95rem;
             background: #fff;
             padding: 1.2rem;
             box-shadow: 0 14px 42px rgba(29, 29, 31, .05);
+            transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+        }
+
+        .pc-store-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(15, 159, 143, .2);
+            box-shadow: 0 22px 58px rgba(29, 29, 31, .075);
         }
 
         .pc-store-logo {
@@ -445,10 +455,10 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            border: 1px solid rgba(31, 94, 255, .12);
-            border-radius: 1rem;
-            background: #f6f9ff;
-            color: #1F5EFF;
+            border: 1px solid rgba(15, 159, 143, .14);
+            border-radius: .85rem;
+            background: #f4fbf9;
+            color: var(--pc-teal);
             font-size: 1.5rem;
             font-weight: 700;
         }
@@ -502,24 +512,27 @@
             display: flex;
             justify-content: center;
             margin-top: 1rem;
-            border-radius: .85rem;
+            border-radius: 999px;
             background: var(--pc-blue);
             padding: .9rem 1rem;
             color: #fff;
             font-size: .9rem;
             font-weight: 700;
-            transition: transform .2s ease, background .2s ease;
+            text-decoration: none;
+            box-shadow: 0 12px 28px rgba(36, 99, 255, .2);
+            transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
         }
 
         .pc-store-link:hover {
             transform: translateY(-1px);
             background: var(--pc-blue-dark);
+            box-shadow: 0 16px 34px rgba(36, 99, 255, .24);
         }
 
         .pc-empty-store {
             grid-column: 1 / -1;
             border: 1px solid rgba(31, 94, 255, .1);
-            border-radius: 1rem;
+            border-radius: .95rem;
             background: #fff;
             padding: 2rem;
             text-align: center;
