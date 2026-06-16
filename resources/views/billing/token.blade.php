@@ -8,6 +8,10 @@
     @vite('resources/js/billing-token.js')
 </head>
 <body>
-    <div id="billing-token-app" data-uuid="{{ $uuid }}"></div>
+    <div
+        id="billing-token-app"
+        data-uuid="{{ $uuid }}"
+        data-custinfo="{{ request()->boolean('custinfo') ? '1' : '0' }}"
+    ></div>
 </body>
 </html>

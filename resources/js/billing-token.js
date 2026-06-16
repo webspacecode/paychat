@@ -15,5 +15,6 @@ const el = document.getElementById('billing-token-app');
 if (el) {
     createApp(CustomerToken, {
         uuid: el.dataset.uuid,
+        custinfo: el.dataset.custinfo === '1',
     }).mount(el);
 }

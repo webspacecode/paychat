@@ -21,7 +21,8 @@ class InvoiceController extends Controller
                 $req->order,
                 $tenant,
                 $req->industry,
-                $req->paper_size
+                $req->paper_size,
+                $req->boolean('custinfo')
             );
         } catch (Throwable $e) {
             Observability::logFailure('invoice.generate.failed', $e, [
@@ -35,34 +36,37 @@ class InvoiceController extends Controller
         }
     }
 
-    public function view($uuid, InvoiceService $service)
+    public function view(Request $request, $uuid, InvoiceService $service)
     {
         
         return $service->view(
-            $uuid
+            $uuid,
+            $request->boolean('custinfo')
         );
         
     }
 
-    public function downloadPdf($uuid, InvoiceService $service)
+    public function downloadPdf(Request $request, $uuid, InvoiceService $service)
     {
-        return $service->downloadPdf($uuid);
+        return $service->downloadPdf($uuid, $request->boolean('custinfo'));
     }
 
-    public function generatedView($uuid, InvoiceService $service)
+    public function generatedView(Request $request, $uuid, InvoiceService $service)
     {
         
         return $service->generatedView(
-            $uuid
+            $uuid,
+            $request->boolean('custinfo')
         );
         
     }
 
-    public function viewToken($uuid, InvoiceService $service)
+    public function viewToken(Request $request, $uuid, InvoiceService $service)
     {
         
         return $service->viewToken(
-            $uuid
+            $uuid,
+            $request->boolean('custinfo')
         );
         
     }

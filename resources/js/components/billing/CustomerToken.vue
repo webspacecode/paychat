@@ -66,7 +66,7 @@ import CustomerOrderStatus from './CustomerOrderStatus.vue'
 import axios from 'axios'
 
 export default {
-  props: ['uuid'],
+  props: ['uuid', 'custinfo'],
 
   components: {
     CustomerOrderStatus
@@ -95,20 +95,27 @@ export default {
 
     resolvedInvoiceUrl() {
       const invoiceNo = this.finalOrderData?.invoice_no
-
-      return (
+      const url = (
         this.finalOrderData?.meta?.invoice?.url ||
         this.invoiceLink ||
         (this.finalOrderData?.invoice_no
           ? `${window.location.origin}/billing/invoices/${encodeURIComponent(invoiceNo)}`
           : `${window.location.origin}/billing/invoices/${encodeURIComponent(this.uuid)}`)
       );
+
+      return this.withCustomerInfoFlag(url);
     }
   },
 
   async mounted() {
     try {
-      const res = await axios.get(`/api/token/${this.uuid}`);
+      const tokenUrl = new URL(`/api/token/${this.uuid}`, window.location.origin);
+
+      if (this.custinfo) {
+        tokenUrl.searchParams.set('custinfo', '1');
+      }
+
+      const res = await axios.get(tokenUrl.pathname + tokenUrl.search);
       console.log("TOken daa", res.data)
       this.finalOrderData = res.data.orderData;
       this.token = res.data.token;
@@ -133,6 +140,23 @@ export default {
   },
 
   methods: {
+    withCustomerInfoFlag(url) {
+      if (!url || !this.custinfo) {
+        return url;
+      }
+
+      try {
+        const invoiceUrl = new URL(url, window.location.origin);
+        invoiceUrl.searchParams.set('custinfo', '1');
+
+        return invoiceUrl.toString();
+      } catch (e) {
+        const separator = url.includes('?') ? '&' : '?';
+
+        return `${url}${separator}custinfo=1`;
+      }
+    },
+
     async submitFeedback() {
       if (this.submitted) return;
 

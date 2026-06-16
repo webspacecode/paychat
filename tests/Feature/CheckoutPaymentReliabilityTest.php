@@ -131,7 +131,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
         ]);
 
         app()->instance(InvoiceService::class, new class extends InvoiceService {
-            public function generate($order, $tenant, $industry, $paper)
+            public function generate($order, $tenant, $industry, $paper, bool $includeCustomerInfo = false)
             {
                 throw new \RuntimeException('Invoice should not run on idempotent success');
             }
@@ -414,7 +414,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
         ]);
 
         app()->instance(InvoiceService::class, new class extends InvoiceService {
-            public function generate($order, $tenant, $industry, $paper)
+            public function generate($order, $tenant, $industry, $paper, bool $includeCustomerInfo = false)
             {
                 throw new \RuntimeException('Online invoice failure remains a side effect');
             }
@@ -448,7 +448,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
         ]);
 
         app()->instance(InvoiceService::class, new class extends InvoiceService {
-            public function generate($order, $tenant, $industry, $paper)
+            public function generate($order, $tenant, $industry, $paper, bool $includeCustomerInfo = false)
             {
                 throw new \RuntimeException('Simulated slow invoice failure');
             }
@@ -620,7 +620,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
             {
             }
 
-            public function generate($order, $tenant, $industry, $paper)
+            public function generate($order, $tenant, $industry, $paper, bool $includeCustomerInfo = false)
             {
                 if ($this->fail) {
                     throw new \RuntimeException('Simulated offline invoice failure');
@@ -630,7 +630,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
                 return $this->generateUsingNumber($order, $tenant, $industry, $paper, 'PC26-O'.$orderId);
             }
 
-            public function generateWithPreferredInvoiceNumber($order, $tenant, $industry, $paper, string $preferredInvoiceNumber)
+            public function generateWithPreferredInvoiceNumber($order, $tenant, $industry, $paper, string $preferredInvoiceNumber, bool $includeCustomerInfo = false)
             {
                 if ($this->fail) {
                     throw new \RuntimeException('Simulated offline invoice failure');

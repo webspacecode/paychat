@@ -8,6 +8,10 @@
     @vite('resources/js/billing-invoice.js')
 </head>
 <body>
-    <div id="billing-invoice-app" data-uuid="{{ $uuid }}"></div>
+    <div
+        id="billing-invoice-app"
+        data-uuid="{{ $uuid }}"
+        data-custinfo="{{ request()->boolean('custinfo') ? '1' : '0' }}"
+    ></div>
 </body>
 </html>

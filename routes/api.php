@@ -30,6 +30,8 @@ use App\Http\Controllers\Api\Tenant\ReportController;
 use App\Http\Controllers\Api\Tenant\OfflineOrderSyncController;
 use App\Http\Controllers\Api\Tenant\BootstrapController;
 use App\Http\Controllers\Api\Tenant\LoyaltySettingsController;
+use App\Http\Controllers\Api\Tenant\BakeryOrderController;
+use App\Http\Controllers\Api\Tenant\BakeryOrderPaymentController;
 
 
 
@@ -73,6 +75,16 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::get('/customers/{customer}/summary', [CustomerController::class, 'summary'])->whereNumber('customer');
     Route::get('/customers/{customer}/orders', [CustomerController::class, 'orders'])->whereNumber('customer');
     Route::get('/customers/{customer}/loyalty-transactions', [CustomerController::class, 'loyaltyTransactions'])->whereNumber('customer');
+
+    Route::prefix('bakery')->middleware(['industry:bakery', 'feature:bakery_management', 'permission:bakery.manage'])->group(function () {
+        Route::get('/orders', [BakeryOrderController::class, 'index']);
+        Route::post('/orders', [BakeryOrderController::class, 'store']);
+        Route::get('/orders/{order}', [BakeryOrderController::class, 'show'])->whereNumber('order');
+        Route::patch('/orders/{order}', [BakeryOrderController::class, 'update'])->whereNumber('order');
+        Route::patch('/orders/{order}/status', [BakeryOrderController::class, 'updateStatus'])->whereNumber('order');
+        Route::post('/orders/{order}/payments', [BakeryOrderPaymentController::class, 'store'])->whereNumber('order');
+        Route::get('/production-board', [BakeryOrderController::class, 'productionBoard']);
+    });
 
     Route::get('/settings/loyalty', [LoyaltySettingsController::class, 'show']);
     Route::put('/settings/loyalty', [LoyaltySettingsController::class, 'update'])->middleware('permission:settings.manage');

@@ -16,17 +16,17 @@ use Spatie\Browsershot\Browsershot;
 
 class InvoiceService
 {
-    public function generate($order,$tenant,$industry,$paper)
+    public function generate($order,$tenant,$industry,$paper, bool $includeCustomerInfo = false)
     {
-        return $this->generateInternal($order, $tenant, $industry, $paper);
+        return $this->generateInternal($order, $tenant, $industry, $paper, null, $includeCustomerInfo);
     }
 
-    public function generateWithPreferredInvoiceNumber($order, $tenant, $industry, $paper, string $preferredInvoiceNumber)
+    public function generateWithPreferredInvoiceNumber($order, $tenant, $industry, $paper, string $preferredInvoiceNumber, bool $includeCustomerInfo = false)
     {
-        return $this->generateInternal($order, $tenant, $industry, $paper, $preferredInvoiceNumber);
+        return $this->generateInternal($order, $tenant, $industry, $paper, $preferredInvoiceNumber, $includeCustomerInfo);
     }
 
-    private function generateInternal($order, $tenant, $industry, $paper, ?string $preferredInvoiceNumber = null)
+    private function generateInternal($order, $tenant, $industry, $paper, ?string $preferredInvoiceNumber = null, bool $includeCustomerInfo = false)
     {
         $startedAt = microtime(true);
         [$config, $template] = $this->resolveInvoiceTemplate($industry, $paper);
@@ -62,7 +62,7 @@ class InvoiceService
 
             $this->attachExistingInvoiceToOrder($orderId, $existingInvoice);
 
-            return $this->generatedView($existingInvoice->uuid);
+            return $this->generatedView($existingInvoice->uuid, $includeCustomerInfo);
         }
 
         if ($preferredInvoiceNumber) {
@@ -72,7 +72,7 @@ class InvoiceService
                 if ($this->canReusePreferredInvoice($existingPreferredInvoice, $tenant->id, $orderId, $orderData)) {
                     $this->attachExistingInvoiceToOrder($orderId, $existingPreferredInvoice);
 
-                    return $this->generatedView($existingPreferredInvoice->uuid);
+                    return $this->generatedView($existingPreferredInvoice->uuid, $includeCustomerInfo);
                 }
 
                 throw new \RuntimeException('Offline invoice number already exists. Cannot change customer-facing invoice number.');
@@ -84,7 +84,7 @@ class InvoiceService
 
         $orderData['review_token'] =  $reviewToken;
 
-        $url = url("/billing/invoices/$uuid");
+        $url = $this->publicInvoiceUrl($uuid, $includeCustomerInfo);
 
         DB::connection('mysql')->beginTransaction();
         DB::connection('tenant')->beginTransaction();
@@ -132,7 +132,7 @@ class InvoiceService
             if ($existingInvoice) {
                 $this->attachExistingInvoiceToOrder($orderId, $existingInvoice);
 
-                return $this->generatedView($existingInvoice->uuid);
+                return $this->generatedView($existingInvoice->uuid, $includeCustomerInfo);
             }
 
             throw $e;
@@ -152,7 +152,7 @@ class InvoiceService
             $qr = $qrCode->format('svg')->size(120)->generate($url);
             if ($token) {
                 $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
-                $tokenUrl = url("/billing/tokens/$uuid");
+                $tokenUrl = $this->publicTokenUrl($uuid, $includeCustomerInfo);
 
                 $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
                 $tokenQr = $qrCode->format('svg')->size(120)->generate($tokenUrl);
@@ -172,7 +172,7 @@ class InvoiceService
         }
         
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
-        $receipt = $this->buildReceiptData($orderData, $tenant, $uuid, $url, $qr);
+        $receipt = $this->buildReceiptData($orderData, $tenant, $uuid, $url, $qr, null, false, $includeCustomerInfo);
 
         // We will add condition here based on settings
         // It runs only if customer display is on
@@ -225,6 +225,26 @@ class InvoiceService
     private function normalizeOrder($order)
     {
         return data_get($order, 'data.data', $order);
+    }
+
+    private function publicInvoiceUrl(string $uuid, bool $includeCustomerInfo = false): string
+    {
+        return url("/billing/invoices/$uuid") . ($includeCustomerInfo ? '?custinfo=1' : '');
+    }
+
+    private function apiInvoiceUrl(string $uuid, bool $includeCustomerInfo = false): string
+    {
+        return url("/api/invoice/$uuid") . ($includeCustomerInfo ? '?custinfo=1' : '');
+    }
+
+    private function publicTokenUrl(string $uuid, bool $includeCustomerInfo = false): string
+    {
+        return url("/billing/tokens/$uuid") . ($includeCustomerInfo ? '?custinfo=1' : '');
+    }
+
+    private function includeCustomerInfo(?bool $includeCustomerInfo = null): bool
+    {
+        return $includeCustomerInfo ?? request()->boolean('custinfo');
     }
 
     private function resolveInvoiceTemplate(?string $industry, ?string $paper): array
@@ -465,8 +485,9 @@ class InvoiceService
     }
 
 
-    public function view($uuid)
+    public function view($uuid, ?bool $includeCustomerInfo = null)
     {
+        $includeCustomerInfo = $this->includeCustomerInfo($includeCustomerInfo);
         $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
@@ -474,7 +495,7 @@ class InvoiceService
         $tenant = $this->centralTenantQuery()->where('id', $inv->tenant_id)->first();
 
         $totals = $this->calculateGST($inv->order_data,$tenant->taxConfig);
-        $url = request()->url();
+        $url = request()->url() . ($includeCustomerInfo ? '?custinfo=1' : '');
         $qr = $this->safeQrSvg($url);
         $receipt = $this->buildReceiptData(
             $inv->order_data,
@@ -482,7 +503,9 @@ class InvoiceService
             $inv->uuid,
             $url,
             $qr,
-            $inv
+            $inv,
+            false,
+            $includeCustomerInfo
         );
 
         return view(
@@ -495,15 +518,19 @@ class InvoiceService
                 'receipt'=>$receipt,
                 'qr'=>$qr,
                 'url'=>$url,
-                'pdfUrl'=>route('invoice.pdf', ['uuid' => $uuid]),
+                'pdfUrl'=>route('invoice.pdf', array_filter([
+                    'uuid' => $uuid,
+                    'custinfo' => $includeCustomerInfo ? 1 : null,
+                ])),
                 'logoSrc'=>$this->invoiceLogoSrc($tenant->branding),
                 'isPdf'=>false
             ]
         );
     }
 
-    public function downloadPdf($uuid)
+    public function downloadPdf($uuid, ?bool $includeCustomerInfo = null)
     {
+        $includeCustomerInfo = $this->includeCustomerInfo($includeCustomerInfo);
         $startedAt = microtime(true);
         $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
@@ -512,7 +539,7 @@ class InvoiceService
         $tenant = $this->centralTenantQuery()->where('id', $inv->tenant_id)->first();
         $orderData = $this->normalizeOrder($inv->order_data);
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
-        $url = url("/api/invoice/$uuid");
+        $url = $this->apiInvoiceUrl($uuid, $includeCustomerInfo);
         $qr = $this->safeQrSvg($url);
         $receipt = $this->buildReceiptData(
             $orderData,
@@ -521,7 +548,8 @@ class InvoiceService
             $url,
             $qr,
             $inv,
-            true
+            true,
+            $includeCustomerInfo
         );
 
         $html = view($template, [
@@ -580,8 +608,9 @@ class InvoiceService
         ]);
     }
 
-    public function viewToken($uuid)
+    public function viewToken($uuid, ?bool $includeCustomerInfo = null)
     {
+        $includeCustomerInfo = $this->includeCustomerInfo($includeCustomerInfo);
         $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
@@ -592,7 +621,7 @@ class InvoiceService
 
         $qrCode = new Generator();
 
-        $url = url("/billing/invoices/$uuid");
+        $url = $this->publicInvoiceUrl($uuid, $includeCustomerInfo);
         $qr = null;
         $kitchenQr = null;
 
@@ -614,16 +643,25 @@ class InvoiceService
             $kitchenQr = null; // fallback (important for production)
         }
 
+        $orderData = $inv->order_data;
+
+        if ($includeCustomerInfo) {
+            data_set($orderData, 'meta.invoice.url', $url);
+        }
+
         return [
-            'orderData' => $inv->order_data,
+            'orderData' => $orderData,
             'token' => $inv->order_data['token'] ?? null,
             'qr'=> base64_encode($qr),
             'kitchenQr'=> base64_encode($kitchenQr),
+            'invoice_url' => $url,
+            'invoiceUrl' => $url,
         ];
     }
 
-    public function generatedView($uuid)
+    public function generatedView($uuid, ?bool $includeCustomerInfo = null)
     {   
+        $includeCustomerInfo = $this->includeCustomerInfo($includeCustomerInfo);
         $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
@@ -634,7 +672,7 @@ class InvoiceService
         $orderData = $this->normalizeOrder($order);
 
         
-        $url = url("/billing/invoices/$uuid");
+        $url = $this->publicInvoiceUrl($uuid, $includeCustomerInfo);
         
         $token = $order['token']['token_code'] ?? null;
 
@@ -651,7 +689,7 @@ class InvoiceService
             $qr = $qrCode->format('svg')->size(120)->generate($url);
             if ($token) {
                 $kitchenUrl = url("pos#/kitchen?mode=staff&token=$token");
-                $tokenUrl = url("/billing/tokens/$uuid");
+                $tokenUrl = $this->publicTokenUrl($uuid, $includeCustomerInfo);
 
                 $kitchenQr = $qrCode->format('svg')->size(120)->generate($kitchenUrl);
                 $tokenQr = $qrCode->format('svg')->size(120)->generate($tokenUrl);
@@ -670,7 +708,7 @@ class InvoiceService
         }
         
         $totals = $this->calculateGST($orderData,$tenant->taxConfig);
-        $receipt = $this->buildReceiptData($orderData, $tenant, $uuid, $url, $qr, $inv);
+        $receipt = $this->buildReceiptData($orderData, $tenant, $uuid, $url, $qr, $inv, false, $includeCustomerInfo);
         
         return [
             'html'=>view($template,[
@@ -681,7 +719,10 @@ class InvoiceService
                 'receipt'=>$receipt,
                 'qr'=>$qr,
                 'url'=>$url,
-                'pdfUrl'=>route('invoice.pdf', ['uuid' => $uuid]),
+                'pdfUrl'=>route('invoice.pdf', array_filter([
+                    'uuid' => $uuid,
+                    'custinfo' => $includeCustomerInfo ? 1 : null,
+                ])),
                 'logoSrc'=>$this->invoiceLogoSrc($tenant->branding),
                 'isPdf'=>false,
                 'config'=>$config
@@ -734,7 +775,8 @@ class InvoiceService
         ?string $invoiceUrl,
         ?string $qrSvg = null,
         ?Invoice $invoice = null,
-        bool $inlineLogos = false
+        bool $inlineLogos = false,
+        bool $includeCustomerInfo = false
     ): array {
         $branding = $tenant->branding;
         $taxConfig = $tenant->taxConfig;
@@ -791,6 +833,14 @@ class InvoiceService
                 'token_code' => data_get($order, 'token.token_code'),
                 'kot_codes' => $kotCodes,
             ],
+            'customer' => $includeCustomerInfo ? [
+                'name' => $this->nullableTrim(data_get($order, 'customer.name'))
+                    ?? $this->nullableTrim(data_get($order, 'walk_in_customer.name'))
+                    ?? $this->nullableTrim(data_get($order, 'customer_name')),
+                'phone' => $this->nullableTrim(data_get($order, 'customer.phone'))
+                    ?? $this->nullableTrim(data_get($order, 'walk_in_customer.phone'))
+                    ?? $this->nullableTrim(data_get($order, 'customer_phone')),
+            ] : null,
             'items' => collect($order['items'] ?? [])
                 ->map(fn ($item) => [
                     'name' => $item['product_name'] ?? $item['name'] ?? 'Item',

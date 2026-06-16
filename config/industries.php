@@ -6,7 +6,7 @@ return [
     'aliases' => [
         'restaurant' => 'cafe',
         'cafe' => 'cafe',
-        'bakery' => 'cafe',
+        'bakery' => 'bakery',
         'salon' => 'salon',
         'service' => 'salon',
         'services' => 'salon',
@@ -27,6 +27,20 @@ return [
             'gst_invoice' => true,
             'customer_management' => true,
             'reports' => true,
+        ],
+
+        'bakery' => [
+            'pos' => true,
+            'dine_in' => true,
+            'kds' => true,
+            'token_management' => true,
+            'inventory' => true,
+            'appointments' => false,
+            'staff_assignment' => true,
+            'gst_invoice' => true,
+            'customer_management' => true,
+            'reports' => true,
+            'bakery_management' => true,
         ],
 
         'salon' => [

@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.user' => \App\Http\Middleware\EnsureTenantUserBelongsToCurrentTenant::class,
             'permission' => \App\Http\Middleware\EnsurePermission::class,
             'feature' => \App\Http\Middleware\EnsureFeature::class,
+            'industry' => \App\Http\Middleware\EnsureIndustry::class,
         ]);
 
         $middleware->group('api', [

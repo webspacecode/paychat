@@ -15,6 +15,7 @@ $all = [
     'report.view',
     'settings.view',
     'settings.manage',
+    'bakery.manage',
     'password.change',
 ];
 
@@ -38,6 +39,7 @@ return [
             'product.manage',
             'report.view',
             'settings.view',
+            'bakery.manage',
             'password.change',
         ],
 
@@ -48,6 +50,7 @@ return [
             'payment.collect',
             'discount.apply',
             'invoice.print',
+            'bakery.manage',
             'password.change',
         ],
 

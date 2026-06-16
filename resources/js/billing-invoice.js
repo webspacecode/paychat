@@ -14,5 +14,6 @@ const el = document.getElementById('billing-invoice-app');
 if (el) {
     createApp(Invoices, {
         uuid: el.dataset.uuid,
+        custinfo: el.dataset.custinfo === '1',
     }).mount(el);
 }

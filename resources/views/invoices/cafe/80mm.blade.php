@@ -221,6 +221,7 @@
     $receiptTotals = $receipt['totals'] ?? [];
     $receiptPayments = collect($receipt['payments'] ?? []);
     $qrData = $receipt['qr'] ?? [];
+    $customer = $receipt['customer'] ?? null;
     $merchantName = $merchant['name'] ?? ($branding->company_name ?? 'Cafe Name');
     $merchantLogo = $merchant['logo_url'] ?? ($logoSrc ?? null);
     $paychatLogo = $platform['paychat_logo_url'] ?? null;
@@ -261,6 +262,19 @@
         <div class="bill-no">{{ $invoice['invoice_no'] ?? ($order['invoice_no'] ?? '---') }}</div>
         <div class="muted">Order: {{ $invoice['order_no'] ?? ($order['order_no'] ?? '---') }}</div>
     </div>
+
+    @if(!empty($customer['name']) || !empty($customer['phone']))
+        <div class="divider"></div>
+        <div>
+            @if(!empty($customer['name']))
+                <div>Customer: {{ $customer['name'] }}</div>
+            @endif
+
+            @if(!empty($customer['phone']))
+                <div>Phone: {{ $customer['phone'] }}</div>
+            @endif
+        </div>
+    @endif
 
     <div class="divider"></div>
 

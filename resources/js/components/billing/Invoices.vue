@@ -100,7 +100,7 @@
 <script>
 export default {
 
-  props: ['uuid'],
+  props: ['uuid', 'custinfo'],
 
   data() {
 
@@ -125,7 +125,14 @@ export default {
 
     invoiceUrl() {
 
-      return `${window.location.origin}/api/invoice/${this.uuid}`;
+      const url = new URL(`/api/invoice/${this.uuid}`, window.location.origin);
+
+      if (this.custinfo) {
+
+        url.searchParams.set('custinfo', '1');
+      }
+
+      return url.toString();
     }
   },
 
