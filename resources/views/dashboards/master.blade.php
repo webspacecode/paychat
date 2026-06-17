@@ -3,14 +3,120 @@
 @section('title', 'Master Dashboard | PayChat')
 
 @section('content')
-    <div class="mb-7 overflow-hidden rounded-lg border border-slate-200 bg-slate-950 text-white shadow-xl">
-        <div class="flex flex-col gap-6 px-6 py-7 sm:flex-row sm:items-end sm:justify-between lg:px-8">
+    <style>
+        [data-master-dashboard] {
+            --master-ink: #111827;
+            --master-muted: #667085;
+            --master-line: rgba(148, 163, 184, 0.18);
+            --master-panel: rgba(255, 255, 255, 0.92);
+            --master-blue: #2157ff;
+            --master-blue-dark: #173fc0;
+            --master-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+            --master-shadow-strong: 0 28px 90px rgba(15, 23, 42, 0.18);
+        }
+
+        [data-master-dashboard] .master-hero {
+            background:
+                radial-gradient(circle at 12% 15%, rgba(255, 255, 255, 0.18), transparent 32%),
+                linear-gradient(135deg, #07111f 0%, #172554 52%, #2157ff 100%);
+            box-shadow: var(--master-shadow-strong);
+        }
+
+        [data-master-dashboard] .master-panel {
+            border: 1px solid var(--master-line);
+            background: var(--master-panel);
+            box-shadow: var(--master-shadow);
+        }
+
+        [data-master-dashboard] .master-section-head {
+            border-bottom: 0;
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.7));
+        }
+
+        [data-master-dashboard] table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        [data-master-dashboard] thead {
+            background: #f8fafc;
+        }
+
+        [data-master-dashboard] tbody {
+            background: transparent;
+        }
+
+        [data-master-dashboard] tbody tr {
+            box-shadow: inset 0 -1px 0 rgba(226, 232, 240, 0.65);
+        }
+
+        [data-master-dashboard] tbody tr:hover {
+            background: #f8fbff;
+        }
+
+        [data-master-dashboard] .master-action {
+            display: inline-flex;
+            min-height: 40px;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            border: 1px solid rgba(33, 87, 255, 0.18);
+            border-radius: 8px;
+            background: #eef4ff;
+            color: #173fc0;
+            font-weight: 700;
+            box-shadow: 0 10px 28px rgba(33, 87, 255, 0.12);
+            transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        }
+
+        [data-master-dashboard] .master-action:hover,
+        [data-master-dashboard] .master-action:focus-visible {
+            background: #dfe9ff;
+            color: #0f2f91;
+            box-shadow: 0 14px 34px rgba(33, 87, 255, 0.18);
+            transform: translateY(-1px);
+        }
+
+        [data-master-dashboard] .master-action-primary {
+            border-color: transparent;
+            background: linear-gradient(135deg, var(--master-blue), var(--master-blue-dark));
+            color: #fff;
+        }
+
+        [data-master-dashboard] .master-action-primary:hover,
+        [data-master-dashboard] .master-action-primary:focus-visible {
+            background: linear-gradient(135deg, #1748dc, #0f2f91);
+            color: #fff;
+        }
+
+        [data-master-dashboard] .master-action-dark {
+            border-color: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            box-shadow: none;
+        }
+
+        [data-master-dashboard] .master-action-dark:hover,
+        [data-master-dashboard] .master-action-dark:focus-visible {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        [data-master-dashboard] input,
+        [data-master-dashboard] select {
+            background-color: #fff;
+        }
+    </style>
+
+    <div data-master-dashboard class="space-y-7">
+    <div class="master-hero overflow-hidden rounded-xl text-white">
+        <div class="flex flex-col gap-6 px-6 py-8 sm:flex-row sm:items-end sm:justify-between lg:px-8">
             <div>
                 <div class="mb-5 flex items-center gap-3">
-                    <span class="rounded-md bg-white px-3 py-2">
+                    <span class="rounded-lg bg-white px-3 py-2 shadow-sm">
                         <img src="{{ asset('color-paychat-logo-main.svg') }}" alt="PayChat" class="h-8 w-auto">
                     </span>
-                    <span class="rounded-md border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200">
+                    <span class="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100">
                         Master Control
                     </span>
                 </div>
@@ -21,15 +127,15 @@
             </div>
 
             <div class="grid grid-cols-3 gap-3 text-right sm:min-w-80">
-                <div class="rounded-md border border-white/10 bg-white/10 px-4 py-3">
+                <div class="rounded-lg border border-white/10 bg-white/10 px-4 py-3 shadow-sm">
                     <div class="text-2xl font-semibold">{{ $tenants->count() }}</div>
                     <div class="text-xs uppercase tracking-wide text-slate-300">Tenants</div>
                 </div>
-                <div class="rounded-md border border-white/10 bg-white/10 px-4 py-3">
+                <div class="rounded-lg border border-white/10 bg-white/10 px-4 py-3 shadow-sm">
                     <div class="text-2xl font-semibold">{{ $tenants->sum(fn ($tenant) => $tenant->users->count()) }}</div>
                     <div class="text-xs uppercase tracking-wide text-slate-300">Users</div>
                 </div>
-                <div class="rounded-md border border-white/10 bg-white/10 px-4 py-3">
+                <div class="rounded-lg border border-white/10 bg-white/10 px-4 py-3 shadow-sm">
                     <div class="text-2xl font-semibold">{{ $demoLeads->count() }}</div>
                     <div class="text-xs uppercase tracking-wide text-slate-300">Leads</div>
                 </div>
@@ -61,15 +167,15 @@
         </div>
     @endif
 
-    <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-5 py-4">
+    <div class="master-panel overflow-hidden rounded-xl">
+        <div class="master-section-head px-5 py-4">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <h2 class="text-base font-semibold text-slate-950">All Tenants</h2>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <p class="text-sm text-slate-500">Click any row to open the full tenant profile.</p>
                     <button
                         type="button"
-                        class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                        class="master-action px-3 py-2 text-sm"
                         data-logs-open
                         data-tenant-name="System / Unknown"
                         data-logs-url="{{ route('master.logs.system') }}"
@@ -140,7 +246,7 @@
                                 <button
                                     type="button"
                                     title="Manage tenant"
-                                    class="mr-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                                    class="master-action master-action-primary mr-2 px-3 py-2 text-sm"
                                     data-modal-target="tenant-modal-{{ $tenant->id }}"
                                     data-open-tab="users"
                                 >
@@ -148,7 +254,7 @@
                                 </button>
                                 <button
                                     type="button"
-                                    class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                                    class="master-action px-3 py-2 text-sm"
                                     data-logs-open
                                     data-tenant-name="{{ $tenant->name }}"
                                     data-logs-url="{{ route('master.tenants.logs', $tenant) }}"
@@ -168,8 +274,8 @@
         </div>
     </div>
 
-    <div class="mt-7 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-5 py-4">
+    <div class="master-panel overflow-hidden rounded-xl">
+        <div class="master-section-head px-5 py-4">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <h2 class="text-base font-semibold text-slate-950">Demo Leads</h2>
                 <p class="text-sm text-slate-500">Latest website demo requests in table format.</p>
@@ -247,10 +353,10 @@
             data-modal
             aria-hidden="{{ $isUserModalOpen ? 'false' : 'true' }}"
         >
-            <div class="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-2xl">
-                <div class="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-950 px-6 py-5 text-white">
+            <div class="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-xl bg-white shadow-2xl">
+                <div class="flex items-start justify-between gap-4 bg-slate-950 px-6 py-5 text-white">
                     <div class="flex items-center gap-4">
-                        <div class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-md bg-white">
+                        <div class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-white">
                             @if($branding?->logo)
                                 <img src="{{ $branding->logo }}" alt="{{ $tenant->name }}" class="h-full w-full object-cover">
                             @else
@@ -262,18 +368,18 @@
                             <p class="mt-1 text-sm text-slate-300">{{ $tenant->slug }} · {{ $tenant->database }}</p>
                         </div>
                     </div>
-                    <button type="button" class="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-white/10" data-modal-close>
+                    <button type="button" class="master-action master-action-dark px-3 py-2 text-sm" data-modal-close>
                         Close
                     </button>
                 </div>
 
                 <div class="max-h-[calc(92vh-89px)] overflow-y-auto">
-                    <div class="border-b border-slate-200 px-6 pt-4">
+                    <div class="px-6 pt-4">
                         <div class="flex gap-2" role="tablist" aria-label="Tenant management">
-                            <button type="button" class="rounded-t-md border border-b-0 border-slate-200 px-4 py-2 text-sm font-semibold {{ $isUserModalOpen ? 'bg-white text-slate-600' : 'bg-slate-950 text-white' }}" data-tenant-tab="profile" data-tab-active-class="bg-slate-950 text-white" data-tab-inactive-class="bg-white text-slate-600">
+                            <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold {{ $isUserModalOpen ? 'bg-slate-100 text-slate-600' : 'bg-slate-950 text-white' }}" data-tenant-tab="profile" data-tab-active-class="bg-slate-950 text-white" data-tab-inactive-class="bg-slate-100 text-slate-600">
                                 Profile
                             </button>
-                            <button type="button" class="rounded-t-md border border-b-0 border-slate-200 px-4 py-2 text-sm font-semibold {{ $isUserModalOpen ? 'bg-slate-950 text-white' : 'bg-white text-slate-600' }}" data-tenant-tab="users" data-tab-active-class="bg-slate-950 text-white" data-tab-inactive-class="bg-white text-slate-600">
+                            <button type="button" class="rounded-lg px-4 py-2 text-sm font-semibold {{ $isUserModalOpen ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-600' }}" data-tenant-tab="users" data-tab-active-class="bg-slate-950 text-white" data-tab-inactive-class="bg-slate-100 text-slate-600">
                                 Users
                             </button>
                         </div>
@@ -281,7 +387,7 @@
 
                     <div class="p-6 {{ $isUserModalOpen ? 'hidden' : '' }}" data-tenant-tab-panel="profile">
                         <div class="grid gap-5 lg:grid-cols-3">
-                            <section class="rounded-md border border-slate-200 p-5">
+                            <section class="rounded-xl bg-slate-50 p-5">
                                 <h3 class="text-sm font-semibold text-slate-950">Tenant Profile</h3>
                                 <dl class="mt-4 space-y-3 text-sm">
                                     <div><dt class="text-slate-500">Name</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->name }}</dd></div>
@@ -290,7 +396,7 @@
                                 </dl>
                             </section>
 
-                            <section class="rounded-md border border-slate-200 p-5">
+                            <section class="rounded-xl bg-slate-50 p-5">
                                 <h3 class="text-sm font-semibold text-slate-950">Tax Config</h3>
                                 <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
                                     <div><dt class="text-slate-500">GST</dt><dd class="mt-1 font-medium">{{ $tax?->gst_number ?: 'Not set' }}</dd></div>
@@ -302,7 +408,7 @@
                                 </dl>
                             </section>
 
-                            <section class="rounded-md border border-slate-200 p-5">
+                            <section class="rounded-xl bg-slate-50 p-5">
                                 <h3 class="text-sm font-semibold text-slate-950">Branding</h3>
                                 <dl class="mt-4 space-y-3 text-sm">
                                     <div><dt class="text-slate-500">Company</dt><dd class="mt-1 font-medium">{{ $branding?->company_name ?: 'Not set' }}</dd></div>
@@ -322,9 +428,9 @@
 
                     <div class="p-6 {{ $isUserModalOpen ? '' : 'hidden' }}" data-tenant-tab-panel="users">
                         <div class="grid gap-5 lg:grid-cols-[1fr_420px]">
-                            <section class="rounded-md border border-slate-200 p-5">
+                            <section class="rounded-xl bg-slate-50 p-5">
                                 <h3 class="text-sm font-semibold text-slate-950">Tenant Users</h3>
-                                <div class="mt-4 overflow-hidden rounded-md border border-slate-200">
+                                <div class="mt-4 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200/70">
                                     <table class="min-w-full divide-y divide-slate-200 text-sm">
                                         <thead class="bg-slate-50">
                                             <tr>
@@ -351,7 +457,7 @@
                             </section>
 
                             <div class="space-y-5">
-                                <section class="rounded-md border border-slate-200 p-5">
+                                <section class="rounded-xl bg-slate-50 p-5">
                                     <h3 class="text-sm font-semibold text-slate-950">Create User</h3>
                                     <form method="POST" action="{{ route('master.tenants.users.store', $tenant) }}" class="mt-4 space-y-3">
                                         @csrf
@@ -382,13 +488,13 @@
                                                 class="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
                                         </div>
 
-                                        <button class="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+                                        <button class="master-action master-action-primary w-full px-4 py-2.5 text-sm">
                                             Create Tenant User
                                         </button>
                                     </form>
                                 </section>
 
-                                <section class="rounded-md border border-slate-200 p-5">
+                                <section class="rounded-xl bg-slate-50 p-5">
                                     <h3 class="text-sm font-semibold text-slate-950">Reset Password</h3>
                                     <form method="POST" action="{{ route('master.tenants.password', $tenant) }}" class="mt-4 space-y-3">
                                         @csrf
@@ -407,7 +513,7 @@
                                         <input name="password_confirmation" type="password" required placeholder="Confirm password"
                                             class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
 
-                                        <button class="w-full rounded-md bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+                                        <button class="master-action master-action-primary w-full px-4 py-2.5 text-sm">
                                             Reset Tenant Password
                                         </button>
                                     </form>
@@ -421,13 +527,13 @@
     @endforeach
 
     <div id="tenant-logs-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/80 px-3 py-4" data-modal aria-hidden="true">
-        <div class="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-            <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-950 px-5 py-4 text-white lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div class="flex flex-col gap-4 bg-slate-950 px-5 py-4 text-white lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h2 class="text-xl font-semibold">Operational Logs</h2>
                     <p id="logs-tenant-name" class="mt-1 text-sm text-slate-300"></p>
                 </div>
-                <button type="button" class="rounded-md border border-white/15 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-white/10" data-modal-close>
+                <button type="button" class="master-action master-action-dark px-3 py-2 text-sm" data-modal-close>
                     Close
                 </button>
             </div>
@@ -477,7 +583,7 @@
                         Support Code
                         <div class="mt-1 flex gap-2">
                             <input id="logs-support-code" type="search" placeholder="PCR-..." class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
-                            <button id="logs-refresh" type="button" class="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Refresh</button>
+                            <button id="logs-refresh" type="button" class="master-action master-action-primary px-4 py-2 text-sm">Refresh</button>
                         </div>
                     </label>
                 </div>
@@ -505,11 +611,13 @@
             <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-600">
                 <span id="logs-page-summary">No logs loaded</span>
                 <div class="flex gap-2">
-                    <button id="logs-prev" type="button" class="rounded-md border border-slate-300 px-3 py-2 font-medium hover:bg-slate-100 disabled:opacity-40">Prev</button>
-                    <button id="logs-next" type="button" class="rounded-md border border-slate-300 px-3 py-2 font-medium hover:bg-slate-100 disabled:opacity-40">Next</button>
+                    <button id="logs-prev" type="button" class="master-action px-3 py-2 disabled:opacity-40">Prev</button>
+                    <button id="logs-next" type="button" class="master-action px-3 py-2 disabled:opacity-40">Next</button>
                 </div>
             </div>
         </div>
+    </div>
+
     </div>
 
     <script>
@@ -649,7 +757,7 @@
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
                                 <code class="text-xs text-slate-700">${supportCode}</code>
-                                ${supportCode ? `<button type="button" class="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100" data-copy="${supportCode}">Copy</button>` : ''}
+                                ${supportCode ? `<button type="button" class="master-action px-2 py-1 text-xs" data-copy="${supportCode}">Copy</button>` : ''}
                             </div>
                         </td>
                         <td class="px-4 py-3 text-slate-700">${escapeHtml(row.status_code || '')}</td>

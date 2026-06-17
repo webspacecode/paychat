@@ -425,3 +425,44 @@ php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tena
 php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --pretend
 php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --step
 ```
+
+
+Reset Query
+-- Tenant DB: reset test order/payment data only
+SET FOREIGN_KEY_CHECKS = 0;
+
+TRUNCATE TABLE pos_transactions;
+TRUNCATE TABLE pos_payments;
+TRUNCATE TABLE pos_order_items;
+TRUNCATE TABLE order_tokens;
+TRUNCATE TABLE kitchen_batches;
+TRUNCATE TABLE table_session_tables;
+TRUNCATE TABLE table_sessions;
+TRUNCATE TABLE loyalty_transactions;
+TRUNCATE TABLE offline_order_syncs;
+
+TRUNCATE TABLE report_daily_sales;
+TRUNCATE TABLE report_payment_breakdowns;
+TRUNCATE TABLE report_top_products_daily;
+TRUNCATE TABLE report_hourly_sales;
+TRUNCATE TABLE report_kpi_summaries;
+
+TRUNCATE TABLE pos_orders;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+
+On Central
+
+-- Replace 123 with the tenant id
+DELETE FROM invoices
+WHERE tenant_id = 123;
+
+-- Optional, if reviews were created from test orders/invoices
+DELETE FROM review_sessions
+WHERE tenant_id = 123;
+
+DELETE r
+FROM reviews r
+JOIN review_sessions rs ON rs.id = r.review_session_id
+WHERE rs.tenant_id = 123;

@@ -4,6 +4,7 @@ namespace App\Services\Bakery;
 
 use App\Models\Tenant\BakeryOrder;
 use App\Models\Tenant\Customer;
+use App\Models\Tenant\Product;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -22,9 +23,21 @@ class BakeryOrderService
 
     public const PAYMENT_STATUSES = [
         'unpaid',
+        'partial',
+        'paid',
+    ];
+
+    public const LEGACY_PAYMENT_STATUSES = [
         'advance_paid',
         'partially_paid',
         'fully_paid',
+    ];
+
+    public const ORDER_TYPES = [
+        'custom_cake',
+        'ready_cake_booking',
+        'event_party',
+        'other',
     ];
 
     public function __construct(private BakeryPaymentService $payments)
@@ -36,7 +49,7 @@ class BakeryOrderService
         $perPage = max(1, min($perPage, 100));
 
         return BakeryOrder::query()
-            ->with(['payments', 'customer:id,name,phone,email', 'location:id,name'])
+            ->with(['payments', 'items', 'customer:id,name,phone,email', 'location:id,name'])
             ->when($filters['status'] ?? null, fn ($q, $status) =>
                 $q->where('status', $this->normalizeStatus($status))
             )
@@ -65,7 +78,7 @@ class BakeryOrderService
     public function productionBoard(array $filters = [])
     {
         return BakeryOrder::query()
-            ->with(['payments', 'customer:id,name,phone,email', 'location:id,name'])
+            ->with(['payments', 'items', 'customer:id,name,phone,email', 'location:id,name'])
             ->whereIn('status', ['booked', 'confirmed', 'in_production', 'ready'])
             ->when($filters['date'] ?? null, fn ($q, $date) =>
                 $q->whereDate('fulfillment_at', $date)
@@ -79,7 +92,8 @@ class BakeryOrderService
     {
         return DB::transaction(function () use ($data, $userId) {
             $customer = $this->resolveCustomer($data);
-            $totals = $this->totals($data);
+            $items = (array) ($data['items'] ?? []);
+            $totals = $this->totals($data, null, $items);
             $advancePaid = $this->money($data['advance_paid'] ?? 0);
             $paidAmount = min($advancePaid, $totals['total']);
 
@@ -94,6 +108,8 @@ class BakeryOrderService
                     'payment_status' => $this->paymentStatus($totals['total'], $paidAmount, $advancePaid > 0),
                 ]
             ));
+
+            $this->syncItems($order, $items);
 
             if ($advancePaid > 0) {
                 $this->payments->recordPayment($order, [
@@ -111,7 +127,7 @@ class BakeryOrderService
                 ]);
             }
 
-            return $order->fresh(['payments', 'customer', 'location']);
+            return $order->fresh(['payments', 'items', 'customer', 'location']);
         });
     }
 
@@ -126,8 +142,10 @@ class BakeryOrderService
                 $payload['status'] = $this->normalizeStatus($data['status']);
             }
 
-            if ($this->hasTotalInput($data)) {
-                $totals = $this->totals($data, $lockedOrder);
+            $items = array_key_exists('items', $data) ? (array) $data['items'] : null;
+
+            if ($this->hasTotalInput($data) || is_array($items)) {
+                $totals = $this->totals($data, $lockedOrder, $items);
                 $paidAmount = $this->money($lockedOrder->payments()->where('status', 'success')->sum('amount'));
                 $payload = array_merge($payload, $totals, [
                     'paid_amount' => min($paidAmount, $totals['total']),
@@ -140,7 +158,11 @@ class BakeryOrderService
                 $lockedOrder->update($payload);
             }
 
-            return $lockedOrder->fresh(['payments', 'customer', 'location']);
+            if (is_array($items)) {
+                $this->syncItems($lockedOrder, $items);
+            }
+
+            return $lockedOrder->fresh(['payments', 'items', 'customer', 'location']);
         });
     }
 
@@ -151,7 +173,7 @@ class BakeryOrderService
             'updated_by' => $userId,
         ]);
 
-        return $order->fresh(['payments', 'customer', 'location']);
+        return $order->fresh(['payments', 'items', 'customer', 'location']);
     }
 
     public function syncPaymentTotals(BakeryOrder $order): BakeryOrder
@@ -164,6 +186,7 @@ class BakeryOrderService
         $order->update([
             'paid_amount' => min($paidAmount, $total),
             'balance_due' => max(0, $this->money($total - $paidAmount)),
+            'total_amount' => $total,
             'payment_status' => $this->paymentStatus(
                 $total,
                 $paidAmount,
@@ -171,7 +194,7 @@ class BakeryOrderService
             ),
         ]);
 
-        return $order->fresh(['payments', 'customer', 'location']);
+        return $order->fresh(['payments', 'items', 'customer', 'location']);
     }
 
     private function resolveCustomer(array $data, bool $createFromPhone = true): ?Customer
@@ -204,9 +227,12 @@ class BakeryOrderService
             'location_id',
             'customer_name',
             'customer_phone',
+            'order_type',
             'fulfillment_type',
             'fulfillment_at',
             'delivery_address',
+            'cake_flavour',
+            'weight',
             'flavour',
             'weight_value',
             'weight_unit',
@@ -232,25 +258,35 @@ class BakeryOrderService
             $payload['customer_phone'] = $this->normalizePhone($payload['customer_phone']) ?? $payload['customer_phone'];
         }
 
+        $payload = $this->syncAliasFields($payload, $data);
+
         $payload['updated_by'] = $userId;
 
         if ($creating) {
             $payload['created_by'] = $userId;
+            $payload['order_type'] = $this->normalizeOrderType($payload['order_type'] ?? 'custom_cake');
             $payload['fulfillment_type'] = $payload['fulfillment_type'] ?? 'pickup';
+        } elseif (array_key_exists('order_type', $payload)) {
+            $payload['order_type'] = $this->normalizeOrderType($payload['order_type']);
         }
 
         return $payload;
     }
 
-    private function totals(array $data, ?BakeryOrder $order = null): array
+    private function totals(array $data, ?BakeryOrder $order = null, ?array $items = null): array
     {
-        $subtotal = $this->money($data['subtotal'] ?? $order?->subtotal ?? 0);
+        $itemsTotal = is_array($items) ? $this->itemsTotal($items) : null;
+        $subtotal = $this->money($data['subtotal'] ?? $itemsTotal ?? $order?->subtotal ?? 0);
         $discount = $this->money($data['discount'] ?? $order?->discount ?? 0);
         $tax = $this->money($data['tax'] ?? $order?->tax ?? 0);
         $shipping = $this->money($data['shipping'] ?? $order?->shipping ?? 0);
-        $total = array_key_exists('total', $data)
-            ? $this->money($data['total'])
-            : $this->money($subtotal - $discount + $tax + $shipping);
+        if (array_key_exists('total_amount', $data)) {
+            $total = $this->money($data['total_amount']);
+        } elseif (array_key_exists('total', $data)) {
+            $total = $this->money($data['total']);
+        } else {
+            $total = $this->money($subtotal - $discount + $tax + $shipping);
+        }
 
         if ($total < 0) {
             throw ValidationException::withMessages([
@@ -258,12 +294,19 @@ class BakeryOrderService
             ]);
         }
 
-        return compact('subtotal', 'discount', 'tax', 'shipping', 'total');
+        return [
+            'subtotal' => $subtotal,
+            'discount' => $discount,
+            'tax' => $tax,
+            'shipping' => $shipping,
+            'total' => $total,
+            'total_amount' => $total,
+        ];
     }
 
     private function hasTotalInput(array $data): bool
     {
-        return (bool) array_intersect(array_keys($data), ['subtotal', 'discount', 'tax', 'shipping', 'total']);
+        return (bool) array_intersect(array_keys($data), ['subtotal', 'discount', 'tax', 'shipping', 'total', 'total_amount']);
     }
 
     private function generateOrderNumber(): string
@@ -294,7 +337,7 @@ class BakeryOrderService
         $normalized = strtolower(trim($status));
         $normalized = str_replace([' ', '-'], '_', $normalized);
 
-        if (! in_array($normalized, self::PAYMENT_STATUSES, true)) {
+        if (! in_array($normalized, array_merge(self::PAYMENT_STATUSES, self::LEGACY_PAYMENT_STATUSES), true)) {
             throw ValidationException::withMessages([
                 'payment_status' => ['Invalid bakery payment status.'],
             ]);
@@ -313,10 +356,97 @@ class BakeryOrderService
         }
 
         if ($paidAmount >= $total && $total > 0) {
-            return 'fully_paid';
+            return 'paid';
         }
 
-        return $hadAdvance ? 'advance_paid' : 'partially_paid';
+        return 'partial';
+    }
+
+    private function normalizeOrderType(string $orderType): string
+    {
+        $normalized = strtolower(trim($orderType));
+        $normalized = str_replace([' ', '-'], '_', $normalized);
+
+        if (! in_array($normalized, self::ORDER_TYPES, true)) {
+            throw ValidationException::withMessages([
+                'order_type' => ['Invalid bakery order type.'],
+            ]);
+        }
+
+        return $normalized;
+    }
+
+    private function syncAliasFields(array $payload, array $data): array
+    {
+        if (! array_key_exists('cake_flavour', $payload) && array_key_exists('flavour', $data)) {
+            $payload['cake_flavour'] = $data['flavour'];
+        }
+
+        if (! array_key_exists('flavour', $payload) && array_key_exists('cake_flavour', $data)) {
+            $payload['flavour'] = $data['cake_flavour'];
+        }
+
+        if (! array_key_exists('weight', $payload) && (array_key_exists('weight_value', $data) || array_key_exists('weight_unit', $data))) {
+            $payload['weight'] = trim(((string) ($data['weight_value'] ?? '')).' '.((string) ($data['weight_unit'] ?? ''))) ?: null;
+        }
+
+        return $payload;
+    }
+
+    private function syncItems(BakeryOrder $order, array $items): void
+    {
+        $order->items()->delete();
+
+        foreach ($items as $item) {
+            $payload = $this->itemPayload($item);
+
+            if ($payload) {
+                $order->items()->create($payload);
+            }
+        }
+    }
+
+    private function itemPayload(array $item): ?array
+    {
+        $product = ! empty($item['product_id'])
+            ? Product::with('images')->find($item['product_id'])
+            : null;
+
+        $productName = $item['product_name'] ?? $product?->name;
+
+        if (! $productName) {
+            return null;
+        }
+
+        $quantity = max(0, $this->money($item['quantity'] ?? 1));
+        $unitPrice = $this->money($item['unit_price'] ?? $product?->price ?? 0);
+        $lineTotal = array_key_exists('line_total', $item)
+            ? $this->money($item['line_total'])
+            : $this->money($quantity * $unitPrice);
+
+        return [
+            'product_id' => $product?->id,
+            'product_name' => $productName,
+            'sku' => $item['sku'] ?? $product?->sku,
+            'quantity' => $quantity ?: 1,
+            'unit_price' => $unitPrice,
+            'line_total' => $lineTotal,
+            'meta' => $item['meta'] ?? null,
+        ];
+    }
+
+    private function itemsTotal(array $items): float
+    {
+        return $this->money(collect($items)->sum(function ($item) {
+            $quantity = max(0, (float) ($item['quantity'] ?? 1));
+            $unitPrice = array_key_exists('unit_price', $item)
+                ? (float) $item['unit_price']
+                : (float) Product::whereKey($item['product_id'] ?? null)->value('price');
+
+            return array_key_exists('line_total', $item)
+                ? (float) $item['line_total']
+                : ($quantity * $unitPrice);
+        }));
     }
 
     private function normalizePhone(?string $phone): ?string

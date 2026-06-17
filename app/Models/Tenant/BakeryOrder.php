@@ -17,11 +17,14 @@ class BakeryOrder extends Model
         'customer_id',
         'customer_name',
         'customer_phone',
+        'order_type',
         'fulfillment_type',
         'fulfillment_at',
         'delivery_address',
         'status',
         'payment_status',
+        'cake_flavour',
+        'weight',
         'flavour',
         'weight_value',
         'weight_unit',
@@ -32,6 +35,7 @@ class BakeryOrder extends Model
         'discount',
         'tax',
         'shipping',
+        'total_amount',
         'total',
         'paid_amount',
         'balance_due',
@@ -48,15 +52,26 @@ class BakeryOrder extends Model
         'discount' => 'decimal:2',
         'tax' => 'decimal:2',
         'shipping' => 'decimal:2',
+        'total_amount' => 'decimal:2',
         'total' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'balance_due' => 'decimal:2',
         'meta' => 'array',
     ];
 
+    protected $appends = [
+        'reference_image_url',
+        'payment_summary',
+    ];
+
     public function payments()
     {
         return $this->hasMany(BakeryOrderPayment::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(BakeryOrderItem::class);
     }
 
     public function customer()
@@ -67,5 +82,22 @@ class BakeryOrder extends Model
     public function location()
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function getReferenceImageUrlAttribute(): ?string
+    {
+        return $this->reference_image_path
+            ? asset('storage/'.$this->reference_image_path)
+            : null;
+    }
+
+    public function getPaymentSummaryAttribute(): array
+    {
+        return [
+            'total_amount' => (float) ($this->total_amount ?? $this->total ?? 0),
+            'paid_amount' => (float) $this->paid_amount,
+            'balance_due' => (float) $this->balance_due,
+            'payment_status' => $this->payment_status,
+        ];
     }
 }
