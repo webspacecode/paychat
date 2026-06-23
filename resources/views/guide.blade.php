@@ -1,6 +1,7 @@
 @extends('layouts.marketing', [
-    'title' => 'PayChat POS Guide - Training Videos',
-    'description' => 'Watch PayChat POS training videos for billing, takeaway, delivery, dine-in tables and daily operations.',
+    'title' => 'PayChat POS Guide | Billing, Dine-In, Delivery & Takeaway',
+    'description' => 'Learn PayChat POS with video guides for counter billing, dine-in tables, takeaway, delivery orders, payments, invoices, KOT and everyday restaurant operations.',
+    'keywords' => 'PayChat POS guide, POS billing tutorial, dine-in POS training, takeaway billing, delivery order POS, restaurant KOT guide, cafe billing tutorial',
     'canonical' => url('/guide'),
 ])
 
@@ -48,8 +49,8 @@
                 <h2 class="pc-section-title">Need help getting started?</h2>
                 <p class="mt-4 max-w-2xl text-lg leading-8 text-ink/64">Contact PayChat support or request a demo for guided setup.</p>
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
-                    <a href="{{ url('/login') }}" class="pc-button pc-button-secondary">Open Login</a>
+                    <a href="https://paychat.shop/pos/#/register" class="pc-button pc-button-primary">Start Free Trial</a>
+                    <a href="{{ url('/login') }}" rel="nofollow" class="pc-button pc-button-secondary">Open Login</a>
                 </div>
             </div>
         </div>

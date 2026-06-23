@@ -6,6 +6,7 @@ use App\Http\Controllers\PublicBillingController;
 use App\Http\Controllers\Web\AuthenticatedSessionController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\RegisteredTenantController;
+use App\Http\Middleware\NoIndex;
 
 Route::get('/', [InfoController::class,'welcome']);
 
@@ -30,12 +31,12 @@ Route::view('/start-free-trial', 'start-free-trial')->name('start-free-trial');
 
 Route::view('/guide', 'guide')->name('guide');
 
-Route::get('/billing/tokens/{uuid}', [PublicBillingController::class, 'token']);
-Route::get('/billing/invoices/{uuid}', [PublicBillingController::class, 'invoice']);
+Route::get('/billing/tokens/{uuid}', [PublicBillingController::class, 'token'])->middleware(NoIndex::class);
+Route::get('/billing/invoices/{uuid}', [PublicBillingController::class, 'invoice'])->middleware(NoIndex::class);
 
 Route::get('/pos/{any?}', function () {
    return response()->file(public_path('pos/index.html'));
-})->where('any', '.*');
+})->where('any', '.*')->middleware(NoIndex::class);
 
 use Spatie\Sitemap\SitemapGenerator;
 
@@ -50,7 +51,7 @@ Route::get('/generate-sitemap', function () {
 
 Route::get('/store/{slug}', [InfoController::class, 'storePage']);
 
-Route::middleware('guest')->group(function () {
+Route::middleware(['guest', NoIndex::class])->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store']);
     Route::get('/register', [RegisteredTenantController::class, 'create'])->name('register');
@@ -58,10 +59,10 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth')
+    ->middleware(['auth', NoIndex::class])
     ->name('logout');
 
-Route::middleware(['auth', 'master'])->prefix('master')->name('master.')->group(function () {
+Route::middleware(['auth', 'master', NoIndex::class])->prefix('master')->name('master.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'master'])->name('dashboard');
     Route::get('/logs/system', [DashboardController::class, 'systemLogs'])
         ->name('logs.system');
@@ -78,5 +79,5 @@ Route::middleware(['auth', 'master'])->prefix('master')->name('master.')->group(
 });
 
 Route::get('/dashboard', [DashboardController::class, 'tenant'])
-    ->middleware('auth')
+    ->middleware(['auth', NoIndex::class])
     ->name('tenant.dashboard');

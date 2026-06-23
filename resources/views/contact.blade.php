@@ -1,6 +1,7 @@
 @extends('layouts.marketing', [
-    'title' => 'Contact PayChat - Book Demo or Talk to Sales',
-    'description' => 'Contact PayChat for a POS demo, pricing, onboarding and setup help for cafes, salons, restaurants and retail shops.',
+    'title' => 'Contact PayChat | POS Demo, Pricing & Setup Support',
+    'description' => 'Talk to PayChat about a POS demo, pricing, onboarding or billing setup for your cafe, restaurant, bakery, salon, retail shop or service business in India.',
+    'keywords' => 'contact PayChat, POS demo India, billing software demo, cafe POS support, salon POS setup, restaurant billing onboarding, PayChat sales',
     'canonical' => url('/contact'),
 ])
 

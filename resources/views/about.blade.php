@@ -1,6 +1,7 @@
 @extends('layouts.marketing', [
-    'title' => 'About PayChat - Simple POS for Indian Businesses',
-    'description' => 'PayChat is built to simplify billing, orders, invoices, tokens and reports for Indian cafes, salons, restaurants and local shops.',
+    'title' => 'About PayChat | Cloud POS for Indian Local Businesses',
+    'description' => 'Meet PayChat, the founder-led cloud POS built for fast billing, orders, invoices, tokens, payments and reports at Indian cafes, salons, restaurants and shops.',
+    'keywords' => 'about PayChat, Indian POS company, cloud POS India, local business billing software, cafe software, salon POS, restaurant billing system',
     'canonical' => url('/about'),
 ])
 

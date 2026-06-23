@@ -2,6 +2,66 @@
     $title = $title ?? 'PayChat - Fast Billing for Local Businesses';
     $description = $description ?? 'PayChat is a simple POS for cafes, salons, restaurants and local shops with billing, orders, tokens, invoices and reports.';
     $canonical = $canonical ?? url()->current();
+    $keywords = $keywords ?? 'PayChat POS, POS software India, billing software, cafe POS, restaurant POS, salon POS, retail billing software';
+    $registrationUrl = 'https://paychat.shop/pos/#/register';
+    $talkToPayChatUrl = url('/start-free-trial');
+    $pageName = preg_replace('/\s*[\-|]\s*PayChat.*$/i', '', $title) ?: $title;
+    $seoSchema = [
+        '@context' => 'https://schema.org',
+        '@graph' => [
+            [
+                '@type' => 'Organization',
+                '@id' => url('/').'#organization',
+                'name' => 'PayChat',
+                'alternateName' => ['Pay Chat', 'PayChat POS', 'PayChat Billing'],
+                'url' => url('/'),
+                'logo' => asset('android-chrome-512x512.png'),
+                'email' => 'hello@paychat.shop',
+                'telephone' => '+91-98349-69229',
+            ],
+            [
+                '@type' => 'WebSite',
+                '@id' => url('/').'#website',
+                'url' => url('/'),
+                'name' => 'PayChat POS',
+                'description' => 'Cloud POS and billing software for cafes, restaurants, bakeries, salons and retail businesses in India.',
+                'publisher' => ['@id' => url('/').'#organization'],
+                'inLanguage' => 'en-IN',
+            ],
+            [
+                '@type' => 'SoftwareApplication',
+                '@id' => url('/').'#pos-software',
+                'name' => 'PayChat POS',
+                'url' => url('/'),
+                'applicationCategory' => 'BusinessApplication',
+                'applicationSubCategory' => 'Point of Sale and Billing Software',
+                'operatingSystem' => 'Web, Android, Windows',
+                'description' => 'Cloud-native POS software for billing, orders, KOT, QR invoices, UPI payments, inventory, customer tokens and business reports.',
+                'audience' => ['@type' => 'BusinessAudience', 'audienceType' => 'Cafes, restaurants, bakeries, salons, retail shops and service businesses'],
+                'offers' => ['@type' => 'Offer', 'url' => $registrationUrl, 'price' => '0', 'priceCurrency' => 'INR', 'availability' => 'https://schema.org/OnlineOnly'],
+                'provider' => ['@id' => url('/').'#organization'],
+            ],
+            [
+                '@type' => 'WebPage',
+                '@id' => $canonical.'#webpage',
+                'url' => $canonical,
+                'name' => $title,
+                'description' => $description,
+                'isPartOf' => ['@id' => url('/').'#website'],
+                'about' => ['@id' => url('/').'#pos-software'],
+                'inLanguage' => 'en-IN',
+                'breadcrumb' => ['@id' => $canonical.'#breadcrumb'],
+            ],
+            [
+                '@type' => 'BreadcrumbList',
+                '@id' => $canonical.'#breadcrumb',
+                'itemListElement' => array_values(array_filter([
+                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'PayChat POS', 'item' => url('/')],
+                    $canonical !== url('/') ? ['@type' => 'ListItem', 'position' => 2, 'name' => $pageName, 'item' => $canonical] : null,
+                ])),
+            ],
+        ],
+    ];
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -9,17 +69,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{ $description }}">
-    <meta name="robots" content="index, follow">
+    <meta name="keywords" content="{{ $keywords }}">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <link rel="canonical" href="{{ $canonical }}">
+    <link rel="alternate" hreflang="en-IN" href="{{ $canonical }}">
+    <link rel="alternate" hreflang="x-default" href="{{ $canonical }}">
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="PayChat POS">
+    <meta property="og:locale" content="en_IN">
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $canonical }}">
-    <meta property="og:image" content="{{ asset('color-paychat-logo-main.svg') }}">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="{{ asset('android-chrome-512x512.png') }}">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $title }}">
     <meta name="twitter:description" content="{{ $description }}">
+    <meta name="twitter:image" content="{{ asset('android-chrome-512x512.png') }}">
     <title>{{ $title }}</title>
+    <script type="application/ld+json">{!! json_encode($seoSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root {
@@ -359,7 +426,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="{{ url('/start-free-trial') }}" class="pc-nav-cta">
+                <a href="{{ $registrationUrl }}" class="pc-nav-cta">
                     Start Free Trial
                 </a>
                 <button type="button" onclick="openDrawer()" class="rounded-full border border-black/10 bg-white p-2 text-ink shadow-soft transition hover:bg-white lg:hidden" aria-label="Open navigation">
@@ -399,7 +466,7 @@
                 </div>
             </div>
             <div class="border-t border-black/10 p-5">
-                <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary w-full">Start Free Trial</a>
+                <a href="{{ $registrationUrl }}" class="pc-button pc-button-primary w-full">Start Free Trial</a>
                 <a href="https://wa.me/919834969229?text=Hi%20PayChat,%20I%20want%20to%20know%20more" target="_blank" rel="noopener noreferrer" class="pc-button pc-button-secondary mt-3 w-full">WhatsApp PayChat</a>
             </div>
         </aside>
@@ -431,8 +498,8 @@
                         <li><a href="{{ url('/features') }}" class="hover:text-ink">Features</a></li>
                         <li><a href="{{ url('/pricing') }}" class="hover:text-ink">Pricing</a></li>
                         <li><a href="{{ url('/guide') }}" class="hover:text-ink">Guide</a></li>
-                        <li><a href="{{ url('/start-free-trial') }}" class="hover:text-ink">Start Free Trial</a></li>
-                        <li><a href="{{ url('/login') }}" class="hover:text-ink">Shop Login</a></li>
+                        <li><a href="{{ $registrationUrl }}" class="hover:text-ink">Start Free Trial</a></li>
+                        <li><a href="{{ url('/login') }}" rel="nofollow" class="hover:text-ink">Shop Login</a></li>
                     </ul>
                 </div>
 

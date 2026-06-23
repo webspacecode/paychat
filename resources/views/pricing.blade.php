@@ -1,6 +1,7 @@
 @extends('layouts.marketing', [
-    'title' => 'PayChat Pricing - Simple POS Plans',
-    'description' => 'PayChat pricing for cafes, restaurants, salons and retail shops. Choose a POS plan based on counters, order volume and operational needs.',
+    'title' => 'POS Software Pricing for Cafes, Salons & Shops | PayChat',
+    'description' => 'Compare PayChat POS billing plans for cafes, restaurants, salons, bakeries and retail shops. Choose pricing for your counters, orders and daily operations.',
+    'keywords' => 'POS software price India, billing software pricing, cafe POS cost, restaurant POS plans, salon billing price, retail POS pricing, PayChat pricing',
     'canonical' => url('/pricing'),
 ])
 

@@ -1,4 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /login
+Disallow: /register
+Disallow: /dashboard
+Disallow: /master/
+Disallow: /pos/
+Disallow: /billing/
+Disallow: /generate-sitemap
 
 Sitemap: https://paychat.shop/sitemap.xml

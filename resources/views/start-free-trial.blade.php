@@ -1,6 +1,7 @@
 @extends('layouts.marketing', [
-    'title' => 'Start Free PayChat POS Trial',
-    'description' => 'Start a free PayChat POS trial for your cafe, restaurant, salon or retail store. Get guided setup for billing, QR ordering, KOT, payments, invoices and reports.',
+    'title' => 'Talk to PayChat | Guided POS Demo for Your Business',
+    'description' => 'Talk to PayChat for a guided POS demo and setup advice for cafe, restaurant, bakery, salon or retail billing, QR ordering, KOT, payments, inventory and reports.',
+    'keywords' => 'talk to PayChat, PayChat POS demo, guided POS setup, cafe billing demo, salon POS demo, restaurant POS trial, retail billing software demo',
     'canonical' => url('/start-free-trial'),
 ])
 

@@ -1,6 +1,7 @@
 @extends('layouts.marketing', [
-    'title' => 'PayChat - Cloud Native POS for Cafes, Restaurants and Salons',
-    'description' => 'PayChat is a cloud native POS for cafes, restaurants, salons, bakeries, retail and service businesses with billing, UPI payments, QR invoices, order flow and reports.',
+    'title' => 'PayChat POS | Billing Software for Cafes, Salons & Retail',
+    'description' => 'PayChat is cloud POS and billing software for cafes, restaurants, salons, bakeries and retail shops in India, with KOT, UPI, QR invoices, inventory and reports.',
+    'keywords' => 'PayChat, PayChat POS, POS software India, billing software, cafe billing software, restaurant POS, salon billing software, retail POS, bakery POS, chatting paying',
     'canonical' => url('/'),
 ])
 
@@ -18,8 +19,8 @@
                         PayChat brings billing, payments, orders, invoices and reports into one simple cloud workspace for cafes, restaurants, salons, bakeries and service businesses.
                     </p>
                     <div class="pc-hero-actions">
-                        <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
-                        <a href="{{ url('/contact') }}" class="pc-button pc-button-secondary">Talk to PayChat</a>
+                        <a href="https://paychat.shop/pos/#/register" class="pc-button pc-button-primary">Start Free Trial</a>
+                        <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-secondary">Talk to PayChat</a>
                     </div>
                 </div>
 
@@ -150,7 +151,7 @@
                     <h2>Try the workflow with your real menu or services.</h2>
                     <p>We help you map PayChat to your billing style before you commit.</p>
                 </div>
-                <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
+                <a href="https://paychat.shop/pos/#/register" class="pc-button pc-button-primary">Start Free Trial</a>
             </div>
         </div>
     </section>

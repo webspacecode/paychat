@@ -14,6 +14,9 @@
 
     $shopUrl = url('/pos#/self-pos/' . $tenant->api_key);
 
+    $industry = ucfirst($tenant->industry ?: 'local business');
+    $storeDescription = 'Order online from ' . $tenant->name . ', a ' . strtolower($industry) . ', with PayChat POS for quick ordering, billing and digital payments.';
+
 @endphp
 <head>
 
@@ -22,17 +25,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta
     name="description"
-    content="Order online from {{ $tenant->name }} using PayChat POS."
+    content="{{ $storeDescription }}"
 >
 
 <meta
     name="keywords"
-    content="{{ $tenant->name }}, online ordering, cafe, restaurant, paychat pos"
+    content="{{ $tenant->name }}, {{ strtolower($industry) }}, online ordering, local business, billing, digital payments, PayChat POS"
 >
 
 <meta
     name="robots"
-    content="index, follow"
+    content="index, follow, max-image-preview:large, max-snippet:-1"
 >
 
 <link
@@ -48,8 +51,12 @@
 
 <meta
     property="og:description"
-    content="Order online from {{ $tenant->name }} using PayChat POS."
+    content="{{ $storeDescription }}"
 >
+
+<meta property="og:site_name" content="PayChat POS">
+<meta property="og:locale" content="en_IN">
+<meta property="og:image" content="{{ $logo }}">
 
 
 
@@ -76,8 +83,9 @@
 
 <meta
     name="twitter:description"
-    content="Order online from {{ $tenant->name }}"
+    content="{{ $storeDescription }}"
 >
+<meta name="twitter:image" content="{{ $logo }}">
 <script type="application/ld+json">
 @php
     $schema = [
@@ -86,7 +94,8 @@
         'name' => $tenant->name,
         'url' => request()->url(),
         'logo' => $logo,
-        'description' => 'Order online from ' . $tenant->name . ' using PayChat POS.',
+        'description' => $storeDescription,
+        'servesCuisine' => in_array(strtolower($tenant->industry ?: ''), ['cafe', 'restaurant', 'bakery']) ? $industry : null,
         'address' => [
             '@type' => 'PostalAddress',
             'streetAddress' => $address,
@@ -107,11 +116,6 @@
     <title>
         {{ $tenant->name }} | Order Online
     </title>
-
-    <meta
-        name="description"
-        content="Order online from {{ $tenant->name }} using PayChat POS."
-    >
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 

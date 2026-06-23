@@ -1,6 +1,7 @@
 @extends('layouts.marketing', [
-    'title' => 'PayChat Features - POS Billing, Orders, Tokens and Reports',
-    'description' => 'Explore PayChat POS features for cafes, restaurants, salons and retail shops: billing, UPI and cash tracking, QR orders, tokens, invoices, inventory and reports.',
+    'title' => 'POS Billing Features: KOT, QR, Inventory & Reports | PayChat',
+    'description' => 'Explore PayChat POS features for cafe, restaurant, salon, bakery and retail billing: KOT, QR ordering, UPI, tokens, invoices, inventory, customers and sales reports.',
+    'keywords' => 'POS billing features, KOT software, QR ordering, UPI billing, inventory POS, cafe token system, salon billing, restaurant order management, PayChat features',
     'canonical' => url('/features'),
 ])
 
@@ -12,8 +13,8 @@
                 <h1 class="pc-page-title mt-4 text-ink">Clean POS tools for busy counters.</h1>
                 <p class="mt-6 text-lg leading-8 text-ink/64">PayChat keeps billing, orders, tokens, customer invoices and reports in one practical system for cafes, salons, restaurants and local shops.</p>
                 <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
-                    <a href="{{ url('/contact') }}" class="pc-button pc-button-secondary">Talk to PayChat</a>
+                    <a href="https://paychat.shop/pos/#/register" class="pc-button pc-button-primary">Start Free Trial</a>
+                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-secondary">Talk to PayChat</a>
                 </div>
             </div>
         </div>
@@ -69,7 +70,7 @@
                         <h2 class="pc-section-title text-ink">See the right PayChat setup for your business.</h2>
                         <p class="mt-4 max-w-2xl text-lg leading-8 text-ink/62">A short founder-led walkthrough is usually the easiest way to map billing, QR ordering, tokens and reports to your current counter.</p>
                     </div>
-                    <a href="{{ url('/start-free-trial') }}" class="pc-button pc-button-primary">Start Free Trial</a>
+                    <a href="https://paychat.shop/pos/#/register" class="pc-button pc-button-primary">Start Free Trial</a>
                 </div>
             </div>
         </div>
