@@ -7,6 +7,7 @@ use App\Models\Tenant\OrderItem;
 use App\Models\Tenant\Recipe;
 use App\Models\Tenant\ProductInventory;
 use App\Models\Tenant\StockMovement;
+use Illuminate\Validation\ValidationException;
 
 class RecipeProductStrategy implements StockDeductionStrategy
 {
@@ -18,7 +19,8 @@ class RecipeProductStrategy implements StockDeductionStrategy
             return;
         }
 
-        $recipe = Recipe::where('product_id', $item->product_id)
+        $recipe = Recipe::with('items.rawProduct')
+            ->where('product_id', $item->product_id)
             ->where(function ($q) use ($locationId) {
                 $q->where('location_id', $locationId)
                   ->orWhereNull('location_id');
@@ -27,12 +29,13 @@ class RecipeProductStrategy implements StockDeductionStrategy
             ->first();
         
         if (!$recipe) {
-            throw new \Exception("Recipe not found in the location for product {$item->product_id}");
+            $this->failStock("Recipe not found for {$this->productName($product, $item->product_id)} at this location");
         }
 
         foreach ($recipe->items as $recipeItem) {
 
             $requiredQty = $recipeItem->quantity * $item->quantity;
+            $rawProductName = $this->productName($recipeItem->rawProduct, $recipeItem->raw_product_id);
 
             $inventory = ProductInventory::where('product_id', $recipeItem->raw_product_id)
                 ->where('location_id', $locationId)
@@ -40,11 +43,13 @@ class RecipeProductStrategy implements StockDeductionStrategy
                 ->first();
 
             if (!$inventory) {
-                throw new \Exception("Inventory not found for raw product {$recipeItem->raw_product_id}");
+                $this->failStock("Inventory not found for raw product {$rawProductName}");
             }
 
             if ($inventory->quantity < $requiredQty) {
-                throw new \Exception("Insufficient stock for raw product {$recipeItem->raw_product_id}");
+                $this->failStock(
+                    "Insufficient stock for raw product {$rawProductName} used by {$this->productName($product, $item->product_id)}. Required: {$this->formatQuantity($requiredQty)}, Available: {$this->formatQuantity((float) $inventory->quantity)}"
+                );
             }
 
             // Deduct inventory
@@ -59,5 +64,22 @@ class RecipeProductStrategy implements StockDeductionStrategy
                 'order_id' => $item->order_id
             ]);
         }
+    }
+
+    private function failStock(string $message): void
+    {
+        throw ValidationException::withMessages([
+            'stock' => $message,
+        ]);
+    }
+
+    private function productName($product, int $productId): string
+    {
+        return $product?->name ?: "ID {$productId}";
+    }
+
+    private function formatQuantity(float $quantity): string
+    {
+        return rtrim(rtrim(number_format($quantity, 4, '.', ''), '0'), '.');
     }
 }

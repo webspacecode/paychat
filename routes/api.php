@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Tenant\InlineTokenController;
 use App\Http\Controllers\Api\Tenant\KitchenController;
 use App\Http\Controllers\Api\Tenant\KitchenBatchController;
 use App\Http\Controllers\Api\Tenant\KitchenQueueController;
+use App\Http\Controllers\Api\Tenant\KitchenSettingsController;
 use App\Http\Controllers\Api\Tenant\TableController;
 use App\Http\Controllers\Api\Tenant\TableSessionController;
 use App\Http\Controllers\Api\Tenant\PhonePeController;
@@ -90,6 +91,8 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
 
     Route::get('/settings/loyalty', [LoyaltySettingsController::class, 'show']);
     Route::put('/settings/loyalty', [LoyaltySettingsController::class, 'update'])->middleware('permission:settings.manage');
+    Route::get('/settings/kitchen', [KitchenSettingsController::class, 'show']);
+    Route::put('/settings/kitchen', [KitchenSettingsController::class, 'update'])->middleware('permission:settings.manage');
 
     // Category Management
     Route::prefix('categories')->group(function () {

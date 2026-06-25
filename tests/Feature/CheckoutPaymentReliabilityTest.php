@@ -12,6 +12,8 @@ use App\Models\Tenant\OrderToken;
 use App\Models\Tenant\Payment;
 use App\Models\Tenant\PaymentMethod;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\ProductInventory;
+use App\Models\Tenant\Recipe;
 use App\Services\InvoiceService;
 use App\Services\OfflineOrderSyncService;
 use App\Services\OrderKitchenDispatchService;
@@ -24,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class CheckoutPaymentReliabilityTest extends TestCase
@@ -189,6 +192,81 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame('completed', $result['order']->status);
         $this->assertSame('paid', $result['order']->payment_status);
         $this->assertSame(1, Payment::count());
+    }
+
+    public function test_payment_success_reports_recipe_stock_shortage_as_validation_error(): void
+    {
+        $rawProduct = Product::create([
+            'name' => 'Flour',
+            'sku' => 'FLOUR',
+            'type' => 'raw',
+            'price' => 0,
+            'track_inventory' => true,
+        ]);
+        $recipeProduct = Product::create([
+            'name' => 'Cake Slice',
+            'sku' => 'CAKE-SLICE',
+            'type' => 'recipe',
+            'price' => 100,
+            'track_inventory' => true,
+        ]);
+        $recipe = Recipe::create([
+            'product_id' => $recipeProduct->id,
+            'location_id' => 1,
+        ]);
+        $recipe->items()->create([
+            'raw_product_id' => $rawProduct->id,
+            'quantity' => 2,
+            'unit' => 'kg',
+        ]);
+        ProductInventory::create([
+            'product_id' => $rawProduct->id,
+            'location_id' => 1,
+            'quantity' => 1,
+        ]);
+
+        $order = Order::create([
+            'order_no' => 'ORD-'.str()->uuid(),
+            'location_id' => 1,
+            'status' => 'pending_payment',
+            'payment_status' => 'unpaid',
+            'order_type' => 'dine_in',
+            'dining_flow' => 'table_service',
+            'subtotal' => 100,
+            'tax' => 0,
+            'discount' => 0,
+            'total' => 100,
+            'paid_amount' => 0,
+            'balance_due' => 100,
+        ]);
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $recipeProduct->id,
+            'quantity' => 1,
+            'price' => 100,
+            'subtotal' => 100,
+            'total' => 100,
+        ]);
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'cash',
+            'amount' => 100,
+            'status' => 'pending',
+        ]);
+
+        try {
+            app(PaymentService::class)->markPaymentSuccess($payment->fresh());
+            $this->fail('Expected insufficient stock to fail as a validation error.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['stock'][0] ?? '';
+
+            $this->assertStringContainsString('Insufficient stock for raw product Flour', $message);
+            $this->assertStringContainsString('Cake Slice', $message);
+        }
+
+        $this->assertSame('pending', $payment->fresh()->status);
+        $this->assertSame('pending_payment', $order->fresh()->status);
+        $this->assertSame('unpaid', $order->fresh()->payment_status);
     }
 
     public function test_offline_sync_retry_returns_existing_synced_response_shape(): void
@@ -785,6 +863,44 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->decimal('price', 12, 2);
             $table->decimal('subtotal', 12, 2)->default(0);
             $table->decimal('total', 12, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('product_inventories', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('location_id');
+            $table->decimal('quantity', 12, 4)->default(0);
+            $table->timestamps();
+            $table->unique(['product_id', 'location_id']);
+        });
+
+        Schema::connection('tenant')->create('recipes', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->text('description')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('recipe_items', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('recipe_id');
+            $table->unsignedBigInteger('raw_product_id');
+            $table->decimal('quantity', 12, 4);
+            $table->string('unit')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('stock_movements', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('from_location_id')->nullable();
+            $table->unsignedBigInteger('to_location_id')->nullable();
+            $table->unsignedBigInteger('order_id')->nullable();
+            $table->decimal('quantity', 12, 4);
+            $table->string('type');
+            $table->json('meta')->nullable();
             $table->timestamps();
         });
 
