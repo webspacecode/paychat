@@ -17,7 +17,7 @@ interface ProductStrategyInterface
     public function delete(Product $product);
 
     // Query
-    public function search(?string $keyword = null, ?string $type = null, ?int $locationId = null);
+    public function search(?string $keyword = null, ?string $type = null, ?int $locationId = null, bool $includeInactive = false);
     public function getById(int $id);
 
     // Inventory

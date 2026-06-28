@@ -7,6 +7,8 @@ use ZipArchive;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\Location;
+use App\Models\Tenant\StockMovement;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -29,12 +31,14 @@ class ProductController extends Controller
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())],
             'name'  => ['required','string','max:255'],
-            'sku'   => ['required','string','max:255','unique:products,sku'],
-            'type'  => ['required', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
+            'sku'   => ['nullable','string','max:255','unique:products,sku'],
+            'barcode' => ['nullable','string','max:255','unique:products,barcode'],
+            'type'  => ['nullable', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
             'price' => ['nullable','numeric','min:0'],
             'unit'  => ['nullable','string','max:50'],
             'images'=> ['sometimes','array'],
-            'images.*' => ['string'],
+            'images.*' => ['nullable'],
+            'image' => ['nullable','image','mimes:jpg,jpeg,png,webp','max:2048'],
             // recipe fields:
             'location_id' => ['nullable','integer','exists:locations,id'],
             'description' => ['nullable','string'],
@@ -43,9 +47,13 @@ class ProductController extends Controller
             'items.*.quantity'       => ['required_with:items','integer','min:1'],
             'items.*.unit'           => ['nullable','string','max:50'],
             'inventory' => ['nullable', 'array'],
-            'track_inventory' => ['nullable', 'boolean']
+            'track_inventory' => ['nullable', 'boolean'],
+            'low_stock_threshold' => ['nullable','integer','min:0'],
+            'is_active' => ['nullable','boolean'],
+            'categories' => ['nullable'],
         ]);
 
+        $validated = $this->prepareProductPayload($request, $validated, true);
         $validated = $this->applySimpleBillingProductDefaults($validated);
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $product = $industryStrategy->create($validated);
@@ -61,13 +69,15 @@ class ProductController extends Controller
             'keyword'  => ['nullable','string'],
             'location_id'  => ['nullable','int'],
             'type'     => ['nullable', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
+            'include_inactive' => ['nullable','boolean'],
         ]);
         
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $items = $industryStrategy->search(
             $validated['keyword'] ?? null, 
             $validated['type'] ?? null, 
-            $validated['location_id'] ?? null
+            $validated['location_id'] ?? null,
+            (bool) ($validated['include_inactive'] ?? false)
         );
 
         return response()->json($items);
@@ -94,11 +104,14 @@ class ProductController extends Controller
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'name'  => ['sometimes','string','max:255'],
+            'sku'   => ['nullable','string','max:255', Rule::unique('products', 'sku')->ignore($product->id)],
+            'barcode' => ['nullable','string','max:255', Rule::unique('products', 'barcode')->ignore($product->id)],
             'type'  => ['sometimes', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
             'price' => ['nullable','numeric','min:0'],
             'unit'  => ['nullable','string','max:50'],
             'images'=> ['sometimes','array'],
-            'images.*' => ['string'],
+            'images.*' => ['nullable'],
+            'image' => ['nullable','image','mimes:jpg,jpeg,png,webp','max:2048'],
 
             // recipe:
             'location_id' => ['nullable','integer','exists:locations,id'],
@@ -108,8 +121,12 @@ class ProductController extends Controller
             'items.*.quantity'       => ['required_with:items','integer','min:1'],
             'items.*.unit'           => ['nullable','string','max:50'],
             'track_inventory' => ['nullable', 'boolean'],
+            'low_stock_threshold' => ['nullable','integer','min:0'],
+            'is_active' => ['nullable','boolean'],
+            'categories' => ['nullable'],
         ]);
 
+        $validated = $this->prepareProductPayload($request, $validated, false);
         $validated = $this->applySimpleBillingProductDefaults($validated);
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $updated = $industryStrategy->update($product, $validated);
@@ -127,7 +144,7 @@ class ProductController extends Controller
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $industryStrategy->delete($product);
 
-        return response()->json(['message' => 'Product deleted successfully']);
+        return response()->json(['message' => 'Product disabled successfully']);
     }
 
     // INVENTORY: adjust (+/-)
@@ -136,7 +153,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'industry'    => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'location_id' => ['required','integer','exists:locations,id'],
-            'delta_qty'   => ['required','integer'],
+            'delta_qty'   => ['required','integer','not_in:0'],
             'meta'        => ['nullable','array'],
         ]);
 
@@ -144,6 +161,52 @@ class ProductController extends Controller
         $inventory = $industryStrategy->adjustInventory($product, (int)$validated['location_id'], (int)$validated['delta_qty'], $validated['meta'] ?? []);
 
         return response()->json($inventory);
+    }
+
+    public function stockMovements(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'location_id' => ['nullable','integer','exists:locations,id'],
+            'limit' => ['nullable','integer','min:1','max:50'],
+        ]);
+
+        $limit = (int) ($validated['limit'] ?? 20);
+        $locationId = $validated['location_id'] ?? null;
+
+        $movements = StockMovement::query()
+            ->where('product_id', $product->id)
+            ->when($locationId, function ($query) use ($locationId) {
+                $query->where(function ($locations) use ($locationId) {
+                    $locations->where('from_location_id', $locationId)
+                        ->orWhere('to_location_id', $locationId);
+                });
+            })
+            ->latest()
+            ->limit($limit)
+            ->get();
+
+        $locationIds = $movements
+            ->flatMap(fn ($movement) => [$movement->from_location_id, $movement->to_location_id])
+            ->filter()
+            ->unique()
+            ->values();
+
+        $locations = Location::whereIn('id', $locationIds)->pluck('name', 'id');
+
+        return response()->json($movements->map(function (StockMovement $movement) use ($locations) {
+            return [
+                'id' => $movement->id,
+                'type' => $movement->type,
+                'quantity' => $movement->quantity,
+                'from_location_id' => $movement->from_location_id,
+                'from_location_name' => $movement->from_location_id ? ($locations[$movement->from_location_id] ?? null) : null,
+                'to_location_id' => $movement->to_location_id,
+                'to_location_name' => $movement->to_location_id ? ($locations[$movement->to_location_id] ?? null) : null,
+                'order_id' => $movement->order_id,
+                'meta' => $movement->meta,
+                'created_at' => $movement->created_at,
+            ];
+        }));
     }
 
     // INVENTORY: transfer
@@ -290,6 +353,29 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'Upload started. Images are being processed in background.'
         ]);
+    }
+
+    private function prepareProductPayload(Request $request, array $data, bool $generateSku): array
+    {
+        $data['type'] = $data['type'] ?? 'basic';
+
+        if ($generateSku && empty($data['sku'])) {
+            $base = Str::upper(Str::slug($data['name'] ?? 'ITEM', ''));
+            $data['sku'] = substr($base ?: 'ITEM', 0, 18) . '-' . Str::upper(Str::random(5));
+        } elseif (array_key_exists('sku', $data) && empty($data['sku'])) {
+            unset($data['sku']);
+        }
+
+        if ($request->hasFile('image')) {
+            $data['images'] = $data['images'] ?? [];
+            $data['images'][] = $request->file('image');
+        }
+
+        if (array_key_exists('low_stock_threshold', $data) && $data['low_stock_threshold'] === '') {
+            $data['low_stock_threshold'] = null;
+        }
+
+        return $data;
     }
 
     private function applySimpleBillingProductDefaults(array $data): array

@@ -23,7 +23,7 @@ class DefaultProductStrategy implements ProductStrategyInterface
 
             // 1. Create Product
             $payload = collect($data)
-            ->only(['name', 'sku', 'type', 'price', 'unit', 'track_inventory'])
+            ->only(['name', 'sku', 'barcode', 'type', 'price', 'unit', 'track_inventory', 'low_stock_threshold', 'is_active'])
             ->all();
 
             $product = Product::create($payload);
@@ -133,15 +133,14 @@ class DefaultProductStrategy implements ProductStrategyInterface
     }
 
 
-    protected function syncCategories(Product $product, ?string $categories)
+    protected function syncCategories(Product $product, $categories)
     {
         if (empty($categories)) {
             return;
         }
 
-        // Split by semicolon ;
-        $names = collect(explode(';', $categories))
-            ->map(fn ($c) => trim($c))
+        $names = collect(is_array($categories) ? $categories : explode(';', $categories))
+            ->map(fn ($c) => trim((string) $c))
             ->filter();
 
         $categoryIds = [];
@@ -161,7 +160,17 @@ class DefaultProductStrategy implements ProductStrategyInterface
 
     public function update(Product $product, array $data): Product
     {
-        $payload = collect($data)->only(['name','type','price','unit','track_inventory'])->all();
+        $payload = collect($data)->only([
+            'name',
+            'sku',
+            'barcode',
+            'type',
+            'price',
+            'unit',
+            'track_inventory',
+            'low_stock_threshold',
+            'is_active',
+        ])->all();
         if (!empty($payload)) $product->update($payload);
 
         if (array_key_exists('images', $data)) {
@@ -179,60 +188,72 @@ class DefaultProductStrategy implements ProductStrategyInterface
                 }
             }
         }
-        return $product->fresh()->load(['images','inventories','recipe.items']);
+
+        if (array_key_exists('categories', $data)) {
+            $this->syncCategories($product, $data['categories']);
+        }
+
+        return $product->fresh()->load(['images','categories:id,name,description','inventories','recipe.items']);
     }
 
     public function delete(Product $product): bool
     {
-        return (bool) $product->delete();
+        return (bool) $product->update(['is_active' => false]);
     }
 
-    public function search(string $keyword = null, ?string $type = null, ?int $locationId = null): Collection 
+    public function search(string $keyword = null, ?string $type = null, ?int $locationId = null, bool $includeInactive = false): Collection
     {
 
         $q = Product::query()
-            ->with(['images', 'categories:id,name,description']);
+            ->with(['images', 'categories:id,name,description', 'inventories']);
+
+        if (! $includeInactive) {
+            $q->where('is_active', true);
+        }
 
         // 🔍 Keyword Search
         if ($keyword) {
             $q->where(function ($w) use ($keyword) {
                 $w->where('name', 'like', "%{$keyword}%")
-                ->orWhere('sku', 'like', "%{$keyword}%");
+                ->orWhere('sku', 'like', "%{$keyword}%")
+                ->orWhere('barcode', 'like', "%{$keyword}%");
             });
         }
 
         // 🎯 MAIN BUSINESS LOGIC
-        $q->where(function ($w) use ($locationId) {
+        if (! $includeInactive) {
+            $q->where(function ($w) use ($locationId) {
 
-            // ✅ 1. Recipe products (ALWAYS show)
-            $w->where('type', 'recipe');
+                // ✅ 1. Recipe products (ALWAYS show)
+                $w->where('type', 'recipe');
 
-            // ✅ 2. Simple products (ONLY if stock available at location)
-            $w->orWhere(function ($q2) use ($locationId) {
+                // ✅ 2. Simple products (ONLY if stock available at location)
+                $w->orWhere(function ($q2) use ($locationId) {
 
-                $q2->where('type', 'basic')
-                ->where(function ($q3) use ($locationId) {
+                    $q2->where('type', 'basic')
+                    ->where(function ($q3) use ($locationId) {
 
-                    // ✅ Case 1: No inventory tracking → ALWAYS include
-                    $q3->where('track_inventory', 0);
+                        // ✅ Case 1: No inventory tracking → ALWAYS include
+                        $q3->where('track_inventory', 0);
 
-                    // ✅ Case 2: Track inventory → check stock
-                    $q3->orWhere(function ($q4) use ($locationId) {
+                        // ✅ Case 2: Track inventory → check stock
+                        $q3->orWhere(function ($q4) use ($locationId) {
 
-                        $q4->where('track_inventory', 1);
+                            $q4->where('track_inventory', 1);
 
-                        if ($locationId) {
-                            $q4->whereHas('inventories', function ($inv) use ($locationId) {
-                                $inv->where('location_id', $locationId)
-                                    ->where('quantity', '>', 0);
-                            });
-                        }
+                            if ($locationId) {
+                                $q4->whereHas('inventories', function ($inv) use ($locationId) {
+                                    $inv->where('location_id', $locationId)
+                                        ->where('quantity', '>', 0);
+                                });
+                            }
+                        });
                     });
                 });
-            });
 
-            // ❌ Raw products are automatically excluded
-        });
+                // ❌ Raw products are automatically excluded
+            });
+        }
 
         // 🔹 Optional: Explicit type filter (for admin/debug use)
         if ($type) {
@@ -241,12 +262,15 @@ class DefaultProductStrategy implements ProductStrategyInterface
 
         return $q->orderBy('name')
                 ->limit(200)
-                ->get();
+                ->get()
+                ->map(fn (Product $product) => $this->withStockSummary($product, $locationId));
     }
 
     public function getById(int $id): ?Product
     {
-        return Product::with(['images','inventories.location','recipe.items.rawProduct'])->find($id);
+        $product = Product::with(['images','categories:id,name,description','inventories.location','recipe.items.rawProduct'])->find($id);
+
+        return $product ? $this->withStockSummary($product) : null;
     }
 
     public function adjustInventory(Product $product, int $locationId, int $deltaQty, array $meta = []): ProductInventory
@@ -256,12 +280,20 @@ class DefaultProductStrategy implements ProductStrategyInterface
                 'product_id' => $product->id,
                 'location_id' => $locationId,
             ]);
-            $newQty = (int)$inv->quantity + (int)$deltaQty;
+            $beforeQty = (int) $inv->quantity;
+            $newQty = $beforeQty + (int)$deltaQty;
             if ($newQty < 0) {
                 throw ValidationException::withMessages(['quantity' => 'Insufficient stock at location']);
             }
             $inv->quantity = $newQty;
             $inv->save();
+
+            $movementMeta = array_merge([
+                'source' => $deltaQty > 0 ? 'manual_restock' : 'manual_adjustment',
+                'before_quantity' => $beforeQty,
+                'after_quantity' => $newQty,
+                'user_id' => auth()->id(),
+            ], $meta);
 
             StockMovement::create([
                 'product_id' => $product->id,
@@ -269,7 +301,7 @@ class DefaultProductStrategy implements ProductStrategyInterface
                 'to_location_id'   => $deltaQty > 0 ? $locationId : null,
                 'quantity' => abs($deltaQty),
                 'type' => $deltaQty > 0 ? 'in' : 'out',
-                'meta' => $meta,
+                'meta' => $movementMeta,
             ]);
 
             return $inv;
@@ -304,5 +336,40 @@ class DefaultProductStrategy implements ProductStrategyInterface
                 'meta'=>$meta,
             ]);
         });
+    }
+
+    protected function withStockSummary(Product $product, ?int $locationId = null): Product
+    {
+        $inventories = $product->relationLoaded('inventories')
+            ? $product->inventories
+            : $product->inventories()->get();
+
+        $currentStock = $locationId
+            ? (int) optional($inventories->firstWhere('location_id', $locationId))->quantity
+            : (int) $inventories->sum('quantity');
+
+        $status = 'not_tracked';
+        $label = 'Not Tracked';
+
+        if ($product->track_inventory) {
+            if ($currentStock <= 0) {
+                $status = 'out_of_stock';
+                $label = 'Out of Stock';
+            } elseif ($product->low_stock_threshold !== null && $currentStock <= (int) $product->low_stock_threshold) {
+                $status = 'low_stock';
+                $label = 'Low Stock';
+            } else {
+                $status = 'ok';
+                $label = 'OK';
+            }
+        }
+
+        $product->setAttribute('current_stock', $currentStock);
+        $product->setAttribute('stock_status', $status);
+        $product->setAttribute('stock_status_label', $label);
+        $product->setAttribute('is_low_stock', $status === 'low_stock');
+        $product->setAttribute('is_out_of_stock', $status === 'out_of_stock');
+
+        return $product;
     }
 }

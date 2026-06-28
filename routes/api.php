@@ -111,6 +111,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::get('/',        [ProductController::class, 'index']);   // search/list
         Route::post('/',       [ProductController::class, 'store'])->middleware('permission:product.manage');   // create
         Route::post('/bulk',       [ProductController::class, 'bulkUpload'])->middleware('permission:product.manage');   // bulk create
+        Route::get('/{product}/stock-movements', [ProductController::class, 'stockMovements'])->middleware(['feature:inventory', 'permission:product.manage']);
         Route::get('/{id}',    [ProductController::class, 'show']);    // read one
         Route::put('/{product}',   [ProductController::class, 'update'])->middleware('permission:product.manage');  // update
         Route::delete('/{product}',[ProductController::class, 'destroy'])->middleware('permission:product.manage'); // delete

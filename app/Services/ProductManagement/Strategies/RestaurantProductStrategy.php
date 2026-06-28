@@ -40,15 +40,21 @@ class RestaurantProductStrategy implements ProductStrategyInterface
         return $strategy->delete($product);
     }
 
-    public function search(?string $keyword = null, ?string $type = null, ?int $locationId = null)
+    public function search(?string $keyword = null, ?string $type = null, ?int $locationId = null, bool $includeInactive = false)
     {
         $strategy = $this->typeResolver->resolve($type);
-        return $strategy->search($keyword, $type, $locationId);
+        return $strategy->search($keyword, $type, $locationId, $includeInactive);
     }
 
     public function getById(int $id): ?Product
     {
-        return Product::with(['images','units','recipe.items'])->find($id);
+        $product = Product::find($id);
+        if (! $product) {
+            return null;
+        }
+
+        $strategy = $this->typeResolver->resolve($product->type);
+        return $strategy->getById($id);
     }
 
     public function adjustInventory(Product $product, int $locationId, int $deltaQty, array $meta = [])

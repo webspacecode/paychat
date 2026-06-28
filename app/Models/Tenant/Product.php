@@ -6,7 +6,24 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $fillable = ['name', 'sku', 'type', 'price', 'unit', 'track_inventory'];
+    protected $fillable = [
+        'name',
+        'sku',
+        'barcode',
+        'type',
+        'price',
+        'unit',
+        'track_inventory',
+        'low_stock_threshold',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'track_inventory' => 'boolean',
+        'low_stock_threshold' => 'integer',
+        'is_active' => 'boolean',
+    ];
 
     public function images()      { return $this->hasMany(ProductImage::class); }
     public function inventories() { return $this->hasMany(ProductInventory::class); }
