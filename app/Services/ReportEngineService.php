@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\Models\Tenant\Order;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -138,6 +139,131 @@ class ReportEngineService
                 'orders_count' => (int) $row->orders_count,
                 'revenue' => (float) $row->revenue,
             ]);
+    }
+
+    public function billingByUser($tenantId, Carbon $start, Carbon $end, ?int $locationId = null, ?int $userId = null): array
+    {
+        $actorExpression = $this->billingActorExpression();
+
+        $paymentRows = $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression)
+            ->selectRaw("{$actorExpression} as user_id")
+            ->selectRaw('COUNT(DISTINCT pos_orders.id) as order_count')
+            ->selectRaw('COALESCE(SUM(pos_payments.amount), 0) as total_paid')
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method = 'cash' THEN pos_payments.amount ELSE 0 END), 0) as cash_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method = 'upi' THEN pos_payments.amount ELSE 0 END), 0) as upi_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method = 'card' THEN pos_payments.amount ELSE 0 END), 0) as card_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method NOT IN ('cash', 'upi', 'card') THEN pos_payments.amount ELSE 0 END), 0) as other_total")
+            ->selectRaw('MIN(pos_payments.created_at) as first_bill_at')
+            ->selectRaw('MAX(pos_payments.created_at) as last_bill_at')
+            ->groupByRaw($actorExpression)
+            ->orderByDesc('total_paid')
+            ->get();
+
+        $userOrderTotals = $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression)
+            ->selectRaw("{$actorExpression} as user_id")
+            ->selectRaw('pos_orders.id as order_id')
+            ->selectRaw('MAX(pos_orders.total) as order_total')
+            ->groupByRaw("{$actorExpression}, pos_orders.id");
+
+        $grossRows = DB::query()
+            ->fromSub($userOrderTotals, 'user_orders')
+            ->select('user_id')
+            ->selectRaw('COALESCE(SUM(order_total), 0) as gross_sales')
+            ->groupBy('user_id')
+            ->get()
+            ->keyBy(fn ($row) => $row->user_id === null ? 'unassigned' : (string) $row->user_id);
+
+        $summaryGross = DB::query()
+            ->fromSub(
+                $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression)
+                    ->selectRaw('pos_orders.id as order_id')
+                    ->selectRaw('MAX(pos_orders.total) as order_total')
+                    ->groupBy('pos_orders.id'),
+                'orders'
+            )
+            ->selectRaw('COUNT(*) as total_orders')
+            ->selectRaw('COALESCE(SUM(order_total), 0) as gross_sales')
+            ->first();
+
+        $userIds = $paymentRows
+            ->pluck('user_id')
+            ->filter(fn ($id) => $id !== null)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $users = User::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('id', $userIds)
+            ->get(['id', 'name', 'role'])
+            ->keyBy('id');
+
+        $rows = $paymentRows->map(function ($row) use ($users, $grossRows) {
+            $userId = $row->user_id === null ? null : (int) $row->user_id;
+            $grossKey = $userId === null ? 'unassigned' : (string) $userId;
+            $user = $userId ? $users->get($userId) : null;
+
+            return [
+                'user_id' => $userId,
+                'user_name' => $user?->name ?: ($userId ? "User #{$userId}" : 'Unassigned / Kiosk'),
+                'user_role' => $user?->role ?: ($userId ? null : 'kiosk'),
+                'order_count' => (int) $row->order_count,
+                'gross_sales' => round((float) ($grossRows->get($grossKey)->gross_sales ?? 0), 2),
+                'total_paid' => round((float) $row->total_paid, 2),
+                'cash_total' => round((float) $row->cash_total, 2),
+                'upi_total' => round((float) $row->upi_total, 2),
+                'card_total' => round((float) $row->card_total, 2),
+                'other_total' => round((float) $row->other_total, 2),
+                'first_bill_at' => $row->first_bill_at,
+                'last_bill_at' => $row->last_bill_at,
+            ];
+        })->values();
+
+        return [
+            'summary' => [
+                'total_orders' => (int) ($summaryGross->total_orders ?? 0),
+                'gross_sales' => round((float) ($summaryGross->gross_sales ?? 0), 2),
+                'total_paid' => round((float) $paymentRows->sum('total_paid'), 2),
+                'cash_total' => round((float) $paymentRows->sum('cash_total'), 2),
+                'upi_total' => round((float) $paymentRows->sum('upi_total'), 2),
+                'card_total' => round((float) $paymentRows->sum('card_total'), 2),
+                'other_total' => round((float) $paymentRows->sum('other_total'), 2),
+            ],
+            'rows' => $rows,
+        ];
+    }
+
+    private function billingBaseQuery(Carbon $start, Carbon $end, ?int $locationId, ?int $userId, string $actorExpression)
+    {
+        return DB::table('pos_payments')
+            ->join('pos_orders', 'pos_orders.id', '=', 'pos_payments.order_id')
+            ->where('pos_payments.status', 'success')
+            ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
+            ->whereBetween('pos_payments.created_at', [$start, $end])
+            ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
+            ->when($userId !== null, fn ($q) => $q->whereRaw("{$actorExpression} = ?", [$userId]));
+    }
+
+    private function billingActorExpression(): string
+    {
+        $columns = [];
+
+        if (Schema::hasColumn('pos_payments', 'collected_by')) {
+            $columns[] = 'pos_payments.collected_by';
+        }
+
+        if (Schema::hasColumn('pos_orders', 'completed_by')) {
+            $columns[] = 'pos_orders.completed_by';
+        }
+
+        if (Schema::hasColumn('pos_orders', 'created_by')) {
+            $columns[] = 'pos_orders.created_by';
+        }
+
+        return count($columns) > 1
+            ? 'COALESCE('.implode(', ', $columns).')'
+            : ($columns[0] ?? 'NULL');
     }
 
     private function generateSales($tenantId, string $date, ?int $locationId): void

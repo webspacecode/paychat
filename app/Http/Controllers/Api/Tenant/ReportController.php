@@ -69,6 +69,32 @@ class ReportController extends Controller
         return $reports->rangeHourly($tenantId, $start, $end, $locationId);
     }
 
+    public function billingByUser(Request $request, ReportEngineService $reports)
+    {
+        $validated = $request->validate([
+            'period' => ['nullable', 'string', 'in:today,month,custom'],
+            'start_date' => ['required_if:period,custom', 'nullable', 'date'],
+            'end_date' => ['required_if:period,custom', 'nullable', 'date', 'after_or_equal:start_date'],
+            'location_id' => ['nullable'],
+            'user_id' => ['nullable', 'integer'],
+        ]);
+
+        $tenantId = $this->tenantId();
+        $locationId = $this->locationId($request);
+        [$start, $end] = $this->billingDateRange($validated);
+        $userId = isset($validated['user_id']) ? (int) $validated['user_id'] : null;
+
+        $report = $reports->billingByUser($tenantId, $start, $end, $locationId, $userId);
+
+        return response()->json([
+            'date_from' => $start->toDateString(),
+            'date_to' => $end->toDateString(),
+            'location_id' => $locationId,
+            'user_id' => $userId,
+            ...$report,
+        ]);
+    }
+
     private function dateRange(Request $request, $tenantId, ?int $locationId): array
     {
         $period = $this->normalizePeriod(
@@ -115,6 +141,26 @@ class ReportController extends Controller
             '7_days', 'last_7_day', 'last_7_days' => 'last_7_days',
             'this_month', 'current_month' => 'month',
             default => $period,
+        };
+    }
+
+    private function billingDateRange(array $filters): array
+    {
+        $period = $filters['period'] ?? 'today';
+
+        return match ($period) {
+            'month' => [
+                now()->startOfMonth()->startOfDay(),
+                now()->endOfDay(),
+            ],
+            'custom' => [
+                Carbon::parse($filters['start_date'])->startOfDay(),
+                Carbon::parse($filters['end_date'])->endOfDay(),
+            ],
+            default => [
+                now()->startOfDay(),
+                now()->endOfDay(),
+            ],
         };
     }
 

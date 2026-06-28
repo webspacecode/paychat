@@ -11,6 +11,7 @@ use App\Models\Tenant\PaymentMethod;
 use App\Models\Tenant\UpiProfile;
 use App\Support\Observability;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Services\Orders\OrderService;
 use App\Services\Payments\Strategies\CashPaymentStrategy;
 use App\Services\Payments\Strategies\UpiPaymentStrategy;
@@ -20,6 +21,38 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class PaymentService
 {       
+    private ?int $actingUserId = null;
+
+    public function withActingUser(?int $userId): self
+    {
+        $this->actingUserId = $userId;
+
+        return $this;
+    }
+
+    private function currentActorId(): ?int
+    {
+        return $this->actingUserId ?: auth()->id();
+    }
+
+    private function collectedByAttributes(): array
+    {
+        $actorId = $this->currentActorId();
+
+        if (! $actorId || ! Schema::hasColumn('pos_payments', 'collected_by')) {
+            return [];
+        }
+
+        return ['collected_by' => $actorId];
+    }
+
+    private function shouldSetCollectedBy(Payment $payment): bool
+    {
+        return ! $payment->collected_by
+            && $this->currentActorId()
+            && Schema::hasColumn('pos_payments', 'collected_by');
+    }
+
     public function initiatePayment(Order $order, string $method, array $data = [])
     {
         if ($order->status === 'cancelled') {
@@ -170,6 +203,7 @@ class PaymentService
             'payment_method' => 'cash',
             'amount' => $amount,
             'status' => 'success',
+            ...$this->collectedByAttributes(),
             'meta' => $changeReturned > 0 ? [
                 'tendered_amount' => $this->money($tenderedAmount),
                 'change_returned' => $changeReturned,
@@ -256,6 +290,7 @@ class PaymentService
             'upi_profile_id' => $profile->id,
             'amount' => $amount,
             'status' => 'pending',
+            ...$this->collectedByAttributes(),
             'upi_qr_url' => $upiQr,
             'meta' => [
                 'upi_id' => $profile->upi_id,
@@ -299,6 +334,7 @@ class PaymentService
             'provider_ref'   => $ref,
             'amount'         => $amount,
             'status'         => 'pending',
+            ...$this->collectedByAttributes(),
             'upi_qr_url'     => $upiQr,
             'meta' => [
                 'upi_id' => $upiId,
@@ -373,6 +409,7 @@ class PaymentService
             'provider_ref' => $txnId,
             'amount' => $amount,
             'status' => 'pending',
+            ...$this->collectedByAttributes(),
             'meta' => $res
         ]);
 
@@ -508,7 +545,11 @@ class PaymentService
             $this->assertPaymentCanBeMarkedSuccessful($lockedPayment, $order);
 
             if ($lockedPayment->status !== 'success') {
-                $lockedPayment->update(['status' => 'success']);
+                $updates = ['status' => 'success'];
+                if ($this->shouldSetCollectedBy($lockedPayment)) {
+                    $updates['collected_by'] = $this->currentActorId();
+                }
+                $lockedPayment->update($updates);
             }
 
             $this->syncOrderAfterPaymentSuccess($order);
@@ -548,8 +589,14 @@ class PaymentService
             $this->assertPaymentCanBeMarkedSuccessful($lockedPayment, $order);
 
             if ($lockedPayment->status !== 'success') {
+                $updates = ['status' => 'success'];
+                if ($this->shouldSetCollectedBy($lockedPayment)) {
+                    $updates['collected_by'] = $this->currentActorId();
+                }
+                $lockedPayment->update($updates);
+            } elseif ($this->shouldSetCollectedBy($lockedPayment)) {
                 $lockedPayment->update([
-                    'status' => 'success'
+                    'collected_by' => $this->currentActorId(),
                 ]);
             }
 

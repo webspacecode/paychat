@@ -351,7 +351,7 @@ class DefaultProductStrategy implements ProductStrategyInterface
         $status = 'not_tracked';
         $label = 'Not Tracked';
 
-        if ($product->track_inventory) {
+        if ($product->track_inventory && $product->type !== 'recipe') {
             if ($currentStock <= 0) {
                 $status = 'out_of_stock';
                 $label = 'Out of Stock';

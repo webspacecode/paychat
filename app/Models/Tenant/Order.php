@@ -2,6 +2,7 @@
 
 namespace App\Models\Tenant;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
@@ -27,6 +28,8 @@ class Order extends Model
 
         // User
         'created_by',
+        'updated_by',
+        'completed_by',
 
         // Customer
         'customer_id',
@@ -127,5 +130,20 @@ class Order extends Model
     public function token()
     {
         return $this->hasOne(OrderToken::class, 'order_id');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function completedBy()
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    public function cancelledBy()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 }

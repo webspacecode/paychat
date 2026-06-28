@@ -237,6 +237,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::get('/payments', [ReportController::class, 'payments']);
         Route::get('/top-products', [ReportController::class, 'topProducts']);
         Route::get('/hourly', [ReportController::class, 'hourly']);
+        Route::get('/billing-by-user', [ReportController::class, 'billingByUser']);
     });
 
 });

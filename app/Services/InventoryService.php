@@ -82,7 +82,7 @@ class InventoryService
 
     private function stockStatus(Product $product, int $currentStock): array
     {
-        if (! $product->track_inventory) {
+        if (! $product->track_inventory || $product->type === 'recipe') {
             return ['not_tracked', 'Not Tracked'];
         }
 

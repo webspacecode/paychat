@@ -236,9 +236,10 @@ class OrderService
         });
     }
 
-    public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null, $diningFlow = null, $guestCount = null, $tableSessionId = null, array $deliverySource = [])
+    public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null, $diningFlow = null, $guestCount = null, $tableSessionId = null, array $deliverySource = [], ?int $createdBy = null)
     {
         [$orderType, $meta] = $this->normalizeDraftOrderType($orderType);
+        $createdBy = $createdBy ?? auth()->id();
 
         $orderData = [
             'order_no' => strtoupper('ORD-' . Str::uuid()),
@@ -253,6 +254,10 @@ class OrderService
             'payment_status' => 'unpaid',
             'meta' => $meta,
         ];
+
+        if ($createdBy && Schema::hasColumn('pos_orders', 'created_by')) {
+            $orderData['created_by'] = $createdBy;
+        }
 
         $orderData = array_merge(
             $orderData,
@@ -635,10 +640,28 @@ class OrderService
                 $strategy->deduct($item, $order->location_id);
             }
 
-            $order->update([
+            $completedBy = $order->completed_by;
+
+            if (! $completedBy && Schema::hasColumn('pos_payments', 'collected_by')) {
+                $completedBy = $order->payments()
+                    ->where('status', 'success')
+                    ->whereNotNull('collected_by')
+                    ->latest('updated_at')
+                    ->value('collected_by');
+            }
+
+            $completedBy = $completedBy ?: auth()->id();
+
+            $updates = [
                 'status' => 'completed',
                 'completed_at' => $order->completed_at ?: now(),
-            ]);
+            ];
+
+            if ($completedBy && ! $order->completed_by && Schema::hasColumn('pos_orders', 'completed_by')) {
+                $updates['completed_by'] = $completedBy;
+            }
+
+            $order->update($updates);
         });
 
         try {

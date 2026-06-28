@@ -2,6 +2,7 @@
 
 namespace App\Models\Tenant;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
@@ -19,6 +20,7 @@ class Payment extends Model
         'upi_profile_id',
         'upi_qr_url',
         'status',
+        'collected_by',
         'meta',
     ];
 
@@ -39,5 +41,10 @@ class Payment extends Model
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function collectedBy()
+    {
+        return $this->belongsTo(User::class, 'collected_by');
     }
 }
