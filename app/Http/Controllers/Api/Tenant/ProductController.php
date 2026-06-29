@@ -99,8 +99,10 @@ class ProductController extends Controller
     }
 
     // UPDATE
-    public function update(Request $request, Product $product)
+    public function update(Request $request, $product)
     {
+        $product = $this->resolveRouteProduct($product);
+
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'name'  => ['sometimes','string','max:255'],
@@ -135,8 +137,10 @@ class ProductController extends Controller
     }
 
     // DELETE
-    public function destroy(Request $request, Product $product)
+    public function destroy(Request $request, $product)
     {
+        $product = $this->resolveRouteProduct($product);
+
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
         ]);
@@ -148,8 +152,10 @@ class ProductController extends Controller
     }
 
     // INVENTORY: adjust (+/-)
-    public function adjustInventory(Request $request, Product $product)
+    public function adjustInventory(Request $request, $product)
     {
+        $product = $this->resolveRouteProduct($product);
+
         $validated = $request->validate([
             'industry'    => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'location_id' => ['required','integer','exists:locations,id'],
@@ -163,8 +169,10 @@ class ProductController extends Controller
         return response()->json($inventory);
     }
 
-    public function stockMovements(Request $request, Product $product)
+    public function stockMovements(Request $request, $product)
     {
+        $product = $this->resolveRouteProduct($product);
+
         $validated = $request->validate([
             'location_id' => ['nullable','integer','exists:locations,id'],
             'limit' => ['nullable','integer','min:1','max:50'],
@@ -210,8 +218,10 @@ class ProductController extends Controller
     }
 
     // INVENTORY: transfer
-    public function moveStock(Request $request, Product $product)
+    public function moveStock(Request $request, $product)
     {
+        $product = $this->resolveRouteProduct($product);
+
         $validated = $request->validate([
             'industry'        => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'from_location_id' => ['required','integer','exists:locations,id'],
@@ -230,6 +240,17 @@ class ProductController extends Controller
         );
 
         return response()->json($movement);
+    }
+
+    private function resolveRouteProduct($product): Product
+    {
+        if ($product instanceof Product) {
+            return $product;
+        }
+
+        abort_unless(is_numeric($product), 404, 'Product not found');
+
+        return Product::findOrFail((int) $product);
     }
 
     public function bulkUpload(Request $request)
