@@ -84,7 +84,7 @@ class ProductController extends Controller
     }
 
     // SHOW
-    public function show(Request $request, int $id)
+    public function show(Request $request, $tenantSlug, int $id)
     {
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
@@ -99,7 +99,7 @@ class ProductController extends Controller
     }
 
     // UPDATE
-    public function update(Request $request, $product)
+    public function update(Request $request, $tenantSlug, $product)
     {
         $productId = $this->routeProductId($product);
 
@@ -138,7 +138,7 @@ class ProductController extends Controller
     }
 
     // DELETE
-    public function destroy(Request $request, $product)
+    public function destroy(Request $request, $tenantSlug, $product)
     {
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
@@ -152,7 +152,7 @@ class ProductController extends Controller
     }
 
     // INVENTORY: adjust (+/-)
-    public function adjustInventory(Request $request, $product)
+    public function adjustInventory(Request $request, $tenantSlug, $product)
     {
         $validated = $request->validate([
             'industry'    => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
@@ -168,7 +168,7 @@ class ProductController extends Controller
         return response()->json($inventory);
     }
 
-    public function stockMovements(Request $request, $product)
+    public function stockMovements(Request $request, $tenantSlug, $product)
     {
         $validated = $request->validate([
             'location_id' => ['nullable','integer','exists:locations,id'],
@@ -216,7 +216,7 @@ class ProductController extends Controller
     }
 
     // INVENTORY: transfer
-    public function moveStock(Request $request, $product)
+    public function moveStock(Request $request, $tenantSlug, $product)
     {
         $validated = $request->validate([
             'industry'        => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
