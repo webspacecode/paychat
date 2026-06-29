@@ -101,13 +101,13 @@ class ProductController extends Controller
     // UPDATE
     public function update(Request $request, $product)
     {
-        $product = $this->resolveRouteProduct($product);
+        $productId = $this->routeProductId($product);
 
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'name'  => ['sometimes','string','max:255'],
-            'sku'   => ['nullable','string','max:255', Rule::unique('products', 'sku')->ignore($product->id)],
-            'barcode' => ['nullable','string','max:255', Rule::unique('products', 'barcode')->ignore($product->id)],
+            'sku'   => ['nullable','string','max:255', Rule::unique('products', 'sku')->ignore($productId)],
+            'barcode' => ['nullable','string','max:255', Rule::unique('products', 'barcode')->ignore($productId)],
             'type'  => ['sometimes', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
             'price' => ['nullable','numeric','min:0'],
             'unit'  => ['nullable','string','max:50'],
@@ -131,6 +131,7 @@ class ProductController extends Controller
         $validated = $this->prepareProductPayload($request, $validated, false);
         $validated = $this->applySimpleBillingProductDefaults($validated);
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
+        $product = $this->resolveRouteProduct($productId);
         $updated = $industryStrategy->update($product, $validated);
 
         return response()->json($updated);
@@ -139,13 +140,12 @@ class ProductController extends Controller
     // DELETE
     public function destroy(Request $request, $product)
     {
-        $product = $this->resolveRouteProduct($product);
-
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
         ]);
 
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
+        $product = $this->resolveRouteProduct($product);
         $industryStrategy->delete($product);
 
         return response()->json(['message' => 'Product disabled successfully']);
@@ -154,8 +154,6 @@ class ProductController extends Controller
     // INVENTORY: adjust (+/-)
     public function adjustInventory(Request $request, $product)
     {
-        $product = $this->resolveRouteProduct($product);
-
         $validated = $request->validate([
             'industry'    => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'location_id' => ['required','integer','exists:locations,id'],
@@ -164,6 +162,7 @@ class ProductController extends Controller
         ]);
 
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
+        $product = $this->resolveRouteProduct($product);
         $inventory = $industryStrategy->adjustInventory($product, (int)$validated['location_id'], (int)$validated['delta_qty'], $validated['meta'] ?? []);
 
         return response()->json($inventory);
@@ -171,12 +170,11 @@ class ProductController extends Controller
 
     public function stockMovements(Request $request, $product)
     {
-        $product = $this->resolveRouteProduct($product);
-
         $validated = $request->validate([
             'location_id' => ['nullable','integer','exists:locations,id'],
             'limit' => ['nullable','integer','min:1','max:50'],
         ]);
+        $product = $this->resolveRouteProduct($product);
 
         $limit = (int) ($validated['limit'] ?? 20);
         $locationId = $validated['location_id'] ?? null;
@@ -220,8 +218,6 @@ class ProductController extends Controller
     // INVENTORY: transfer
     public function moveStock(Request $request, $product)
     {
-        $product = $this->resolveRouteProduct($product);
-
         $validated = $request->validate([
             'industry'        => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'from_location_id' => ['required','integer','exists:locations,id'],
@@ -231,6 +227,7 @@ class ProductController extends Controller
         ]);
 
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
+        $product = $this->resolveRouteProduct($product);
         $movement = $industryStrategy->moveStock(
             $product,
             (int)$validated['from_location_id'],
@@ -242,15 +239,27 @@ class ProductController extends Controller
         return response()->json($movement);
     }
 
+    private function routeProductId($product): int
+    {
+        if ($product instanceof Product) {
+            return (int) $product->id;
+        }
+
+        abort_unless(is_numeric($product), 404, 'Product not found');
+
+        return (int) $product;
+    }
+
     private function resolveRouteProduct($product): Product
     {
         if ($product instanceof Product) {
             return $product;
         }
 
-        abort_unless(is_numeric($product), 404, 'Product not found');
+        $product = Product::query()->whereKey($this->routeProductId($product))->first();
+        abort_unless($product, 404, 'Product not found');
 
-        return Product::findOrFail((int) $product);
+        return $product;
     }
 
     public function bulkUpload(Request $request)

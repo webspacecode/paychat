@@ -3,7 +3,9 @@
 // app/Models/Category.php
 namespace App\Models\Tenant;
 
-class Category extends BaseTenantModel
+use Illuminate\Database\Eloquent\Model;
+
+class Category extends Model
 {
     protected $fillable = ['name', 'description'];
 
