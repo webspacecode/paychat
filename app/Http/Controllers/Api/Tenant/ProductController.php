@@ -362,8 +362,14 @@ class ProductController extends Controller
         if ($generateSku && empty($data['sku'])) {
             $base = Str::upper(Str::slug($data['name'] ?? 'ITEM', ''));
             $data['sku'] = substr($base ?: 'ITEM', 0, 18) . '-' . Str::upper(Str::random(5));
-        } elseif (array_key_exists('sku', $data) && empty($data['sku'])) {
-            unset($data['sku']);
+        } elseif (array_key_exists('sku', $data) && $data['sku'] === '') {
+            $data['sku'] = null;
+        }
+
+        foreach (['barcode', 'unit'] as $nullableTextField) {
+            if (array_key_exists($nullableTextField, $data) && $data[$nullableTextField] === '') {
+                $data[$nullableTextField] = null;
+            }
         }
 
         if ($request->hasFile('image')) {

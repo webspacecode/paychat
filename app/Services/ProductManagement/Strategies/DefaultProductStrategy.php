@@ -133,9 +133,13 @@ class DefaultProductStrategy implements ProductStrategyInterface
     }
 
 
-    protected function syncCategories(Product $product, $categories)
+    protected function syncCategories(Product $product, $categories, bool $replace = false)
     {
         if (empty($categories)) {
+            if ($replace) {
+                $product->categories()->detach();
+            }
+
             return;
         }
 
@@ -154,7 +158,11 @@ class DefaultProductStrategy implements ProductStrategyInterface
             $categoryIds[] = $category->id;
         }
 
-        // Attach without removing existing ones
+        if ($replace) {
+            $product->categories()->sync($categoryIds);
+            return;
+        }
+
         $product->categories()->syncWithoutDetaching($categoryIds);
     }
 
@@ -190,7 +198,7 @@ class DefaultProductStrategy implements ProductStrategyInterface
         }
 
         if (array_key_exists('categories', $data)) {
-            $this->syncCategories($product, $data['categories']);
+            $this->syncCategories($product, $data['categories'], true);
         }
 
         return $product->fresh()->load(['images','categories:id,name,description','inventories','recipe.items']);
@@ -275,6 +283,18 @@ class DefaultProductStrategy implements ProductStrategyInterface
 
     public function adjustInventory(Product $product, int $locationId, int $deltaQty, array $meta = []): ProductInventory
     {
+        if ($product->type === 'recipe') {
+            throw ValidationException::withMessages(['product' => 'Recipe products cannot be restocked directly. Restock the raw ingredients instead.']);
+        }
+
+        if (! $product->track_inventory) {
+            throw ValidationException::withMessages(['product' => 'Inventory tracking is disabled for this product. Enable tracking before adjusting stock.']);
+        }
+
+        if ($deltaQty === 0) {
+            throw ValidationException::withMessages(['quantity' => 'Quantity adjustment cannot be zero.']);
+        }
+
         return DB::transaction(function () use ($product, $locationId, $deltaQty, $meta) {
             $inv = ProductInventory::lockForUpdate()->firstOrNew([
                 'product_id' => $product->id,

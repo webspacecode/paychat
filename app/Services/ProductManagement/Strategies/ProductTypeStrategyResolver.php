@@ -9,7 +9,11 @@ class ProductTypeStrategyResolver
         return match ($type) {
             'raw'        => new RawProductStrategy(),
             'recipe'     => new RecipeProductStrategy(),
-            'basic', null => new DefaultProductStrategy(),
+            'basic',
+            'semi_finished',
+            'finished',
+            'other',
+            null => new DefaultProductStrategy(),
         };
     }
 }
