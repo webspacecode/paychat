@@ -2,9 +2,7 @@
 
 namespace App\Models\Tenant;
 
-use Illuminate\Database\Eloquent\Model;
-
-class ProductInventory extends Model
+class ProductInventory extends BaseTenantModel
 {
     protected $fillable = ['product_id', 'location_id', 'quantity'];
     public function product()  { return $this->belongsTo(Product::class); }

@@ -2,9 +2,7 @@
 
 namespace App\Models\Tenant;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Recipe extends Model
+class Recipe extends BaseTenantModel
 {
     protected $fillable = ['product_id','location_id','description'];
     public function product() { return $this->belongsTo(Product::class); }

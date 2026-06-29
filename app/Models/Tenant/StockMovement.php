@@ -2,9 +2,7 @@
 
 namespace App\Models\Tenant;
 
-use Illuminate\Database\Eloquent\Model;
-
-class StockMovement extends Model
+class StockMovement extends BaseTenantModel
 {
     protected $table = 'stock_movements';
 
