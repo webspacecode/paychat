@@ -42,6 +42,7 @@ class OrderResource extends JsonResource
             'location' => [
                 'id' => $this->location_id,
                 'name' => optional($this->location)->name,
+                'address' => optional($this->location)->address,
             ],
 
             'table' => $this->table ? [
@@ -68,6 +69,7 @@ class OrderResource extends JsonResource
                 'id' => $this->customer->id,
                 'name' => $this->customer->name,
                 'phone' => $this->customer->phone,
+                'address' => $this->customer->address,
             ] : null,
 
             'walk_in_customer' => [
