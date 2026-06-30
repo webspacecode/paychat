@@ -72,6 +72,8 @@ Route::middleware(['auth', 'master', NoIndex::class])->prefix('master')->name('m
         ->name('tenants.logs');
     Route::get('/tenants/{tenant}/logs/available-dates', [DashboardController::class, 'tenantLogDates'])
         ->name('tenants.logs.dates');
+    Route::patch('/demo-leads/{demoLead}', [DashboardController::class, 'updateDemoLead'])
+        ->name('demo-leads.update');
     Route::post('/tenants/{tenant}/users', [DashboardController::class, 'storeTenantUser'])
         ->name('tenants.users.store');
     Route::patch('/tenants/{tenant}/password', [DashboardController::class, 'resetTenantPassword'])

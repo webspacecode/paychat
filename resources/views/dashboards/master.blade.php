@@ -103,8 +103,20 @@
         }
 
         [data-master-dashboard] input,
-        [data-master-dashboard] select {
+        [data-master-dashboard] select,
+        [data-master-dashboard] textarea {
             background-color: #fff;
+        }
+
+        [data-master-dashboard] .master-count-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            background: #eef4ff;
+            padding: 0.25rem 0.65rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #173fc0;
         }
     </style>
 
@@ -158,7 +170,7 @@
 
     @if($errors->any())
         <div class="mb-5 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-            <div class="font-semibold">Please fix the highlighted user details.</div>
+            <div class="font-semibold">Please fix the highlighted details.</div>
             <ul class="mt-2 list-disc space-y-1 pl-5">
                 @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -170,7 +182,10 @@
     <div class="master-panel overflow-hidden rounded-xl">
         <div class="master-section-head px-5 py-4">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h2 class="text-base font-semibold text-slate-950">All Tenants</h2>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-base font-semibold text-slate-950">All Tenants</h2>
+                    <span class="master-count-pill">{{ $tenants->count() }} records</span>
+                </div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <p class="text-sm text-slate-500">Click any row to open the full tenant profile.</p>
                     <button
@@ -277,25 +292,40 @@
     <div class="master-panel overflow-hidden rounded-xl">
         <div class="master-section-head px-5 py-4">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h2 class="text-base font-semibold text-slate-950">Demo Leads</h2>
-                <p class="text-sm text-slate-500">Latest website demo requests in table format.</p>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-base font-semibold text-slate-950">Demo Leads</h2>
+                    <span class="master-count-pill">{{ $demoLeads->count() }} records</span>
+                </div>
+                <p class="text-sm text-slate-500">Latest website demo requests with editable status and notes.</p>
             </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="min-w-[1120px] divide-y divide-slate-200">
                 <thead class="bg-slate-50">
                     <tr>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Lead</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Business</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Demo Time</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Source</th>
                         <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Received</th>
+                        <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white">
                     @forelse($demoLeads as $lead)
+                        @php
+                            $leadStatus = $lead->status ?: 'new';
+                            $leadStatusClasses = match ($leadStatus) {
+                                'converted' => 'bg-emerald-50 text-emerald-700',
+                                'demo_scheduled' => 'bg-blue-50 text-blue-700',
+                                'contacted' => 'bg-indigo-50 text-indigo-700',
+                                'not_interested', 'closed' => 'bg-slate-100 text-slate-600',
+                                default => 'bg-amber-50 text-amber-700',
+                            };
+                        @endphp
                         <tr class="transition hover:bg-slate-50">
                             <td class="px-5 py-4">
                                 <div class="font-semibold text-slate-950">{{ $lead->name }}</div>
@@ -319,25 +349,119 @@
                                 {{ $lead->preferred_demo_time?->format('d M Y, h:i A') ?: 'Not set' }}
                             </td>
                             <td class="px-5 py-4">
-                                <span class="inline-flex rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
-                                    {{ $lead->status ?: 'new' }}
+                                <span class="inline-flex rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide {{ $leadStatusClasses }}">
+                                    {{ str_replace('_', ' ', $leadStatus) }}
                                 </span>
-                                @if($lead->notes)
-                                    <div class="mt-1 max-w-xs truncate text-xs text-slate-500">{{ $lead->notes }}</div>
-                                @endif
+                            </td>
+                            <td class="px-5 py-4 text-sm text-slate-700">
+                                <div class="max-w-sm whitespace-normal break-words leading-5">
+                                    {{ $lead->notes ?: 'No notes yet' }}
+                                </div>
                             </td>
                             <td class="px-5 py-4 text-sm text-slate-700">{{ $lead->source ?: 'website' }}</td>
                             <td class="px-5 py-4 text-right text-sm text-slate-500">{{ $lead->created_at?->format('d M Y') }}</td>
+                            <td class="px-5 py-4 text-right">
+                                <button
+                                    type="button"
+                                    class="master-action px-3 py-2 text-sm"
+                                    data-modal-target="demo-lead-modal-{{ $lead->id }}"
+                                >
+                                    Edit
+                                </button>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-10 text-center text-sm text-slate-500">No demo leads yet.</td>
+                            <td colspan="8" class="px-5 py-10 text-center text-sm text-slate-500">No demo leads yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
+
+    @foreach($demoLeads as $lead)
+        @php
+            $isDemoLeadModalOpen = (int) session('demo_lead_id') === (int) $lead->id;
+            $leadOld = fn (string $field, mixed $default = null) => $isDemoLeadModalOpen ? old($field, $default) : $default;
+        @endphp
+
+        <div
+            id="demo-lead-modal-{{ $lead->id }}"
+            class="fixed inset-0 z-50 {{ $isDemoLeadModalOpen ? 'flex' : 'hidden' }} items-center justify-center bg-slate-950/70 px-4 py-6"
+            data-modal
+            aria-hidden="{{ $isDemoLeadModalOpen ? 'false' : 'true' }}"
+        >
+            <div class="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl">
+                <div class="flex items-start justify-between gap-4 bg-slate-950 px-6 py-5 text-white">
+                    <div>
+                        <h2 class="text-xl font-semibold">Edit Demo Lead</h2>
+                        <p class="mt-1 text-sm text-slate-300">{{ $lead->business_name }} · {{ $lead->phone }}</p>
+                    </div>
+                    <button type="button" class="master-action master-action-dark px-3 py-2 text-sm" data-modal-close>
+                        Close
+                    </button>
+                </div>
+
+                <form method="POST" action="{{ route('master.demo-leads.update', $lead) }}" class="max-h-[calc(92vh-89px)] overflow-y-auto px-6 py-5">
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <label class="text-sm font-semibold text-slate-700">
+                            Name
+                            <input name="name" value="{{ $leadOld('name', $lead->name) }}" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Phone
+                            <input name="phone" value="{{ $leadOld('phone', $lead->phone) }}" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Email
+                            <input name="email" type="email" value="{{ $leadOld('email', $lead->email) }}" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Business Name
+                            <input name="business_name" value="{{ $leadOld('business_name', $lead->business_name) }}" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Business Type
+                            <input name="business_type" value="{{ $leadOld('business_type', $lead->business_type) }}" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Counters
+                            <input name="counters" value="{{ $leadOld('counters', $lead->counters) }}" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Demo Time
+                            <input name="preferred_demo_time" type="datetime-local" value="{{ $leadOld('preferred_demo_time', $lead->preferred_demo_time?->format('Y-m-d\TH:i')) }}" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700">
+                            Status
+                            <select name="status" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                                @foreach($demoLeadStatuses as $status)
+                                    <option value="{{ $status }}" @selected($leadOld('status', $lead->status ?: 'new') === $status)>{{ \Illuminate\Support\Str::headline($status) }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700 md:col-span-2">
+                            Source
+                            <input name="source" value="{{ $leadOld('source', $lead->source ?: 'website') }}" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                        </label>
+                        <label class="text-sm font-semibold text-slate-700 md:col-span-2">
+                            Notes
+                            <textarea name="notes" rows="5" class="mt-1 w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">{{ $leadOld('notes', $lead->notes) }}</textarea>
+                        </label>
+                    </div>
+
+                    <div class="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-end">
+                        <button type="button" class="master-action px-4 py-2.5 text-sm" data-modal-close>Cancel</button>
+                        <button class="master-action master-action-primary px-4 py-2.5 text-sm">Save Lead</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
 
     @foreach($tenants as $tenant)
         @php

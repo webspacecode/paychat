@@ -26,6 +26,15 @@ class DashboardController extends Controller
         'accountant',
     ];
 
+    private const DEMO_LEAD_STATUSES = [
+        'new',
+        'contacted',
+        'demo_scheduled',
+        'converted',
+        'not_interested',
+        'closed',
+    ];
+
     public function master(): View
     {
         $tenants = Tenant::with(['taxConfig', 'branding', 'users' => fn ($query) => $query->orderBy('role')->orderBy('name')])
@@ -35,7 +44,9 @@ class DashboardController extends Controller
         $demoLeads = DemoLead::latest()
             ->get();
 
-        return view('dashboards.master', compact('tenants', 'demoLeads'));
+        $demoLeadStatuses = self::DEMO_LEAD_STATUSES;
+
+        return view('dashboards.master', compact('tenants', 'demoLeads', 'demoLeadStatuses'));
     }
 
     public function tenant(Request $request): View|RedirectResponse
@@ -101,6 +112,28 @@ class DashboardController extends Controller
         ])->save();
 
         return back()->with('status', "Password reset for {$user->email}.");
+    }
+
+    public function updateDemoLead(Request $request, DemoLead $demoLead): RedirectResponse
+    {
+        $request->session()->flash('demo_lead_id', $demoLead->id);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'max:50'],
+            'business_name' => ['required', 'string', 'max:255'],
+            'business_type' => ['nullable', 'string', 'max:255'],
+            'counters' => ['nullable', 'string', 'max:50'],
+            'preferred_demo_time' => ['nullable', 'date'],
+            'source' => ['nullable', 'string', 'max:100'],
+            'status' => ['required', 'string', Rule::in(self::DEMO_LEAD_STATUSES)],
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $demoLead->update($validated);
+
+        return back()->with('status', "Demo lead updated for {$demoLead->name}.");
     }
 
     public function tenantLogs(Request $request, Tenant $tenant, TenantOperationalLogReader $reader): JsonResponse
