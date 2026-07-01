@@ -224,7 +224,17 @@ class InvoiceService
 
     private function normalizeOrder($order)
     {
-        return data_get($order, 'data.data', $order);
+        $orderData = data_get($order, 'data.data', data_get($order, 'data', $order));
+
+        if ($orderData instanceof \Illuminate\Contracts\Support\Arrayable) {
+            return $orderData->toArray();
+        }
+
+        if (is_object($orderData)) {
+            return json_decode(json_encode($orderData), true) ?: [];
+        }
+
+        return is_array($orderData) ? $orderData : [];
     }
 
     private function publicInvoiceUrl(string $uuid, bool $includeCustomerInfo = false): string
