@@ -421,7 +421,7 @@ That is the purpose of this system.
 
 To run migrations on specific tenants db
 ```
-php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant/some_migration.php
+php artisan tenant:migrate-db tenant_idli_junction --path=database/migrations/tenant/2026_07_01_000001_add_dispatch_channel_to_kitchen_batches.php
 php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --pretend
 php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --step
 ```
