@@ -14,13 +14,18 @@ class KitchenBatchService
 {
     public const MODE_DEDICATED_KDS = 'dedicated_kds';
     public const MODE_INLINE = 'inline';
+    public const CHANNEL_BOARD = 'board';
+    public const CHANNEL_PRINT = 'print';
+    public const CHANNEL_BOARD_AND_PRINT = 'board_and_print';
 
     private const STATUSES = ['waiting', 'pending', 'preparing', 'ready', 'served', 'cancelled'];
     private const OPERATION_MODES = [self::MODE_DEDICATED_KDS, self::MODE_INLINE];
+    private const DISPATCH_CHANNELS = [self::CHANNEL_BOARD, self::CHANNEL_PRINT, self::CHANNEL_BOARD_AND_PRINT];
+    private const CANCELLABLE_STATUSES = ['waiting', 'pending', 'sent', 'in_kitchen'];
 
-    public function sendFreshItems(Order $order): KitchenBatch
+    public function sendFreshItems(Order $order, string $dispatchChannel = self::CHANNEL_BOARD): KitchenBatch
     {
-        return DB::transaction(function () use ($order) {
+        return DB::transaction(function () use ($order, $dispatchChannel) {
             $lockedOrder = Order::with(['items.product', 'table', 'tableSession'])
                 ->whereKey($order->id)
                 ->lockForUpdate()
@@ -75,6 +80,7 @@ class KitchenBatchService
                 'batch_code' => $this->batchCode($nextNumber),
                 'business_date' => $businessDate,
                 'status' => 'waiting',
+                'dispatch_channel' => $this->normalizeDispatchChannel($dispatchChannel),
                 'sent_at' => now(),
             ]);
 
@@ -113,6 +119,93 @@ class KitchenBatchService
         return $batch->fresh(['order.table', 'table', 'tableSession', 'items.product']);
     }
 
+    public function cancelBatch(KitchenBatch $batch): KitchenBatch
+    {
+        DB::transaction(function () use ($batch) {
+            $lockedBatch = KitchenBatch::with('items')
+                ->whereKey($batch->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $status = strtolower((string) $lockedBatch->status);
+            if (! in_array($status, self::CANCELLABLE_STATUSES, true)) {
+                throw ValidationException::withMessages([
+                    'batch' => 'Only waiting kitchen batches can be cancelled safely.',
+                ]);
+            }
+
+            $lockedBatch->items()->lockForUpdate()->get()->each(function ($item) {
+                $item->update([
+                    'kitchen_batch_id' => null,
+                    'kitchen_status' => 'pending',
+                    'sent_to_kitchen_at' => null,
+                ]);
+            });
+
+            $lockedBatch->update(['status' => 'cancelled']);
+        });
+
+        return $batch->fresh(['order.table', 'table', 'tableSession', 'items.product']);
+    }
+
+    public function printPayload(KitchenBatch $batch): array
+    {
+        $batch->loadMissing([
+            'location',
+            'order.location',
+            'order.tableSession.tables',
+            'table',
+            'tableSession.tables',
+            'tableSession.primaryTable',
+            'tableSession.linkedTables',
+            'items.product',
+        ]);
+
+        $order = $batch->order;
+
+        return [
+            'id' => $batch->id,
+            'batch_id' => $batch->id,
+            'batch_code' => $batch->batch_code,
+            'batch_number' => $batch->batch_number,
+            'dispatch_channel' => $batch->dispatch_channel ?? self::CHANNEL_BOARD,
+            'business_date' => optional($batch->business_date)->toDateString(),
+            'status' => $batch->status,
+            'sent_at' => optional($batch->sent_at)->toISOString(),
+            'created_at' => optional($batch->created_at)->toISOString(),
+            'order' => [
+                'id' => $order?->id,
+                'order_no' => $order?->order_no,
+                'notes' => $order?->notes,
+                'guest_count' => $order?->guest_count,
+            ],
+            'location' => [
+                'id' => $batch->location_id,
+                'name' => optional($order?->location ?: $batch->location)->name,
+            ],
+            'table' => $batch->table ? [
+                'id' => $batch->table->id,
+                'name' => $batch->table->name,
+                'code' => $batch->table->code,
+            ] : null,
+            'table_display' => $this->tableDisplayForPayload($batch),
+            'items' => $batch->items->map(fn ($item) => [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_name' => optional($item->product)->name,
+                'name' => optional($item->product)->name,
+                'sku' => optional($item->product)->sku,
+                'quantity' => $item->quantity,
+                'qty' => $item->quantity,
+                'kitchen_status' => $item->kitchen_status,
+                'item_status' => $item->item_status,
+                'notes' => $item->notes ?? $item->note ?? null,
+                'variant' => $item->variant ?? null,
+                'modifiers' => $item->modifiers ?? null,
+            ])->values()->all(),
+        ];
+    }
+
     public function operationMode(): string
     {
         $mode = (string) Setting::get('kitchen_operation_mode', null, self::MODE_DEDICATED_KDS);
@@ -124,7 +217,25 @@ class KitchenBatchService
 
     public function shouldBroadcastToKds(?KitchenBatch $batch = null): bool
     {
-        return $this->operationMode() === self::MODE_DEDICATED_KDS;
+        return $this->operationMode() === self::MODE_DEDICATED_KDS
+            && $this->shouldDispatchToBoard($batch?->dispatch_channel);
+    }
+
+    public function normalizeDispatchChannel(?string $channel): string
+    {
+        $channel = strtolower(trim((string) $channel));
+
+        return in_array($channel, self::DISPATCH_CHANNELS, true)
+            ? $channel
+            : self::CHANNEL_BOARD;
+    }
+
+    public function shouldDispatchToBoard(?string $channel): bool
+    {
+        return in_array($this->normalizeDispatchChannel($channel), [
+            self::CHANNEL_BOARD,
+            self::CHANNEL_BOARD_AND_PRINT,
+        ], true);
     }
 
     public function resolveBusinessDate(?Order $order = null): string
@@ -169,5 +280,29 @@ class KitchenBatchService
     private function batchCode(int $number): string
     {
         return 'KOT-'.str_pad((string) $number, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function tableDisplayForPayload(KitchenBatch $batch): ?string
+    {
+        $session = $batch->tableSession ?: $batch->order?->tableSession;
+
+        if ($session) {
+            $session->loadMissing(['tables']);
+
+            if ($session->table_display) {
+                return $session->table_display;
+            }
+
+            $names = $session->tables
+                ->map(fn ($table) => $table->name ?: $table->code)
+                ->filter()
+                ->values();
+
+            if ($names->isNotEmpty()) {
+                return $names->join(', ');
+            }
+        }
+
+        return $batch->table ? ($batch->table->name ?: $batch->table->code) : null;
     }
 }

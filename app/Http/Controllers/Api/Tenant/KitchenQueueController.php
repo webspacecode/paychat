@@ -89,11 +89,12 @@ class KitchenQueueController extends Controller
         }
 
         return KitchenBatch::query()
-            ->with(['order.tableSession.tables', 'table', 'tableSession.tables', 'tableSession.primaryTable', 'tableSession.linkedTables', 'items.product'])
-            ->whereDate('business_date', $businessDate)
-            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
-            ->when($status, fn ($q) => $q->where('status', $status))
-            ->get()
+	            ->with(['order.tableSession.tables', 'table', 'tableSession.tables', 'tableSession.primaryTable', 'tableSession.linkedTables', 'items.product'])
+	            ->whereDate('business_date', $businessDate)
+	            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+	            ->when($status, fn ($q) => $q->where('status', $status))
+	            ->when(!$status, fn ($q) => $q->whereNotIn('status', ['cancelled', 'canceled']))
+	            ->get()
             ->map(fn ($batch) => $this->normalizeBatch($batch, $operationMode));
     }
 
@@ -187,8 +188,8 @@ class KitchenQueueController extends Controller
             'table_id' => $batch->table_id,
             'batch_number' => $batch->batch_number,
             'business_date' => $batch->business_date,
-            'kitchen_operation_mode' => $operationMode,
-            'table' => $batch->table ? [
+	            'kitchen_operation_mode' => $operationMode,
+	            'table' => $batch->table ? [
                 'id' => $batch->table->id,
                 'name' => $batch->table->name,
                 'code' => $batch->table->code,
@@ -202,9 +203,10 @@ class KitchenQueueController extends Controller
             'delivery_channel' => $batch->order?->delivery_channel,
             'delivery_channel_label' => $batch->order?->delivery_channel_label,
             'external_order_reference' => $batch->order?->external_order_reference,
-            'dining_flow' => 'table_service',
-            'status' => $batch->status,
-            'sent_at' => $batch->sent_at,
+	            'dining_flow' => 'table_service',
+	            'status' => $batch->status,
+	            'dispatch_channel' => $batch->dispatch_channel ?? 'board',
+	            'sent_at' => $batch->sent_at,
             'created_at' => $batch->created_at,
             'items' => $this->normalizeItems($batch->items),
         ];

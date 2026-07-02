@@ -15,6 +15,7 @@ use App\Models\Tenant\Product;
 use App\Models\Tenant\ProductInventory;
 use App\Models\Tenant\Recipe;
 use App\Services\InvoiceService;
+use App\Services\KitchenBatchService;
 use App\Services\OfflineOrderSyncService;
 use App\Services\OrderKitchenDispatchService;
 use App\Services\Orders\OrderService;
@@ -192,6 +193,46 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame('completed', $result['order']->status);
         $this->assertSame('paid', $result['order']->payment_status);
         $this->assertSame(1, Payment::count());
+    }
+
+    public function test_kot_send_batches_fresh_items_once(): void
+    {
+        $order = $this->tableServiceOrder();
+        $service = app(KitchenBatchService::class);
+
+        $batch = $service->sendFreshItems($order, KitchenBatchService::CHANNEL_BOARD);
+
+        $this->assertSame('board', $batch->dispatch_channel);
+        $this->assertSame(1, $batch->items()->count());
+        $this->assertSame('sent', $order->items()->first()->fresh()->kitchen_status);
+
+        $this->expectException(ValidationException::class);
+        $service->sendFreshItems($order->fresh(), KitchenBatchService::CHANNEL_BOARD);
+    }
+
+    public function test_print_channel_creates_batch_without_board_dispatch(): void
+    {
+        $order = $this->tableServiceOrder();
+        $service = app(KitchenBatchService::class);
+
+        $batch = $service->sendFreshItems($order, KitchenBatchService::CHANNEL_PRINT);
+
+        $this->assertSame('print', $batch->dispatch_channel);
+        $this->assertFalse($service->shouldDispatchToBoard($batch->dispatch_channel));
+    }
+
+    public function test_waiting_kot_batch_can_be_cancelled_safely(): void
+    {
+        $order = $this->tableServiceOrder();
+        $service = app(KitchenBatchService::class);
+        $batch = $service->sendFreshItems($order, KitchenBatchService::CHANNEL_PRINT);
+
+        $cancelled = $service->cancelBatch($batch);
+
+        $this->assertSame('cancelled', $cancelled->status);
+        $item = $order->items()->first()->fresh();
+        $this->assertNull($item->kitchen_batch_id);
+        $this->assertSame('pending', $item->kitchen_status);
     }
 
     public function test_payment_success_reports_recipe_stock_shortage_as_validation_error(): void
@@ -646,6 +687,41 @@ class CheckoutPaymentReliabilityTest extends TestCase
         return $order;
     }
 
+    private function tableServiceOrder(): Order
+    {
+        DB::connection('tenant')->table('resources')->insert([
+            'id' => 10,
+            'location_id' => 1,
+            'name' => 'T1',
+            'code' => 'T1',
+            'type' => 'table',
+            'status' => 'occupied',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::connection('tenant')->table('table_sessions')->insert([
+            'id' => 20,
+            'location_id' => 1,
+            'primary_table_id' => 10,
+            'table_id' => 10,
+            'status' => 'active',
+            'guest_count' => 1,
+            'opened_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $order = $this->order(total: 120, orderType: 'dine_in', diningFlow: 'table_service');
+        $order->update([
+            'table_id' => 10,
+            'table_session_id' => 20,
+            'guest_count' => 1,
+        ]);
+
+        return $order->fresh(['items']);
+    }
+
     private function offlineProduct(): Product
     {
         return Product::create([
@@ -806,6 +882,27 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::connection('tenant')->create('resources', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->string('name')->nullable();
+            $table->string('code')->nullable();
+            $table->string('type')->nullable();
+            $table->string('status')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('table_sessions', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->unsignedBigInteger('primary_table_id')->nullable();
+            $table->unsignedBigInteger('table_id')->nullable();
+            $table->string('status')->default('active');
+            $table->unsignedInteger('guest_count')->nullable();
+            $table->timestamp('opened_at')->nullable();
+            $table->timestamps();
+        });
+
         Schema::connection('tenant')->create('pos_orders', function (Blueprint $table) {
             $table->id();
             $table->string('order_no')->unique();
@@ -857,6 +954,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->unsignedBigInteger('order_id');
             $table->unsignedBigInteger('product_id');
             $table->unsignedBigInteger('kitchen_batch_id')->nullable();
+            $table->string('kitchen_status')->nullable();
             $table->timestamp('sent_to_kitchen_at')->nullable();
             $table->string('item_status')->nullable();
             $table->integer('quantity');
@@ -914,6 +1012,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->string('batch_code')->nullable();
             $table->date('business_date')->nullable();
             $table->string('status')->default('waiting');
+            $table->string('dispatch_channel')->default('board');
             $table->timestamp('sent_at')->nullable();
             $table->timestamps();
         });

@@ -327,9 +327,10 @@ class OrderController extends Controller
                     'batch_number' => $batch->batch_number,
                     'batch_code' => $batch->batch_code,
                     'business_date' => $batch->business_date,
-                    'kitchen_operation_mode' => $operationMode,
-                    'status' => $batch->status,
-                    'sent_at' => $batch->sent_at,
+	                    'kitchen_operation_mode' => $operationMode,
+	                    'status' => $batch->status,
+	                    'dispatch_channel' => $batch->dispatch_channel ?? 'board',
+	                    'sent_at' => $batch->sent_at,
                     'created_at' => $batch->created_at,
                     'updated_at' => $batch->updated_at,
                     'items' => $batch->items->map(function ($item) {
@@ -510,11 +511,12 @@ class OrderController extends Controller
         }
     }
 
-    public function sendToKitchen(String $tenantSlug, Order $order, KitchenBatchService $service)
+    public function sendToKitchen(String $tenantSlug, Order $order, Request $request, KitchenBatchService $service)
     {
         $startedAt = microtime(true);
+        $dispatchChannel = $service->normalizeDispatchChannel($request->input('dispatch_channel', KitchenBatchService::CHANNEL_BOARD));
         try {
-            $batch = $service->sendFreshItems($order);
+            $batch = $service->sendFreshItems($order, $dispatchChannel);
 
             if ($service->shouldBroadcastToKds($batch)) {
                 try {
@@ -538,6 +540,7 @@ class OrderController extends Controller
                 'table_session_id' => $batch->table_session_id,
                 'batch_id' => $batch->id,
                 'batch_code' => $batch->batch_code,
+                'dispatch_channel' => $batch->dispatch_channel,
                 'duration_ms' => Observability::durationMs($startedAt),
             ]);
         } catch (Throwable $e) {
@@ -554,6 +557,42 @@ class OrderController extends Controller
         return response()->json([
             'message' => 'Kitchen batch created',
             'batch' => $batch,
+        ], 201);
+    }
+
+    public function printKot(String $tenantSlug, Order $order, KitchenBatchService $service)
+    {
+        $startedAt = microtime(true);
+
+        try {
+            $batch = $service->sendFreshItems($order, KitchenBatchService::CHANNEL_PRINT);
+
+            Observability::logInfo('kitchen.batch.print_created', [
+                'tenant_slug' => $tenantSlug,
+                'order_id' => $order->id,
+                'location_id' => $order->location_id,
+                'table_id' => $batch->table_id,
+                'table_session_id' => $batch->table_session_id,
+                'batch_id' => $batch->id,
+                'batch_code' => $batch->batch_code,
+                'dispatch_channel' => $batch->dispatch_channel,
+                'duration_ms' => Observability::durationMs($startedAt),
+            ]);
+        } catch (Throwable $e) {
+            Observability::logFailure('kitchen.print_kot.failed', $e, [
+                'tenant_slug' => $tenantSlug,
+                'order_id' => $order->id,
+                'location_id' => $order->location_id,
+                'action' => 'kitchen.print_kot',
+            ]);
+
+            throw $e;
+        }
+
+        return response()->json([
+            'message' => 'KOT batch created for print',
+            'batch' => $batch,
+            'print_data' => $service->printPayload($batch),
         ], 201);
     }
 }

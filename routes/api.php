@@ -177,6 +177,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::patch('/orders/{order}/table', [OrderController::class, 'assignTable'])->middleware(['feature:dine_in', 'permission:table.manage'])->whereNumber('order');
     Route::post('/orders/{order}/tables/link', [OrderController::class, 'linkTables'])->middleware(['feature:dine_in', 'permission:table.manage'])->whereNumber('order');
     Route::post('/orders/{order}/send-to-kitchen', [OrderController::class, 'sendToKitchen'])->middleware(['feature:kds', 'permission:kds.update'])->whereNumber('order');
+    Route::post('/orders/{order}/print-kot', [OrderController::class, 'printKot'])->middleware(['feature:kds', 'permission:kds.update'])->whereNumber('order');
     Route::post('/orders/{order}/inline-token', [InlineTokenController::class, 'store'])->middleware(['feature:token_management', 'permission:order.edit'])->whereNumber('order');
 
     // Cancel Order
@@ -230,6 +231,8 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::get('/kitchen/orders', [KitchenController::class, 'index'])->middleware(['feature:kds', 'permission:kds.access']);
     Route::get('/kitchen/queue', [KitchenQueueController::class, 'index'])->middleware(['feature:kds', 'permission:kds.access']);
     Route::patch('/kitchen-batches/{batch}/status', [KitchenBatchController::class, 'updateStatus'])->middleware(['feature:kds', 'permission:kds.update'])->whereNumber('batch');
+    Route::post('/kitchen-batches/{batch}/reprint', [KitchenBatchController::class, 'reprint'])->middleware(['feature:kds', 'permission:kds.update'])->whereNumber('batch');
+    Route::post('/kitchen-batches/{batch}/cancel', [KitchenBatchController::class, 'cancel'])->middleware(['feature:kds', 'permission:kds.update'])->whereNumber('batch');
 
 
     Route::prefix('reports')->middleware(['feature:reports', 'permission:report.view'])->group(function () {

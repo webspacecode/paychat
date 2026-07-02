@@ -17,6 +17,7 @@ class KitchenBatch extends Model
         'batch_code',
         'business_date',
         'status',
+        'dispatch_channel',
         'sent_at',
     ];
 

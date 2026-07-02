@@ -34,6 +34,7 @@ class KitchenBatchStatusUpdated implements ShouldBroadcastNow
             'order_id' => $this->batch->order_id,
             'batch_code' => $this->batch->batch_code,
             'kitchen_operation_mode' => app(KitchenBatchService::class)->operationMode(),
+            'dispatch_channel' => $this->batch->dispatch_channel ?? KitchenBatchService::CHANNEL_BOARD,
             'status' => $this->batch->status,
             'location_id' => $this->batch->location_id,
             'table_session_id' => $this->batch->table_session_id,

@@ -1,1 +1,1 @@
-rsync -av --delete dist/ ../paychat-api/public/pos/
+rsync -av dist/ ../paychat-api/public/pos/
