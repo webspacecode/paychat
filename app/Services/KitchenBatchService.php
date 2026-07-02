@@ -154,6 +154,7 @@ class KitchenBatchService
             'location',
             'order.location',
             'order.tableSession.tables',
+            'order.token',
             'table',
             'tableSession.tables',
             'tableSession.primaryTable',
@@ -178,6 +179,11 @@ class KitchenBatchService
                 'order_no' => $order?->order_no,
                 'notes' => $order?->notes,
                 'guest_count' => $order?->guest_count,
+                'token' => $order?->token ? [
+                    'id' => $order->token->id,
+                    'token_code' => $order->token->token_code,
+                    'token_no' => $order->token->token_code,
+                ] : null,
             ],
             'location' => [
                 'id' => $batch->location_id,
