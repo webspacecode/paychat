@@ -192,7 +192,7 @@ class ReportEngineService
             ->unique()
             ->values();
 
-        $users = User::query()
+        $users = User::on('mysql')
             ->where('tenant_id', $tenantId)
             ->whereIn('id', $userIds)
             ->get(['id', 'name', 'role'])
