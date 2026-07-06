@@ -3,9 +3,13 @@
 namespace App\Services\Bakery;
 
 use App\Models\Tenant\BakeryOrder;
+use App\Models\Tenant\Location;
+use App\Models\Tenant\Order;
+use App\Models\Tenant\Payment;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -146,7 +150,7 @@ class BakeryOrderService
 
             if ($this->hasTotalInput($data) || is_array($items)) {
                 $totals = $this->totals($data, $lockedOrder, $items);
-                $paidAmount = $this->money($lockedOrder->payments()->where('status', 'success')->sum('amount'));
+                $paidAmount = $this->syncEditedAdvancePayment($lockedOrder, $data, $userId);
                 $payload = array_merge($payload, $totals, [
                     'paid_amount' => min($paidAmount, $totals['total']),
                     'balance_due' => max(0, $this->money($totals['total'] - $paidAmount)),
@@ -162,18 +166,35 @@ class BakeryOrderService
                 $this->syncItems($lockedOrder, $items);
             }
 
+            if (($payload['status'] ?? null) === 'completed') {
+                $this->syncCompletedOrderToPos($lockedOrder->fresh(['items', 'payments', 'customer', 'location']), $userId);
+            }
+
             return $lockedOrder->fresh(['payments', 'items', 'customer', 'location']);
         });
     }
 
     public function updateStatus(BakeryOrder $order, string $status, ?int $userId = null): BakeryOrder
     {
-        $order->update([
-            'status' => $this->normalizeStatus($status),
-            'updated_by' => $userId,
-        ]);
+        return DB::transaction(function () use ($order, $status, $userId) {
+            $lockedOrder = BakeryOrder::with(['items', 'payments', 'customer', 'location'])
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return $order->fresh(['payments', 'items', 'customer', 'location']);
+            $normalizedStatus = $this->normalizeStatus($status);
+
+            $lockedOrder->update([
+                'status' => $normalizedStatus,
+                'updated_by' => $userId,
+            ]);
+
+            if ($normalizedStatus === 'completed') {
+                $this->syncCompletedOrderToPos($lockedOrder->fresh(['items', 'payments', 'customer', 'location']), $userId);
+            }
+
+            return $lockedOrder->fresh(['payments', 'items', 'customer', 'location']);
+        });
     }
 
     public function syncPaymentTotals(BakeryOrder $order): BakeryOrder
@@ -316,6 +337,168 @@ class BakeryOrderService
         } while (BakeryOrder::where('bakery_order_no', $number)->exists());
 
         return $number;
+    }
+
+    private function syncCompletedOrderToPos(BakeryOrder $order, ?int $userId = null): void
+    {
+        $meta = $order->meta ?: [];
+        $existingPosOrderId = data_get($meta, 'pos_order_id');
+
+        if ($existingPosOrderId && Order::whereKey($existingPosOrderId)->exists()) {
+            return;
+        }
+
+        $locationId = $order->location_id
+            ?: Location::where('type', 'default')->value('id')
+            ?: Location::query()->value('id');
+
+        if (! $locationId) {
+            throw ValidationException::withMessages([
+                'location_id' => ['A location is required before this bakery order can be converted to a sales order.'],
+            ]);
+        }
+
+        $total = $this->money($order->total_amount ?? $order->total ?? 0);
+        $paidAmount = $this->money($order->paid_amount ?? 0);
+        $paymentStatus = $paidAmount >= $total && $total > 0
+            ? 'paid'
+            : ($paidAmount > 0 ? 'partially_paid' : 'unpaid');
+        $businessDate = now()->toDateString();
+        $completedAt = now();
+
+        $payload = [
+            'order_no' => $this->generatePosOrderNumber($order),
+            'location_id' => $locationId,
+            'customer_id' => $order->customer_id,
+            'customer_name' => $order->customer_name,
+            'customer_phone' => $order->customer_phone,
+            'created_by' => $order->created_by ?? $userId,
+            'updated_by' => $userId,
+            'completed_by' => $userId,
+            'order_type' => $order->fulfillment_type === 'delivery' ? 'delivery' : 'takeaway',
+            'status' => 'completed',
+            'payment_status' => $paymentStatus,
+            'subtotal' => $this->money($order->subtotal ?? $total),
+            'discount' => $this->money($order->discount ?? 0),
+            'tax' => $this->money($order->tax ?? 0),
+            'service_charge' => 0,
+            'rounding' => 0,
+            'total' => $total,
+            'paid_amount' => min($paidAmount, $total),
+            'balance_due' => max(0, $this->money($total - $paidAmount)),
+            'paid_at' => $paidAmount > 0 ? $completedAt : null,
+            'completed_at' => $completedAt,
+            'business_date' => $businessDate,
+            'notes' => trim("Bakery order {$order->bakery_order_no}\n".($order->notes ?? '')),
+            'meta' => [
+                'source' => 'bakery_management',
+                'bakery_order_id' => $order->id,
+                'bakery_order_no' => $order->bakery_order_no,
+                'cake_flavour' => $order->cake_flavour,
+                'weight' => $order->weight,
+                'cake_message' => $order->cake_message,
+            ],
+        ];
+
+        if (Schema::hasColumn('pos_orders', 'source')) {
+            $payload['source'] = 'bakery_management';
+        }
+
+        if (Schema::hasColumn('pos_orders', 'delivery_channel')) {
+            $payload['delivery_channel'] = 'bakery';
+        }
+
+        if (Schema::hasColumn('pos_orders', 'delivery_channel_label')) {
+            $payload['delivery_channel_label'] = 'Bakery Management';
+        }
+
+        if (Schema::hasColumn('pos_orders', 'external_order_reference')) {
+            $payload['external_order_reference'] = $order->bakery_order_no;
+        }
+
+        $posOrder = Order::create($payload);
+
+        foreach ($order->items as $item) {
+            if (! $item->product_id) {
+                continue;
+            }
+
+            $posOrder->items()->create([
+                'product_id' => $item->product_id,
+                'quantity' => max(1, (int) ceil((float) $item->quantity)),
+                'price' => $this->money($item->unit_price),
+                'discount' => 0,
+                'tax' => 0,
+                'total' => $this->money($item->line_total),
+            ]);
+        }
+
+        if ($paidAmount > 0) {
+            Payment::create([
+                'order_id' => $posOrder->id,
+                'payment_method' => 'cash',
+                'amount' => min($paidAmount, $total),
+                'status' => 'success',
+                'collected_by' => $userId,
+                'meta' => [
+                    'source' => 'bakery_management',
+                    'bakery_order_id' => $order->id,
+                    'kind' => 'bakery_payment_sync',
+                ],
+            ]);
+        }
+
+        $meta['pos_order_id'] = $posOrder->id;
+        $meta['pos_order_no'] = $posOrder->order_no;
+        $meta['pos_synced_at'] = now()->toIso8601String();
+
+        $order->update(['meta' => $meta]);
+    }
+
+    private function syncEditedAdvancePayment(BakeryOrder $order, array $data, ?int $userId = null): float
+    {
+        $currentPaid = $this->money($order->payments()->where('status', 'success')->sum('amount'));
+
+        if (! array_key_exists('advance_paid', $data)) {
+            return $currentPaid;
+        }
+
+        $requestedPaid = $this->money($data['advance_paid']);
+        $delta = $this->money($requestedPaid - $currentPaid);
+
+        if ($delta <= 0) {
+            return $currentPaid;
+        }
+
+        $this->payments->recordPayment($order, [
+            'payment_method' => $data['advance_payment_method'] ?? $data['payment_method'] ?? 'cash',
+            'amount' => $delta,
+            'status' => $data['advance_payment_status'] ?? 'success',
+            'transaction_id' => $data['transaction_id'] ?? null,
+            'provider' => $data['provider'] ?? null,
+            'provider_ref' => $data['provider_ref'] ?? null,
+            'paid_at' => $data['paid_at'] ?? now(),
+            'received_by' => $userId,
+            'meta' => [
+                'kind' => 'advance_adjustment',
+            ],
+        ]);
+
+        return $requestedPaid;
+    }
+
+    private function generatePosOrderNumber(BakeryOrder $order): string
+    {
+        $base = substr('SALE-'.$order->bakery_order_no, 0, 46);
+        $candidate = $base;
+        $suffix = 1;
+
+        while (Order::where('order_no', $candidate)->exists()) {
+            $candidate = substr($base, 0, 43).'-'.$suffix;
+            $suffix++;
+        }
+
+        return $candidate;
     }
 
     public function normalizeStatus(string $status): string

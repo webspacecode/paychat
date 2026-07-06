@@ -161,6 +161,10 @@ class RecipeProductStrategy extends DefaultProductStrategy
             ->toArray();
         }
 
+        if (empty($row['items'])) {
+            throw new \Exception('Recipe items missing. Expected items format: SKU:quantity|SKU:quantity');
+        }
+
         // 🔥 build SAME payload as store() expects
         $product = [
             'name'  => $row['name'],
@@ -170,7 +174,7 @@ class RecipeProductStrategy extends DefaultProductStrategy
             'unit'  => $row['unit'] ?? null,
             'categories' => $row['categories'] ?? null,
             'images' => $images, // ✅ Added here
-            'items' => $this->getItemsData($row['items']),
+            'items' => $this->getItemsData($row['items'] ?? null),
             'inventory' => !empty($row['location_id'])
                 ? [[
                     'location_id' => (int) $row['location_id'],

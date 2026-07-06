@@ -287,6 +287,10 @@ class ProductController extends Controller
                     return;
                 }
 
+                $header = array_map(function ($column) {
+                    return trim((string) $column, " \t\n\r\0\x0B\xEF\xBB\xBF");
+                }, $header);
+
                 $headerCount = count($header);
 
                 while (($row = fgetcsv($handle)) !== false) {
@@ -310,6 +314,7 @@ class ProductController extends Controller
                         $row = array_pad($row, $headerCount, null);
                     }
 
+                    $row = array_slice($row, 0, $headerCount);
 
                     yield array_combine($header, $row);
                 }
@@ -329,13 +334,13 @@ class ProductController extends Controller
                             throw new \Exception('Name or SKU missing');
                         }
 
-                        $created++;
                         $industryStrategy = $this->resolver::resolve($request['industry']); // 👈 resolve by industry
                         $productPayload = $industryStrategy->getProductPayload($row);
                         $productPayload = $this->applySimpleBillingProductDefaults(
                             array_merge($productPayload, ['industry' => $request['industry']])
                         );
                         $updated = $industryStrategy->create($productPayload);
+                        $created++;
                     } catch (\Throwable $e) {
                         $failed[] = [
                             'row' => $row,
