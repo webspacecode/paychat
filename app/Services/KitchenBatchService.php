@@ -223,8 +223,7 @@ class KitchenBatchService
 
     public function shouldBroadcastToKds(?KitchenBatch $batch = null): bool
     {
-        return $this->operationMode() === self::MODE_DEDICATED_KDS
-            && $this->shouldDispatchToBoard($batch?->dispatch_channel);
+        return $this->shouldDispatchToBoard($batch?->dispatch_channel);
     }
 
     public function normalizeDispatchChannel(?string $channel): string

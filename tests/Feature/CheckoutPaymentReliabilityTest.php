@@ -221,6 +221,25 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertFalse($service->shouldDispatchToBoard($batch->dispatch_channel));
     }
 
+    public function test_inline_kitchen_board_channel_still_broadcasts_to_order_board(): void
+    {
+        DB::connection('tenant')->table('settings')->insert([
+            'setting_key' => 'kitchen_operation_mode',
+            'value' => KitchenBatchService::MODE_INLINE,
+            'type' => 'string',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $order = $this->tableServiceOrder();
+        $service = app(KitchenBatchService::class);
+
+        $boardBatch = $service->sendFreshItems($order, KitchenBatchService::CHANNEL_BOARD);
+
+        $this->assertSame(KitchenBatchService::MODE_INLINE, $service->operationMode());
+        $this->assertTrue($service->shouldBroadcastToKds($boardBatch));
+    }
+
     public function test_waiting_kot_batch_can_be_cancelled_safely(): void
     {
         $order = $this->tableServiceOrder();
