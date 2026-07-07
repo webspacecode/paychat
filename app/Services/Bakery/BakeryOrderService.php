@@ -70,7 +70,13 @@ class BakeryOrderService
                 $q->where(function ($q) use ($search) {
                     $q->where('bakery_order_no', 'like', "%{$search}%")
                         ->orWhere('customer_name', 'like', "%{$search}%")
-                        ->orWhere('customer_phone', 'like', "%{$search}%");
+                        ->orWhere('customer_phone', 'like', "%{$search}%")
+                        ->orWhere('cake_flavour', 'like', "%{$search}%")
+                        ->orWhere('weight', 'like', "%{$search}%")
+                        ->orWhereHas('items', function ($q) use ($search) {
+                            $q->where('product_name', 'like', "%{$search}%")
+                                ->orWhere('sku', 'like', "%{$search}%");
+                        });
                 });
             })
             ->orderByRaw('fulfillment_at IS NULL')
