@@ -144,6 +144,7 @@ class BakeryOrderService
 
             if (array_key_exists('status', $data)) {
                 $payload['status'] = $this->normalizeStatus($data['status']);
+                $this->assertStatusTransitionAllowed($lockedOrder, $payload['status']);
             }
 
             $items = array_key_exists('items', $data) ? (array) $data['items'] : null;
@@ -183,6 +184,7 @@ class BakeryOrderService
                 ->firstOrFail();
 
             $normalizedStatus = $this->normalizeStatus($status);
+            $this->assertStatusTransitionAllowed($lockedOrder, $normalizedStatus);
 
             $lockedOrder->update([
                 'status' => $normalizedStatus,
@@ -344,10 +346,6 @@ class BakeryOrderService
         $meta = $order->meta ?: [];
         $existingPosOrderId = data_get($meta, 'pos_order_id');
 
-        if ($existingPosOrderId && Order::whereKey($existingPosOrderId)->exists()) {
-            return;
-        }
-
         $locationId = $order->location_id
             ?: Location::where('type', 'default')->value('id')
             ?: Location::query()->value('id');
@@ -360,9 +358,7 @@ class BakeryOrderService
 
         $total = $this->money($order->total_amount ?? $order->total ?? 0);
         $paidAmount = $this->money($order->paid_amount ?? 0);
-        $paymentStatus = $paidAmount >= $total && $total > 0
-            ? 'paid'
-            : ($paidAmount > 0 ? 'partially_paid' : 'unpaid');
+        $paymentStatus = $paidAmount >= $total && $total > 0 ? 'paid' : ($paidAmount > 0 ? 'partially_paid' : 'unpaid');
         $businessDate = now()->toDateString();
         $completedAt = now();
 
@@ -416,36 +412,64 @@ class BakeryOrderService
             $payload['external_order_reference'] = $order->bakery_order_no;
         }
 
-        $posOrder = Order::create($payload);
+        $payload = $this->filterPayloadForTable('pos_orders', $payload);
+        $posOrder = $existingPosOrderId
+            ? Order::whereKey($existingPosOrderId)->first()
+            : null;
 
-        foreach ($order->items as $item) {
-            if (! $item->product_id) {
-                continue;
-            }
-
-            $posOrder->items()->create([
-                'product_id' => $item->product_id,
-                'quantity' => max(1, (int) ceil((float) $item->quantity)),
-                'price' => $this->money($item->unit_price),
-                'discount' => 0,
-                'tax' => 0,
-                'total' => $this->money($item->line_total),
-            ]);
+        if ($posOrder) {
+            $posOrder->update($payload);
+        } else {
+            $posOrder = Order::create($payload);
         }
 
-        if ($paidAmount > 0) {
-            Payment::create([
-                'order_id' => $posOrder->id,
-                'payment_method' => 'cash',
-                'amount' => min($paidAmount, $total),
-                'status' => 'success',
-                'collected_by' => $userId,
-                'meta' => [
+        if (Schema::hasTable('pos_order_items')) {
+            $posOrder->items()->delete();
+
+            foreach ($order->items as $item) {
+                if (! $item->product_id) {
+                    continue;
+                }
+
+                $posOrder->items()->create($this->filterPayloadForTable('pos_order_items', [
+                    'product_id' => $item->product_id,
+                    'quantity' => max(1, (int) ceil((float) $item->quantity)),
+                    'price' => $this->money($item->unit_price),
+                    'discount' => 0,
+                    'tax' => 0,
+                    'total' => $this->money($item->line_total),
+                ]));
+            }
+        }
+
+        if ($paidAmount > 0 && Schema::hasTable('pos_payments')) {
+            $posOrder->payments()->delete();
+
+            foreach ($order->payments()->where('status', 'success')->oldest('id')->get() as $bakeryPayment) {
+                $paymentMeta = array_merge($bakeryPayment->meta ?? [], [
                     'source' => 'bakery_management',
                     'bakery_order_id' => $order->id,
+                    'bakery_order_payment_id' => $bakeryPayment->id,
                     'kind' => 'bakery_payment_sync',
-                ],
-            ]);
+                ]);
+
+                Payment::create($this->filterPayloadForTable('pos_payments', [
+                    'order_id' => $posOrder->id,
+                    'payment_method' => in_array($bakeryPayment->payment_method, ['cash', 'upi'], true)
+                        ? $bakeryPayment->payment_method
+                        : 'cash',
+                    'mode' => $bakeryPayment->payment_method === 'upi' ? 'personal' : null,
+                    'provider' => $bakeryPayment->provider,
+                    'provider_ref' => $bakeryPayment->provider_ref,
+                    'transaction_id' => $bakeryPayment->transaction_id,
+                    'upi_profile_id' => data_get($bakeryPayment->meta, 'upi_profile_id'),
+                    'upi_qr_url' => data_get($bakeryPayment->meta, 'upi_qr_url'),
+                    'amount' => $this->money($bakeryPayment->amount),
+                    'status' => 'success',
+                    'collected_by' => $bakeryPayment->received_by ?? $userId,
+                    'meta' => $paymentMeta,
+                ]));
+            }
         }
 
         $meta['pos_order_id'] = $posOrder->id;
@@ -453,6 +477,45 @@ class BakeryOrderService
         $meta['pos_synced_at'] = now()->toIso8601String();
 
         $order->update(['meta' => $meta]);
+    }
+
+    private function assertStatusTransitionAllowed(BakeryOrder $order, string $status): void
+    {
+        if ($order->status === 'cancelled' && $status !== 'cancelled') {
+            throw ValidationException::withMessages([
+                'status' => ['Cancelled bakery order cannot be reopened from this flow.'],
+            ]);
+        }
+
+        if ($status !== 'completed') {
+            return;
+        }
+
+        if ($order->status === 'cancelled') {
+            throw ValidationException::withMessages([
+                'status' => ['Cancelled bakery order cannot be completed.'],
+            ]);
+        }
+
+        $total = $this->money($order->total_amount ?? $order->total ?? 0);
+        $paid = $this->money($order->payments()->where('status', 'success')->sum('amount'));
+
+        if ($total > 0 && $paid < $total) {
+            throw ValidationException::withMessages([
+                'payment_status' => ['Bakery order must be fully paid before completion.'],
+            ]);
+        }
+    }
+
+    private function filterPayloadForTable(string $table, array $payload): array
+    {
+        if (! Schema::hasTable($table)) {
+            return $payload;
+        }
+
+        return collect($payload)
+            ->filter(fn ($value, $column) => Schema::hasColumn($table, $column))
+            ->all();
     }
 
     private function syncEditedAdvancePayment(BakeryOrder $order, array $data, ?int $userId = null): float

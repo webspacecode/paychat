@@ -101,6 +101,25 @@ class BakeryManagementTest extends TestCase
         $this->assertSame(0, Payment::count());
     }
 
+    public function test_fresh_bakery_order_can_record_upi_advance_payment(): void
+    {
+        $order = app(BakeryOrderService::class)->create([
+            'customer_name' => 'Pooja',
+            'subtotal' => 1000,
+            'advance_paid' => 400,
+            'advance_payment_method' => 'upi',
+        ]);
+
+        $payment = $order->fresh('payments')->payments->first();
+
+        $this->assertSame('upi', $payment->payment_method);
+        $this->assertSame('success', $payment->status);
+        $this->assertSame('advance', data_get($payment->meta, 'kind'));
+        $this->assertSame('partial', $order->fresh()->payment_status);
+        $this->assertSame('400.00', (string) $order->fresh()->paid_amount);
+        $this->assertSame('600.00', (string) $order->fresh()->balance_due);
+    }
+
     public function test_custom_cake_order_works_without_product_selection(): void
     {
         $order = app(BakeryOrderService::class)->create([
@@ -196,6 +215,112 @@ class BakeryManagementTest extends TestCase
         $this->assertSame(0, OrderToken::count());
     }
 
+    public function test_bakery_order_cannot_complete_until_fully_paid(): void
+    {
+        $order = app(BakeryOrderService::class)->create([
+            'customer_name' => 'Kavya',
+            'total_amount' => 1500,
+            'advance_paid' => 500,
+        ]);
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+
+        app(BakeryOrderService::class)->updateStatus($order->fresh(), 'completed');
+    }
+
+    public function test_completed_bakery_order_syncs_items_and_multiple_payments_to_pos(): void
+    {
+        DB::table('locations')->insert([
+            'id' => 1,
+            'name' => 'Main Bakery',
+            'type' => 'default',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'name' => 'Pastry Box',
+            'sku' => 'PASTRY-BOX',
+            'type' => 'basic',
+            'price' => 600,
+            'unit' => 'box',
+        ]);
+
+        $order = app(BakeryOrderService::class)->create([
+            'order_type' => 'ready_cake_booking',
+            'customer_name' => 'Dev',
+            'total_amount' => 1500,
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => 1,
+                'unit_price' => 1500,
+                'line_total' => 1500,
+            ]],
+            'advance_paid' => 500,
+            'advance_payment_method' => 'upi',
+        ], 7);
+
+        app(BakeryPaymentService::class)->recordPayment($order->fresh(), [
+            'payment_method' => 'cash',
+            'amount' => 1000,
+            'received_by' => 8,
+        ]);
+
+        $completed = app(BakeryOrderService::class)->updateStatus($order->fresh(), 'completed', 9);
+        $meta = $completed->fresh()->meta;
+
+        $this->assertSame('completed', $completed->status);
+        $this->assertSame(1, Order::count());
+        $this->assertSame(2, Payment::count());
+        $this->assertSame(['upi', 'cash'], Payment::orderBy('id')->pluck('payment_method')->all());
+        $this->assertSame([500.0, 1000.0], Payment::orderBy('id')->pluck('amount')->map(fn ($amount) => (float) $amount)->all());
+        $this->assertNotEmpty($meta['pos_order_id'] ?? null);
+        $this->assertSame(1, DB::table('pos_order_items')->count());
+
+        app(BakeryOrderService::class)->updateStatus($completed->fresh(), 'completed', 9);
+
+        $this->assertSame(1, Order::count());
+        $this->assertSame(2, Payment::count());
+    }
+
+    public function test_bakery_upi_qr_payment_is_pending_and_reused_until_confirmed(): void
+    {
+        DB::table('payment_methods')->insert([
+            'type' => 'upi',
+            'mode' => 'personal',
+            'enabled' => true,
+            'config' => json_encode(['upi_id' => 'store@upi', 'name' => 'Store']),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $order = app(BakeryOrderService::class)->create([
+            'customer_name' => 'Nisha',
+            'total_amount' => 700,
+        ]);
+
+        $first = app(BakeryPaymentService::class)->recordPayment($order->fresh(), [
+            'payment_method' => 'upi',
+            'amount' => 700,
+            'generate_qr' => true,
+        ]);
+        $second = app(BakeryPaymentService::class)->recordPayment($order->fresh(), [
+            'payment_method' => 'upi',
+            'amount' => 700,
+            'generate_qr' => true,
+        ]);
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame('pending', $first->fresh()->status);
+        $this->assertStringStartsWith('upi://pay?', data_get($first->fresh()->meta, 'upi_qr_url'));
+        $this->assertSame('unpaid', $order->fresh()->payment_status);
+
+        app(BakeryPaymentService::class)->markPaymentSuccess($order->fresh(), $first->fresh());
+
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame('success', $first->fresh()->status);
+    }
+
     public function test_reference_image_upload_stores_in_tenant_bakery_path(): void
     {
         Storage::fake('public');
@@ -234,6 +359,7 @@ class BakeryManagementTest extends TestCase
         Schema::connection('tenant')->create('locations', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable();
+            $table->string('type')->nullable();
             $table->timestamps();
         });
 
@@ -248,6 +374,29 @@ class BakeryManagementTest extends TestCase
         Schema::connection('tenant')->create('pos_orders', function (Blueprint $table) {
             $table->id();
             $table->string('order_no')->nullable();
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->unsignedBigInteger('customer_id')->nullable();
+            $table->string('customer_name')->nullable();
+            $table->string('customer_phone')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('completed_by')->nullable();
+            $table->string('order_type')->nullable();
+            $table->string('status')->nullable();
+            $table->string('payment_status')->nullable();
+            $table->decimal('subtotal', 15, 2)->default(0);
+            $table->decimal('discount', 15, 2)->default(0);
+            $table->decimal('tax', 15, 2)->default(0);
+            $table->decimal('service_charge', 15, 2)->default(0);
+            $table->decimal('rounding', 15, 2)->default(0);
+            $table->decimal('total', 15, 2)->default(0);
+            $table->decimal('paid_amount', 15, 2)->default(0);
+            $table->decimal('balance_due', 15, 2)->default(0);
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            $table->date('business_date')->nullable();
+            $table->text('notes')->nullable();
+            $table->json('meta')->nullable();
             $table->timestamps();
         });
 
@@ -255,8 +404,50 @@ class BakeryManagementTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('order_id')->nullable();
             $table->string('payment_method')->nullable();
+            $table->string('mode')->nullable();
+            $table->string('provider')->nullable();
+            $table->string('transaction_id')->nullable();
+            $table->string('provider_ref')->nullable();
+            $table->unsignedBigInteger('upi_profile_id')->nullable();
+            $table->string('upi_qr_url')->nullable();
             $table->decimal('amount', 15, 2)->default(0);
             $table->string('status')->nullable();
+            $table->unsignedBigInteger('collected_by')->nullable();
+            $table->json('meta')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('pos_order_items', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('order_id')->nullable();
+            $table->unsignedBigInteger('product_id')->nullable();
+            $table->decimal('quantity', 12, 3)->default(1);
+            $table->decimal('price', 15, 2)->default(0);
+            $table->decimal('discount', 15, 2)->default(0);
+            $table->decimal('tax', 15, 2)->default(0);
+            $table->decimal('total', 15, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('payment_methods', function (Blueprint $table) {
+            $table->id();
+            $table->string('type');
+            $table->string('mode')->nullable();
+            $table->boolean('enabled')->default(true);
+            $table->json('config')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('upi_profiles', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->string('label');
+            $table->string('upi_id');
+            $table->string('payee_name')->nullable();
+            $table->boolean('is_default')->default(false);
+            $table->boolean('is_active')->default(true);
+            $table->integer('sort_order')->default(0);
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
 

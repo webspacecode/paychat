@@ -234,7 +234,120 @@ class PaymentService
         throw new \Exception('Invalid UPI configuration');
     }
 
+    public function createExternalUpiQrAttempt(array $data): array
+    {
+        $amount = $this->money($data['amount'] ?? 0);
+
+        if ($amount <= 0) {
+            throw new PaymentException('UPI QR amount must be greater than zero', 'UPI_QR_AMOUNT_INVALID', 422);
+        }
+
+        $locationId = $data['location_id'] ?? null;
+        $orderNo = (string) ($data['order_no'] ?? 'ORDER');
+        $sourceType = (string) ($data['source_type'] ?? 'external_order');
+        $sourceId = $data['source_id'] ?? null;
+        $paymentId = $data['payment_id'] ?? null;
+        $upiProfileId = $data['upi_profile_id'] ?? null;
+
+        $profile = $this->resolveUpiProfileForLocation($locationId ? (int) $locationId : null, $upiProfileId ? (int) $upiProfileId : null);
+
+        if ($profile) {
+            $payeeName = $profile->payee_name ?: $profile->label;
+            $reference = Str::upper(Str::slug(substr($sourceType, 0, 12), '')).'-'.($paymentId ?: $sourceId ?: now()->timestamp);
+            $upiQr = $this->buildUpiPayload($profile->upi_id, $payeeName, $amount, $reference);
+            $profileSnapshot = $this->upiProfileSnapshot($profile);
+
+            $payload = [
+                'type' => 'payment_qr',
+                'payment_method' => 'upi',
+                'order_id' => null,
+                'order_no' => $orderNo,
+                'payment_id' => $paymentId,
+                'amount' => $amount,
+                'qr_payload' => $upiQr,
+                'upi_profile' => $this->publicUpiProfilePayload($profileSnapshot),
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+            ];
+
+            $this->broadcastPaymentQrPayload($payload, [
+                'order_id' => null,
+                'payment_id' => $paymentId,
+                'location_id' => $locationId,
+                'payment_method' => 'upi',
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+            ]);
+
+            return [
+                'upi_qr_url' => $upiQr,
+                'provider_ref' => $reference,
+                'upi_profile_id' => $profile->id,
+                'meta' => [
+                    'upi_id' => $profile->upi_id,
+                    'note' => "{$profile->label}#{$orderNo}",
+                    'upi_profile' => $profileSnapshot,
+                ],
+            ];
+        }
+
+        $config = PaymentMethod::where('type', 'upi')
+            ->where('enabled', true)
+            ->first();
+
+        if (! $config || $config->mode !== 'personal') {
+            throw new PaymentException('UPI payment method is not configured', 'UPI_NOT_CONFIGURED', 422);
+        }
+
+        $upiId = $config->config['upi_id'] ?? null;
+        $name = $config->config['name'] ?? 'Store';
+
+        if (! $upiId) {
+            throw new PaymentException('UPI ID not configured', 'UPI_NOT_CONFIGURED', 422);
+        }
+
+        $reference = Str::upper(Str::slug(substr($sourceType, 0, 12), '')).'-'.($paymentId ?: $sourceId ?: now()->timestamp);
+        $upiQr = $this->buildUpiPayload($upiId, $name, $amount, $reference);
+
+        $payload = [
+            'type' => 'payment_qr',
+            'payment_method' => 'upi',
+            'order_id' => null,
+            'order_no' => $orderNo,
+            'payment_id' => $paymentId,
+            'amount' => $amount,
+            'qr_payload' => $upiQr,
+            'upi_profile' => null,
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+        ];
+
+        $this->broadcastPaymentQrPayload($payload, [
+            'order_id' => null,
+            'payment_id' => $paymentId,
+            'location_id' => $locationId,
+            'payment_method' => 'upi',
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+        ]);
+
+        return [
+            'upi_qr_url' => $upiQr,
+            'provider_ref' => $reference,
+            'upi_profile_id' => null,
+            'meta' => [
+                'upi_id' => $upiId,
+                'note' => "{$name}#{$orderNo}",
+            ],
+        ];
+    }
+
     private function resolveUpiProfile(Order $order, ?int $upiProfileId = null): ?UpiProfile
+    {
+        return $this->resolveUpiProfileForLocation($order->location_id ? (int) $order->location_id : null, $upiProfileId);
+    }
+
+    private function resolveUpiProfileForLocation(?int $locationId, ?int $upiProfileId = null): ?UpiProfile
     {
         if ($upiProfileId) {
             $profile = UpiProfile::whereKey($upiProfileId)
@@ -245,18 +358,18 @@ class PaymentService
                 throw new PaymentException('Selected UPI profile is not active', 'UPI_PROFILE_INACTIVE', 422);
             }
 
-            if ($profile->location_id !== null && (int) $profile->location_id !== (int) $order->location_id) {
+            if ($profile->location_id !== null && (int) $profile->location_id !== (int) $locationId) {
                 throw new PaymentException('Selected UPI profile is not available for this order location', 'UPI_PROFILE_LOCATION_MISMATCH', 422);
             }
 
             return $profile;
         }
 
-        if ($order->location_id) {
+        if ($locationId) {
             $locationDefault = UpiProfile::query()
                 ->where('is_active', true)
                 ->where('is_default', true)
-                ->where('location_id', $order->location_id)
+                ->where('location_id', $locationId)
                 ->orderBy('sort_order')
                 ->first();
 
@@ -458,20 +571,6 @@ class PaymentService
 
     private function broadcastPaymentQr(Order $order, Payment $payment, string $upiQr, ?array $upiProfile = null): void
     {
-        $qr = null;
-
-        try {
-            $qr = (new Generator())->format('svg')->size(240)->generate($upiQr);
-        } catch (\Exception $e) {
-            Observability::logWarning('payment.qr_generation.failed', $e, [
-                'order_id' => $order->id,
-                'payment_id' => $payment->id,
-                'location_id' => $order->location_id,
-                'payment_method' => 'upi',
-            ]);
-            $qr = null;
-        }
-
         $payload = [
             'type' => 'payment_qr',
             'payment_method' => 'upi',
@@ -479,21 +578,37 @@ class PaymentService
             'order_no' => $order->order_no,
             'payment_id' => $payment->id,
             'amount' => $payment->amount,
-            'qr' => $qr ? base64_encode($qr) : null,
             'qr_payload' => $upiQr,
             'upi_profile' => $this->publicUpiProfilePayload($upiProfile),
         ];
 
-        DB::afterCommit(function () use ($payload, $order, $payment) {
+        $this->broadcastPaymentQrPayload($payload, [
+            'order_id' => $order->id,
+            'payment_id' => $payment->id,
+            'location_id' => $order->location_id,
+            'payment_method' => 'upi',
+        ]);
+    }
+
+    private function broadcastPaymentQrPayload(array $payload, array $logContext = []): void
+    {
+        $qr = null;
+        $upiQr = (string) ($payload['qr_payload'] ?? '');
+
+        try {
+            $qr = (new Generator())->format('svg')->size(240)->generate($upiQr);
+        } catch (\Exception $e) {
+            Observability::logWarning('payment.qr_generation.failed', $e, $logContext);
+            $qr = null;
+        }
+
+        $payload['qr'] = $qr ? base64_encode($qr) : null;
+
+        DB::afterCommit(function () use ($payload, $logContext) {
             try {
                 event(new PaymentQrGenerated($payload));
             } catch (\Throwable $e) {
-                Observability::logWarning('payment.qr_broadcast.failed', $e, [
-                    'order_id' => $order->id,
-                    'payment_id' => $payment->id,
-                    'location_id' => $order->location_id,
-                    'payment_method' => 'upi',
-                ]);
+                Observability::logWarning('payment.qr_broadcast.failed', $e, $logContext);
             }
         });
     }

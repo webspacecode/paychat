@@ -84,6 +84,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::patch('/orders/{order}', [BakeryOrderController::class, 'update'])->whereNumber('order');
         Route::patch('/orders/{order}/status', [BakeryOrderController::class, 'updateStatus'])->whereNumber('order');
         Route::post('/orders/{order}/payments', [BakeryOrderPaymentController::class, 'store'])->whereNumber('order');
+        Route::patch('/orders/{order}/payments/{payment}/success', [BakeryOrderPaymentController::class, 'markSuccess'])->whereNumber('order')->whereNumber('payment');
         Route::get('/production-board', [BakeryOrderController::class, 'productionBoard']);
         Route::get('/products/search', [BakeryOrderController::class, 'products']);
         Route::post('/orders/reference-image', [BakeryOrderController::class, 'uploadReferenceImage']);
