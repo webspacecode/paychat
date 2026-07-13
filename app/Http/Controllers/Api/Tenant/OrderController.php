@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Models\Tenant\Order;
-use App\Models\Tenant\Customer;
 use App\Events\KitchenBatchCreated;
 use Illuminate\Http\Request;
 use App\Services\Orders\OrderService;
+use App\Services\CustomerIdentityService;
 use App\Services\TableSessionService;
 use App\Services\KitchenBatchService;
 use App\Services\Payments\TaxService;
@@ -26,7 +26,7 @@ class OrderController extends Controller
 {
     protected OrderService $orderService;
 
-    public function __construct(OrderService $orderService)
+    public function __construct(OrderService $orderService, private CustomerIdentityService $customerIdentity)
     {
         $this->orderService = $orderService;
     }
@@ -217,24 +217,8 @@ class OrderController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $customer = null;
-        $phone = $this->normalizeCustomerPhone($validated['phone'] ?? null);
-
-        if (! empty($validated['customer_id'])) {
-            $customer = Customer::find($validated['customer_id']);
-        }
-
-        if (! $customer && $phone) {
-            $customer = Customer::whereIn('phone', $this->customerPhoneCandidates($validated['phone'] ?? null, $phone))->first();
-        }
-
-        if (! $customer && $phone) {
-            $customer = Customer::create([
-                'name'  => $validated['name'] ?? null,
-                'phone' => $phone,
-                'email' => $validated['email'] ?? null,
-            ]);
-        }
+        $phone = $this->customerIdentity->normalizePhone($validated['phone'] ?? null);
+        $customer = $this->customerIdentity->resolveOrCreate($validated);
 
         if ($customer) {
             $order->update([
@@ -247,29 +231,6 @@ class OrderController extends Controller
         return new OrderResource(
             $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
         );
-    }
-
-    private function normalizeCustomerPhone(?string $phone): ?string
-    {
-        $phone = trim((string) $phone);
-
-        if ($phone === '') {
-            return null;
-        }
-
-        $digits = preg_replace('/\D+/', '', $phone);
-
-        return $digits !== '' ? $digits : $phone;
-    }
-
-    private function customerPhoneCandidates(?string $rawPhone, string $normalizedPhone): array
-    {
-        return collect([$rawPhone, $normalizedPhone])
-            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
-            ->map(fn ($value) => trim($value))
-            ->unique()
-            ->values()
-            ->all();
     }
 
     public function completeOrder(String $tenantSlug, Order $order, OrderService $service)

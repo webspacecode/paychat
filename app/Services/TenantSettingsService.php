@@ -55,6 +55,7 @@ class TenantSettingsService
                 'reset_daily' => $settings['token_reset_daily'] ?? null,
             ],
             'features' => $this->featureOverrides($settings),
+            'registration' => $this->registrationSettings($settings),
             'raw' => $settings,
         ];
     }
@@ -94,6 +95,19 @@ class TenantSettingsService
         if ($tenant) {
             Cache::store('file')->forget($this->cacheKey($tenant));
         }
+    }
+
+    public function registrationSettings(mixed $tenantOrSettings = null): array
+    {
+        $settings = is_array($tenantOrSettings) ? $tenantOrSettings : $this->all($tenantOrSettings);
+        $defaults = config('modules.registration_management.settings', []);
+
+        return collect($defaults)->mapWithKeys(function ($definition, $key) use ($settings) {
+            $settingKey = "registration.{$key}";
+            return [$key => array_key_exists($settingKey, $settings)
+                ? $settings[$settingKey]
+                : ($definition['default'] ?? null)];
+        })->all();
     }
 
     private function readSettings(Tenant $tenant): array

@@ -356,16 +356,26 @@ class OrderService
         }
 
         try {
-            $this->stockAvailabilityService->checkProductsStock(
-                (array) $request->items,
-                (int) $order->location_id
-            );
+            $this->replaceItems($order, (array) $request->items, [
+                'discount' => $request->discount,
+            ]);
         } catch (ValidationException $e) {
             $this->logStockUnavailable($e, $order, $request);
             throw $e;
         }
+    }
+
+    public function replaceItems(Order $order, array $items, array $context = []): Order
+    {
+        if (in_array($order->status, ['completed', 'cancelled'], true)) {
+            throw new ConflictHttpException('Completed or cancelled order cannot be modified');
+        }
+
+        $products = $this->productsForItems($items);
+
+        $this->stockAvailabilityService->checkProductsStock($items, (int) $order->location_id);
         
-        DB::transaction(function () use ($order, $request, $products) {
+        DB::transaction(function () use ($order, $items, $context, $products) {
 
             // 1️⃣ Remove old items
             $order->items()->delete();
@@ -373,7 +383,7 @@ class OrderService
             $subtotal = 0;
 
             // 2️⃣ Insert new ones
-            foreach ($request->items as $item) {
+            foreach ($items as $item) {
                 $product = $products->get((int) $item['product_id']);
                 
                 if (!$product) {
@@ -394,14 +404,13 @@ class OrderService
 
             // ✅ 3️⃣ CALL RECALCULATE
             $this->recalculate($order, [
-                'total' => $request->total,
-                'subtotal' => $request->subtotal,
-                'tax' => $request->tax,
-                'discount' => $request->discount
+                'discount' => $context['discount'] ?? 0,
             ]);
 
             $this->syncPaymentStateAfterOrderChange($order->fresh());
         });
+
+        return $order->fresh('items.product');
     }
 
     private function syncTableServiceItems(Order $order, Request $request, $products): void

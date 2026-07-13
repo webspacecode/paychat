@@ -11,6 +11,7 @@ class BootstrapService
         private TenantSettingsService $settings,
         private TenantFeatureService $features,
         private PermissionService $permissions,
+        private ModuleAccessService $modules,
     ) {
     }
 
@@ -45,6 +46,7 @@ class BootstrapService
             'features' => $tenant ? $this->features->forTenant($tenant) : [],
             'permissions' => $this->permissions->forUser($user),
             'settings' => $tenant ? $this->settings->grouped($tenant) : [],
+            'modules' => $tenant ? $this->modules->publicStates($tenant, $user) : [],
         ];
     }
 }

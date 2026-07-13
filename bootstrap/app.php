@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\EnsurePermission::class,
             'feature' => \App\Http\Middleware\EnsureFeature::class,
             'industry' => \App\Http\Middleware\EnsureIndustry::class,
+            'module.access' => \App\Http\Middleware\EnsureModuleAccess::class,
         ]);
 
         $middleware->group('api', [

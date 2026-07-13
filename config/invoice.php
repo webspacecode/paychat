@@ -51,7 +51,7 @@ return [
 
 'services' => [
     'templates' => [
-        'a4' => 'invoices.services.a4'
+        '80mm' => 'invoices.cafe.80mm'
     ],
     'features' => [
         'description' => true

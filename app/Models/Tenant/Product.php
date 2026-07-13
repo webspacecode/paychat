@@ -28,6 +28,7 @@ class Product extends Model
     public function images()      { return $this->hasMany(ProductImage::class); }
     public function inventories() { return $this->hasMany(ProductInventory::class); }
     public function recipe()      { return $this->hasOne(Recipe::class); }
+    public function program()     { return $this->hasOne(\App\Models\Tenant\Registration\Program::class); }
 
     public function scopeType($q, string $type) { return $q->where('type', $type); }
 

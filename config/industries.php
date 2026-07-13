@@ -17,6 +17,7 @@ return [
 
     'features' => [
         'cafe' => [
+            'registration_management' => false,
             'pos' => true,
             'dine_in' => true,
             'kds' => true,
@@ -30,6 +31,7 @@ return [
         ],
 
         'bakery' => [
+            'registration_management' => false,
             'pos' => true,
             'dine_in' => true,
             'kds' => true,
@@ -44,6 +46,7 @@ return [
         ],
 
         'salon' => [
+            'registration_management' => false,
             'pos' => true,
             'dine_in' => false,
             'kds' => false,
@@ -57,6 +60,7 @@ return [
         ],
 
         'retail' => [
+            'registration_management' => false,
             'pos' => true,
             'dine_in' => false,
             'kds' => false,
@@ -70,6 +74,7 @@ return [
         ],
 
         'general' => [
+            'registration_management' => false,
             'pos' => true,
             'dine_in' => false,
             'kds' => false,

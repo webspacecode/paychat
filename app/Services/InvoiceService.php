@@ -227,14 +227,34 @@ class InvoiceService
         $orderData = data_get($order, 'data.data', data_get($order, 'data', $order));
 
         if ($orderData instanceof \Illuminate\Contracts\Support\Arrayable) {
-            return $orderData->toArray();
+            $orderData = $orderData->toArray();
+        } elseif (is_object($orderData)) {
+            $orderData = json_decode(json_encode($orderData), true) ?: [];
+        } elseif (! is_array($orderData)) {
+            $orderData = [];
         }
 
-        if (is_object($orderData)) {
-            return json_decode(json_encode($orderData), true) ?: [];
-        }
+        $orderData['items'] = collect($orderData['items'] ?? [])
+            ->map(function ($item) {
+                $quantity = (float) ($item['quantity'] ?? $item['qty'] ?? 0);
+                $price = (float) ($item['price'] ?? $item['rate'] ?? 0);
+                $total = (float) ($item['total'] ?? $item['subtotal'] ?? ($quantity * $price));
 
-        return is_array($orderData) ? $orderData : [];
+                return array_merge($item, [
+                    'name' => $item['name'] ?? $item['product_name'] ?? 'Item',
+                    'product_name' => $item['product_name'] ?? $item['name'] ?? 'Item',
+                    'qty' => $item['qty'] ?? $quantity,
+                    'quantity' => $item['quantity'] ?? $quantity,
+                    'rate' => $item['rate'] ?? $price,
+                    'price' => $item['price'] ?? $price,
+                    'total' => $item['total'] ?? $total,
+                    'subtotal' => $item['subtotal'] ?? $total,
+                ]);
+            })
+            ->values()
+            ->all();
+
+        return $orderData;
     }
 
     private function publicInvoiceUrl(string $uuid, bool $includeCustomerInfo = false): string
@@ -504,11 +524,12 @@ class InvoiceService
         
         $tenant = $this->centralTenantQuery()->where('id', $inv->tenant_id)->first();
 
-        $totals = $this->calculateGST($inv->order_data,$tenant->taxConfig);
+        $orderData = $this->normalizeOrder($inv->order_data);
+        $totals = $this->calculateGST($orderData,$tenant->taxConfig);
         $url = request()->url() . ($includeCustomerInfo ? '?custinfo=1' : '');
         $qr = $this->safeQrSvg($url);
         $receipt = $this->buildReceiptData(
-            $inv->order_data,
+            $orderData,
             $tenant,
             $inv->uuid,
             $url,
@@ -521,7 +542,7 @@ class InvoiceService
         return view(
             $template,
             [
-                'order'=>$inv->order_data,
+                'order'=>$orderData,
                 'branding'=>$tenant->branding,
                 'tax'=>$tenant->taxConfig,
                 'totals'=>$totals,

@@ -38,6 +38,12 @@ Route::get('/pos/{any?}', function () {
    return response()->file(public_path('pos/index.html'));
 })->where('any', '.*')->middleware(NoIndex::class);
 
+Route::get('/registration/{any?}', function (?string $any = null) {
+    $hashPath = '/registration' . ($any ? '/' . ltrim($any, '/') : '');
+    $query = request()->getQueryString();
+    return redirect('/pos/#' . $hashPath . ($query ? '?' . $query : ''));
+})->where('any', '.*')->middleware(NoIndex::class);
+
 use Spatie\Sitemap\SitemapGenerator;
 
 Route::get('/generate-sitemap', function () {

@@ -16,18 +16,21 @@ use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Facades\Storage;
 use App\Support\IndustryNormalizer;
 use App\Services\ProductManagement\Strategies\ProductStrategyResolver;
+use App\Services\ProductManagement\ProductApplicationService;
 
 use App\Jobs\ProcessProductImagesZip;
 
 class ProductController extends Controller
 {
-    public function __construct(private ProductStrategyResolver $resolver) {
+    public function __construct(private ProductStrategyResolver $resolver, private ProductApplicationService $products) {
         
     }
 
     // CREATE
     public function store(Request $request)
     {
+        $this->normalizeIndustryInput($request);
+
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())],
             'name'  => ['required','string','max:255'],
@@ -55,8 +58,7 @@ class ProductController extends Controller
 
         $validated = $this->prepareProductPayload($request, $validated, true);
         $validated = $this->applySimpleBillingProductDefaults($validated);
-        $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
-        $product = $industryStrategy->create($validated);
+        $product = $this->products->create($validated);
 
         return response()->json($product, 201);
     }
@@ -64,6 +66,8 @@ class ProductController extends Controller
     // READ (list/search with filters)
     public function index(Request $request)
     {
+        $this->normalizeIndustryInput($request);
+
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'keyword'  => ['nullable','string'],
@@ -86,6 +90,8 @@ class ProductController extends Controller
     // SHOW
     public function show(Request $request, $tenantSlug, int $id)
     {
+        $this->normalizeIndustryInput($request);
+
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
         ]);
@@ -101,6 +107,8 @@ class ProductController extends Controller
     // UPDATE
     public function update(Request $request, $tenantSlug, $product)
     {
+        $this->normalizeIndustryInput($request);
+
         $productId = $this->routeProductId($product);
 
         $validated = $request->validate([
@@ -130,9 +138,8 @@ class ProductController extends Controller
 
         $validated = $this->prepareProductPayload($request, $validated, false);
         $validated = $this->applySimpleBillingProductDefaults($validated);
-        $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $product = $this->resolveRouteProduct($productId);
-        $updated = $industryStrategy->update($product, $validated);
+        $updated = $this->products->update($product, $validated);
 
         return response()->json($updated);
     }
@@ -140,6 +147,8 @@ class ProductController extends Controller
     // DELETE
     public function destroy(Request $request, $tenantSlug, $product)
     {
+        $this->normalizeIndustryInput($request);
+
         $validated = $request->validate([
             'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
         ]);
@@ -154,6 +163,8 @@ class ProductController extends Controller
     // INVENTORY: adjust (+/-)
     public function adjustInventory(Request $request, $tenantSlug, $product)
     {
+        $this->normalizeIndustryInput($request);
+
         $validated = $request->validate([
             'industry'    => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'location_id' => ['required','integer','exists:locations,id'],
@@ -218,6 +229,8 @@ class ProductController extends Controller
     // INVENTORY: transfer
     public function moveStock(Request $request, $tenantSlug, $product)
     {
+        $this->normalizeIndustryInput($request);
+
         $validated = $request->validate([
             'industry'        => ['required', Rule::in(IndustryNormalizer::productIndustries())], // 👈 new
             'from_location_id' => ['required','integer','exists:locations,id'],
@@ -264,6 +277,8 @@ class ProductController extends Controller
 
     public function bulkUpload(Request $request)
     {
+        $this->normalizeIndustryInput($request);
+
         $request->validate([
             'file' => 'required|file|mimes:csv,txt'
         ]);
@@ -432,5 +447,16 @@ class ProductController extends Controller
         }
 
         return $data;
+    }
+
+    private function normalizeIndustryInput(Request $request): void
+    {
+        if (! $request->has('industry')) {
+            return;
+        }
+
+        $request->merge([
+            'industry' => IndustryNormalizer::normalize($request->input('industry')),
+        ]);
     }
 }

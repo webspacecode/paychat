@@ -33,6 +33,12 @@ use App\Http\Controllers\Api\Tenant\BootstrapController;
 use App\Http\Controllers\Api\Tenant\LoyaltySettingsController;
 use App\Http\Controllers\Api\Tenant\BakeryOrderController;
 use App\Http\Controllers\Api\Tenant\BakeryOrderPaymentController;
+use App\Http\Controllers\Api\Tenant\ModuleSettingsController;
+use App\Http\Controllers\Api\Tenant\Registration\ProgramController;
+use App\Http\Controllers\Api\Tenant\Registration\ProgramBatchController;
+use App\Http\Controllers\Api\Tenant\Registration\ParticipantController;
+use App\Http\Controllers\Api\Tenant\Registration\ParticipantPhotoController;
+use App\Http\Controllers\Api\Tenant\Registration\ProgramRegistrationController;
 
 
 
@@ -70,6 +76,44 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/bootstrap', [BootstrapController::class, 'show']);
+    Route::put('/settings/modules/{module}', [ModuleSettingsController::class, 'updateEnabled'])
+        ->middleware('permission:tenant.modules.manage');
+    Route::get('/registration/access', [ModuleSettingsController::class, 'access'])
+        ->middleware('module.access:registration_management,registration.access');
+    Route::prefix('registration')->group(function () {
+        Route::get('/overview', [ProgramRegistrationController::class, 'overview'])->middleware('module.access:registration_management,registration.access');
+        Route::get('/registrations', [ProgramRegistrationController::class, 'index'])->middleware('module.access:registration_management,registration.registrations.view');
+        Route::post('/registrations', [ProgramRegistrationController::class, 'store'])->middleware('module.access:registration_management,registration.registrations.create');
+        Route::get('/registrations/{registration}', [ProgramRegistrationController::class, 'show'])->middleware('module.access:registration_management,registration.registrations.view');
+        Route::put('/registrations/{registration}', [ProgramRegistrationController::class, 'update'])->middleware('module.access:registration_management,registration.registrations.update');
+        Route::post('/registrations/{registration}/cancel', [ProgramRegistrationController::class, 'cancel'])->middleware('module.access:registration_management,registration.registrations.cancel');
+        Route::post('/registrations/{registration}/order', [ProgramRegistrationController::class, 'generateOrder'])->middleware('module.access:registration_management,registration.registrations.update');
+        Route::get('/program-products', [ProgramController::class, 'compatibleProducts'])->middleware('module.access:registration_management,registration.programs.view');
+        Route::get('/programs', [ProgramController::class, 'index'])->middleware('module.access:registration_management,registration.programs.view');
+        Route::post('/programs', [ProgramController::class, 'store'])->middleware('module.access:registration_management,registration.programs.create');
+        Route::get('/programs/{program}', [ProgramController::class, 'show'])->middleware('module.access:registration_management,registration.programs.view');
+        Route::put('/programs/{program}', [ProgramController::class, 'update'])->middleware('module.access:registration_management,registration.programs.update');
+        Route::post('/programs/{program}/archive', [ProgramController::class, 'archive'])->middleware('module.access:registration_management,registration.programs.archive');
+        Route::get('/programs/{program}/batches', [ProgramBatchController::class, 'index'])->middleware('module.access:registration_management,registration.programs.view');
+        Route::post('/programs/{program}/batches', [ProgramBatchController::class, 'store'])->middleware('module.access:registration_management,registration.programs.create');
+        Route::get('/batches/{batch}', [ProgramBatchController::class, 'show'])->middleware('module.access:registration_management,registration.programs.view');
+        Route::put('/batches/{batch}', [ProgramBatchController::class, 'update'])->middleware('module.access:registration_management,registration.programs.update');
+        Route::post('/batches/{batch}/archive', [ProgramBatchController::class, 'archive'])->middleware('module.access:registration_management,registration.programs.archive');
+        Route::get('/instructors', [ProgramBatchController::class, 'instructors'])->middleware('module.access:registration_management,registration.programs.view');
+        Route::get('/participants/customer-matches', [ParticipantController::class, 'matches'])->middleware('module.access:registration_management,registration.participants.view');
+        Route::get('/participants', [ParticipantController::class, 'index'])->middleware('module.access:registration_management,registration.participants.view');
+        Route::post('/participants', [ParticipantController::class, 'store'])->middleware('module.access:registration_management,registration.participants.create');
+        Route::get('/participants/{participant}', [ParticipantController::class, 'show'])->middleware('module.access:registration_management,registration.participants.view');
+        Route::put('/participants/{participant}', [ParticipantController::class, 'update'])->middleware('module.access:registration_management,registration.participants.update');
+        Route::post('/participants/{participant}/archive', [ParticipantController::class, 'archive'])->middleware('module.access:registration_management,registration.participants.update');
+        Route::get('/participants/{participant}/photo', [ParticipantPhotoController::class, 'show'])->middleware('module.access:registration_management,registration.participants.view');
+        Route::post('/participants/{participant}/photo', [ParticipantPhotoController::class, 'store'])->middleware('module.access:registration_management,registration.participants.update');
+        Route::delete('/participants/{participant}/photo', [ParticipantPhotoController::class, 'destroy'])->middleware('module.access:registration_management,registration.participants.update');
+    });
+    Route::get('/settings/registration', [ModuleSettingsController::class, 'registration'])
+        ->middleware('module.access:registration_management,registration.settings.manage');
+    Route::put('/settings/registration', [ModuleSettingsController::class, 'updateRegistration'])
+        ->middleware('module.access:registration_management,registration.settings.manage');
 
     Route::get('/customers', [CustomerController::class, 'index']);
     Route::get('/customers/{customer}', [CustomerController::class, 'show'])->whereNumber('customer');

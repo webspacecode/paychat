@@ -182,7 +182,7 @@ class PaymentController extends Controller
             }
 
             $order = $order->fresh(['items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product']);
-            $invoice = $this->autoGenerateTableServiceInvoice($tenantSlug, $order, $payment);
+            $invoice = $this->autoGenerateOrderInvoice($tenantSlug, $order, $payment);
             $sideEffects['invoice'] = $invoice['side_effect_status'];
 
             $sideEffects['table_session'] = $this->closeTableSessionAfterPayment($tenantSlug, $order, $payment);
@@ -305,7 +305,7 @@ class PaymentController extends Controller
         }
     }
 
-    private function autoGenerateTableServiceInvoice(string $tenantSlug, Order $order, Payment $payment): array
+    private function autoGenerateOrderInvoice(string $tenantSlug, Order $order, Payment $payment): array
     {
         $invoice = [
             'invoice_generated' => false,
@@ -315,7 +315,7 @@ class PaymentController extends Controller
             'side_effect_status' => 'pending',
         ];
 
-        if (! $this->shouldAutoGenerateTableServiceInvoice($order)) {
+        if (! $this->shouldAutoGenerateInvoice($order)) {
             return $invoice;
         }
 
@@ -365,7 +365,7 @@ class PaymentController extends Controller
                 'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
                 'invoice_connection' => Invoice::CENTRAL_CONNECTION,
                 'default_connection' => DB::getDefaultConnection(),
-                'action' => 'table_service.invoice.generate',
+                'action' => 'order.invoice.generate',
             ]);
 
             if ($freshOrder?->invoice_id || $freshOrder?->invoice_no) {
@@ -384,12 +384,24 @@ class PaymentController extends Controller
         }
     }
 
-    private function shouldAutoGenerateTableServiceInvoice(Order $order): bool
+    private function shouldAutoGenerateInvoice(Order $order): bool
     {
+        if ($this->isRegistrationOrder($order)) {
+            return $order->payment_status === 'paid'
+                && $order->status === 'completed';
+        }
+
         return strtolower((string) $order->order_type) === 'dine_in'
             && $order->dining_flow === 'table_service'
             && $order->payment_status === 'paid'
             && $order->status === 'completed';
+    }
+
+    private function isRegistrationOrder(Order $order): bool
+    {
+        return strtolower((string) ($order->source ?? '')) === 'registration'
+            || data_get($order->meta, 'source') === 'registration'
+            || data_get($order->meta, 'registration_id') !== null;
     }
 
     private function defaultInvoicePaperSize(string $industry): string
