@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\Tenant\ProductController;
+use App\Http\Controllers\Api\Tenant\PosFavoriteProductController;
 use App\Http\Controllers\Api\Tenant\CategoryController;
 use App\Http\Controllers\Api\Tenant\LocationController;
 use App\Http\Controllers\Api\Tenant\OrderController;
@@ -138,6 +139,14 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::put('/settings/loyalty', [LoyaltySettingsController::class, 'update'])->middleware('permission:settings.manage');
     Route::get('/settings/kitchen', [KitchenSettingsController::class, 'show']);
     Route::put('/settings/kitchen', [KitchenSettingsController::class, 'update'])->middleware('permission:settings.manage');
+
+    Route::prefix('pos-favorites')->group(function () {
+        Route::get('/', [PosFavoriteProductController::class, 'index']);
+        Route::post('/', [PosFavoriteProductController::class, 'store'])->middleware('permission:product.manage');
+        Route::delete('/{product}', [PosFavoriteProductController::class, 'destroy'])
+            ->whereNumber('product')
+            ->middleware('permission:product.manage');
+    });
 
     // Category Management
     Route::prefix('categories')->group(function () {

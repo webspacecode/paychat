@@ -2,53 +2,60 @@
     $title = $title ?? 'PayChat - Fast Billing for Local Businesses';
     $description = $description ?? 'PayChat is a simple POS for cafes, salons, restaurants and local shops with billing, orders, tokens, invoices and reports.';
     $canonical = $canonical ?? url()->current();
+    $marketingUrl = rtrim(config('seo.marketing_url', config('app.url')), '/');
+    $canonicalPath = parse_url($canonical, PHP_URL_PATH) ?: '/';
+    $canonical = $marketingUrl . ($canonicalPath === '/' ? '/' : $canonicalPath);
+    $siteUrl = $marketingUrl . '/';
+    $seoImage = $marketingUrl . '/android-chrome-512x512.png';
     $keywords = $keywords ?? 'PayChat POS, POS software India, billing software, cafe POS, restaurant POS, salon POS, retail billing software';
     $registrationUrl = 'https://paychat.shop/pos/#/register';
     $talkToPayChatUrl = url('/start-free-trial');
     $pageName = preg_replace('/\s*[\-|]\s*PayChat.*$/i', '', $title) ?: $title;
+    $softwareApplicationOffers = $softwareApplicationOffers ?? ['@type' => 'Offer', 'url' => $registrationUrl, 'price' => '0', 'priceCurrency' => 'INR', 'availability' => 'https://schema.org/OnlineOnly'];
+    $softwareApplicationSchema = array_filter([
+        '@type' => 'SoftwareApplication',
+        '@id' => $siteUrl.'#pos-software',
+        'name' => 'PayChat POS',
+        'url' => $siteUrl,
+        'applicationCategory' => 'BusinessApplication',
+        'applicationSubCategory' => 'Point of Sale and Billing Software',
+        'operatingSystem' => 'Web, Android, Windows',
+        'description' => 'Cloud-native POS software for billing, orders, KOT, QR invoices, UPI payments, inventory, customer tokens and business reports.',
+        'audience' => ['@type' => 'BusinessAudience', 'audienceType' => 'Cafes, restaurants, bakeries, salons, retail shops and service businesses'],
+        'offers' => $softwareApplicationOffers === false ? null : $softwareApplicationOffers,
+        'provider' => ['@id' => $siteUrl.'#organization'],
+    ]);
     $seoSchema = [
         '@context' => 'https://schema.org',
         '@graph' => [
             [
                 '@type' => 'Organization',
-                '@id' => url('/').'#organization',
+                '@id' => $siteUrl.'#organization',
                 'name' => 'PayChat',
                 'alternateName' => ['Pay Chat', 'PayChat POS', 'PayChat Billing'],
-                'url' => url('/'),
-                'logo' => asset('android-chrome-512x512.png'),
+                'url' => $siteUrl,
+                'logo' => $seoImage,
                 'email' => 'hello@paychat.shop',
                 'telephone' => '+91-98349-69229',
             ],
             [
                 '@type' => 'WebSite',
-                '@id' => url('/').'#website',
-                'url' => url('/'),
+                '@id' => $siteUrl.'#website',
+                'url' => $siteUrl,
                 'name' => 'PayChat POS',
                 'description' => 'Cloud POS and billing software for cafes, restaurants, bakeries, salons and retail businesses in India.',
-                'publisher' => ['@id' => url('/').'#organization'],
+                'publisher' => ['@id' => $siteUrl.'#organization'],
                 'inLanguage' => 'en-IN',
             ],
-            [
-                '@type' => 'SoftwareApplication',
-                '@id' => url('/').'#pos-software',
-                'name' => 'PayChat POS',
-                'url' => url('/'),
-                'applicationCategory' => 'BusinessApplication',
-                'applicationSubCategory' => 'Point of Sale and Billing Software',
-                'operatingSystem' => 'Web, Android, Windows',
-                'description' => 'Cloud-native POS software for billing, orders, KOT, QR invoices, UPI payments, inventory, customer tokens and business reports.',
-                'audience' => ['@type' => 'BusinessAudience', 'audienceType' => 'Cafes, restaurants, bakeries, salons, retail shops and service businesses'],
-                'offers' => ['@type' => 'Offer', 'url' => $registrationUrl, 'price' => '0', 'priceCurrency' => 'INR', 'availability' => 'https://schema.org/OnlineOnly'],
-                'provider' => ['@id' => url('/').'#organization'],
-            ],
+            $softwareApplicationSchema,
             [
                 '@type' => 'WebPage',
                 '@id' => $canonical.'#webpage',
                 'url' => $canonical,
                 'name' => $title,
                 'description' => $description,
-                'isPartOf' => ['@id' => url('/').'#website'],
-                'about' => ['@id' => url('/').'#pos-software'],
+                'isPartOf' => ['@id' => $siteUrl.'#website'],
+                'about' => ['@id' => $siteUrl.'#pos-software'],
                 'inLanguage' => 'en-IN',
                 'breadcrumb' => ['@id' => $canonical.'#breadcrumb'],
             ],
@@ -56,8 +63,8 @@
                 '@type' => 'BreadcrumbList',
                 '@id' => $canonical.'#breadcrumb',
                 'itemListElement' => array_values(array_filter([
-                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'PayChat POS', 'item' => url('/')],
-                    $canonical !== url('/') ? ['@type' => 'ListItem', 'position' => 2, 'name' => $pageName, 'item' => $canonical] : null,
+                    ['@type' => 'ListItem', 'position' => 1, 'name' => 'PayChat POS', 'item' => $siteUrl],
+                    $canonical !== $siteUrl ? ['@type' => 'ListItem', 'position' => 2, 'name' => $pageName, 'item' => $canonical] : null,
                 ])),
             ],
         ],
@@ -80,11 +87,11 @@
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $canonical }}">
-    <meta property="og:image" content="{{ asset('android-chrome-512x512.png') }}">
+    <meta property="og:image" content="{{ $seoImage }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $title }}">
     <meta name="twitter:description" content="{{ $description }}">
-    <meta name="twitter:image" content="{{ asset('android-chrome-512x512.png') }}">
+    <meta name="twitter:image" content="{{ $seoImage }}">
     <title>{{ $title }}</title>
     <script type="application/ld+json">{!! json_encode($seoSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
