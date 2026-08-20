@@ -113,6 +113,22 @@ class SelfPosQrTest extends TestCase
             ]);
     }
 
+    public function test_tenant_self_pos_qr_uses_public_forwarded_host_over_localhost_origin(): void
+    {
+        Config::set('services.frontend_url', 'http://localhost:3000');
+
+        $response = $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->withHeader('X-Forwarded-Proto', 'https')
+            ->withHeader('X-Forwarded-Host', 'paychat.shop')
+            ->getJson('/api/frozen-cafe/self-pos/qr');
+
+        $response->assertOk()
+            ->assertJson([
+                'target_url' => 'https://paychat.shop/pos#/self-pos/61OtxUm8aVglxPi38WJZOlffFTnrkfpZ',
+            ]);
+    }
+
     public function test_tenant_self_pos_qr_regenerates_old_file_without_target_metadata(): void
     {
         $path = 'tenants/23/self-pos/self-pos.svg';
@@ -195,6 +211,29 @@ class SelfPosQrTest extends TestCase
         $response->assertOk()
             ->assertJson([
                 'target_url' => 'https://guest-menu.example.com/pos#/self-pos/61OtxUm8aVglxPi38WJZOlffFTnrkfpZ?table=T2',
+            ]);
+    }
+
+    public function test_table_self_pos_qr_uses_public_forwarded_host_over_localhost_origin(): void
+    {
+        Config::set('services.frontend_url', 'http://localhost:3000');
+
+        $table = Resource::create([
+            'type' => 'table',
+            'location_id' => 1,
+            'name' => 'Table 3',
+            'code' => 'T3',
+        ]);
+
+        $response = $this
+            ->withHeader('Origin', 'http://localhost:3000')
+            ->withHeader('X-Forwarded-Proto', 'https')
+            ->withHeader('X-Forwarded-Host', 'paychat.shop')
+            ->getJson("/api/frozen-cafe/tables/{$table->id}/self-pos-qr");
+
+        $response->assertOk()
+            ->assertJson([
+                'target_url' => 'https://paychat.shop/pos#/self-pos/61OtxUm8aVglxPi38WJZOlffFTnrkfpZ?table=T3',
             ]);
     }
 

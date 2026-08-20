@@ -88,23 +88,57 @@ class SelfPosQrService
 
     private function frontendOrigin(Request $request): string
     {
-        $requestOrigin = $this->originFromHeader($request->headers->get('origin'))
-            ?: $this->originFromHeader($request->headers->get('referer'));
+        $requestOrigins = array_values(array_filter([
+            $this->forwardedOrigin($request),
+            $this->originFromHeader($request->getSchemeAndHttpHost()),
+        ]));
 
-        if ($requestOrigin) {
-            return $requestOrigin;
+        $browserOrigins = array_values(array_filter([
+            $this->originFromHeader($request->headers->get('origin')),
+            $this->originFromHeader($request->headers->get('referer')),
+        ]));
+
+        $configuredOrigins = array_values(array_filter([
+            $this->originFromHeader(config('services.frontend_url')),
+            $this->originFromHeader(config('app.frontend_url')),
+            $this->originFromHeader(env('FRONTEND_URL')),
+            $this->originFromHeader(env('POS_FRONTEND_URL')),
+            $this->originFromHeader(config('app.url')),
+        ]));
+
+        foreach ([$requestOrigins, $browserOrigins, $configuredOrigins] as $origins) {
+            foreach ($origins as $origin) {
+                if (! $this->isLocalOrigin($origin)) {
+                    return $origin;
+                }
+            }
         }
 
-        $configured = $this->originFromHeader(config('services.frontend_url'))
-            ?: $this->originFromHeader(config('app.frontend_url'))
-            ?: $this->originFromHeader(env('FRONTEND_URL'))
-            ?: $this->originFromHeader(env('POS_FRONTEND_URL'));
+        return $browserOrigins[0]
+            ?? $configuredOrigins[0]
+            ?? $requestOrigins[0]
+            ?? 'http://localhost';
+    }
 
-        if ($configured) {
-            return $configured;
+    private function forwardedOrigin(Request $request): ?string
+    {
+        $host = $this->firstForwardedValue($request->headers->get('x-forwarded-host'));
+
+        if (! $host) {
+            return null;
         }
 
-        return rtrim($request->getSchemeAndHttpHost() ?: config('app.url'), '/');
+        $scheme = $this->firstForwardedValue($request->headers->get('x-forwarded-proto'))
+            ?: ($request->headers->get('x-forwarded-ssl') === 'on' ? 'https' : $request->getScheme());
+
+        return $this->originFromHeader("{$scheme}://{$host}");
+    }
+
+    private function firstForwardedValue(mixed $value): ?string
+    {
+        $first = trim(explode(',', (string) $value)[0] ?? '');
+
+        return $first !== '' ? $first : null;
     }
 
     private function originFromHeader(mixed $value): ?string
@@ -130,6 +164,16 @@ class SelfPosQrService
         }
 
         return rtrim($origin, '/');
+    }
+
+    private function isLocalOrigin(string $origin): bool
+    {
+        $host = strtolower((string) (parse_url($origin, PHP_URL_HOST) ?: ''));
+
+        return $host === 'localhost'
+            || $host === '::1'
+            || str_ends_with($host, '.localhost')
+            || str_starts_with($host, '127.');
     }
 
     private function tenantQrPath(Tenant $tenant): string
