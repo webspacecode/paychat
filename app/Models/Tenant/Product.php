@@ -67,8 +67,11 @@ class Product extends Model
             ? $this->images
             : $this->images()->get();
 
-        return $images->first(fn ($image) => in_array($image->source, [null, '', 'merchant_upload', 'bulk_upload', 'imported_path'], true))
-            ?: $images->first(fn ($image) => $image->source === 'external_approved')
+        $preferredLocalSources = [null, '', 'merchant_upload', 'bulk_upload', 'imported_path'];
+
+        return $images->first(fn ($image) => in_array($image->source, $preferredLocalSources, true) && $image->hasRenderableImage())
+            ?: $images->first(fn ($image) => $image->source === 'external_approved' && $image->hasRenderableImage())
+            ?: $images->first(fn ($image) => $image->hasRenderableImage())
             ?: $images->first();
     }
 }

@@ -13,7 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class TableSessionService
 {
-    private const TABLE_GROUP_RELATIONS = ['table', 'tables', 'primaryTable', 'linkedTables', 'order'];
+    private const BASE_RELATIONS = ['table', 'order'];
+    private const TABLE_GROUP_RELATIONS = ['tables', 'primaryTable', 'linkedTables'];
 
     public function create(array $data): TableSession
     {
@@ -153,7 +154,7 @@ class TableSessionService
             $this->markTablesOccupied($activeTableIds);
             $this->linkOrder($session, $lockedOrder, $guestCount);
 
-            $session = $session->fresh(self::TABLE_GROUP_RELATIONS);
+            $session = $session->fresh($this->tableSessionRelations());
 
             Observability::logInfo('table.group.assigned', [
                 'order_id' => $lockedOrder->id,
@@ -196,7 +197,7 @@ class TableSessionService
 
             $this->releaseSessionTables($lockedSession);
 
-            $closed = $lockedSession->fresh(self::TABLE_GROUP_RELATIONS);
+            $closed = $lockedSession->fresh($this->tableSessionRelations());
 
             Observability::logInfo('table.session.closed', [
                 'location_id' => $closed->location_id,
@@ -223,7 +224,7 @@ class TableSessionService
             $lockedSession = TableSession::whereKey($session->id)->lockForUpdate()->firstOrFail();
 
             if ($lockedSession->status === 'closed') {
-                return $lockedSession->fresh(self::TABLE_GROUP_RELATIONS);
+                return $lockedSession->fresh($this->tableSessionRelations());
             }
 
             if ($lockedOrder->payment_status !== 'paid') {
@@ -243,7 +244,7 @@ class TableSessionService
 
             $this->releaseSessionTables($lockedSession);
 
-            return $lockedSession->fresh(self::TABLE_GROUP_RELATIONS);
+            return $lockedSession->fresh($this->tableSessionRelations());
         });
     }
 
@@ -534,7 +535,7 @@ class TableSessionService
                 ->with([
                     'tableSession' => function ($query) {
                         $query->where('status', 'active')
-                            ->with(self::TABLE_GROUP_RELATIONS);
+                            ->with($this->tableSessionRelations());
                     },
                 ])
                 ->whereIn('table_id', $tableIds)
@@ -800,6 +801,13 @@ class TableSessionService
     private function hasTableSessionTables(): bool
     {
         return Schema::connection('tenant')->hasTable('table_session_tables');
+    }
+
+    private function tableSessionRelations(): array
+    {
+        return $this->hasTableSessionTables()
+            ? array_merge(self::BASE_RELATIONS, self::TABLE_GROUP_RELATIONS)
+            : self::BASE_RELATIONS;
     }
 
     private function ensureNoActiveSession(int $tableId): void

@@ -774,6 +774,93 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertNull($fresh->invoice_id);
     }
 
+    public function test_self_pos_table_qr_submit_creates_active_table_session_and_links_order(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $this->tableResource(31, 'T31');
+        $order = $this->order(total: 260, status: 'draft', orderType: 'dine_in', diningFlow: 'table_service');
+        $order->update(['table_id' => 31]);
+
+        $result = app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'cash',
+            'amount' => 260,
+        ]);
+
+        $fresh = $order->fresh(['tableSession', 'kitchenBatches']);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('pending_payment', $fresh->status);
+        $this->assertSame('unpaid', $fresh->payment_status);
+        $this->assertSame('dine_in', $fresh->order_type);
+        $this->assertSame('table_service', $fresh->dining_flow);
+        $this->assertSame(31, (int) $fresh->table_id);
+        $this->assertNotNull($fresh->table_session_id);
+        $this->assertSame('active', $fresh->tableSession->status);
+        $this->assertSame($fresh->id, (int) $fresh->tableSession->order_id);
+        $this->assertSame('occupied', DB::connection('tenant')->table('resources')->where('id', 31)->value('status'));
+        $this->assertSame(1, DB::connection('tenant')->table('table_sessions')->where('table_id', 31)->where('status', 'active')->count());
+        $this->assertSame($fresh->table_session_id, DB::connection('tenant')->table('kitchen_batches')->value('table_session_id'));
+    }
+
+    public function test_self_pos_table_qr_submit_is_idempotent_for_table_session(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $this->tableResource(32, 'T32');
+        $order = $this->order(total: 180, status: 'draft', orderType: 'dine_in', diningFlow: 'table_service');
+        $order->update(['table_id' => 32]);
+
+        $first = app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'cash',
+            'amount' => 180,
+        ]);
+        $second = app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'cash',
+            'amount' => 180,
+        ]);
+
+        $fresh = $order->fresh();
+
+        $this->assertTrue($first['success']);
+        $this->assertTrue($second['success']);
+        $this->assertSame(1, DB::connection('tenant')->table('table_sessions')->where('table_id', 32)->where('status', 'active')->count());
+        $this->assertSame(1, Payment::where('payment_method', 'cash')->where('status', 'pending')->count());
+        $this->assertSame($fresh->table_session_id, $second['order']['table_session_id']);
+    }
+
+    public function test_self_pos_table_qr_upi_submit_keeps_payment_pending_and_links_table_session(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create([
+            'type' => 'upi',
+            'mode' => 'personal',
+            'enabled' => true,
+            'config' => ['upi_id' => 'store@upi', 'name' => 'Store'],
+        ]);
+        $this->tableResource(33, 'T33');
+        $order = $this->order(total: 220, status: 'pending_payment', orderType: 'dine_in', diningFlow: 'table_service');
+        $order->update(['table_id' => 33]);
+        $payment = app(PaymentService::class)->createPayment($order, 'upi', 220);
+
+        $result = app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'upi',
+            'payment_id' => $payment->id,
+            'amount' => 220,
+        ]);
+
+        $fresh = $order->fresh(['tableSession']);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('pending', $payment->fresh()->status);
+        $this->assertSame('pending_payment', $fresh->status);
+        $this->assertSame('unpaid', $fresh->payment_status);
+        $this->assertNotNull($fresh->table_session_id);
+        $this->assertSame('active', $fresh->tableSession->status);
+        $this->assertTrue(data_get($fresh->meta, 'self_pos.customer_submitted_after_upi'));
+        $this->assertSame('processed_pending_verification', $result['payment_display_status']);
+    }
+
     public function test_self_pos_upi_submit_rejects_payment_id_from_another_order(): void
     {
         PaymentMethod::create([
@@ -907,16 +994,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
 
     private function tableServiceOrder(): Order
     {
-        DB::connection('tenant')->table('resources')->insert([
-            'id' => 10,
-            'location_id' => 1,
-            'name' => 'T1',
-            'code' => 'T1',
-            'type' => 'table',
-            'status' => 'occupied',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->tableResource(10, 'T1', 'occupied');
 
         DB::connection('tenant')->table('table_sessions')->insert([
             'id' => 20,
@@ -938,6 +1016,20 @@ class CheckoutPaymentReliabilityTest extends TestCase
         ]);
 
         return $order->fresh(['items']);
+    }
+
+    private function tableResource(int $id, string $code, string $status = 'available'): void
+    {
+        DB::connection('tenant')->table('resources')->insert([
+            'id' => $id,
+            'location_id' => 1,
+            'name' => $code,
+            'code' => $code,
+            'type' => 'table',
+            'status' => $status,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function offlineProduct(): Product
@@ -1115,6 +1207,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->unsignedBigInteger('location_id')->nullable();
             $table->unsignedBigInteger('primary_table_id')->nullable();
             $table->unsignedBigInteger('table_id')->nullable();
+            $table->unsignedBigInteger('order_id')->nullable();
             $table->string('status')->default('active');
             $table->unsignedInteger('guest_count')->nullable();
             $table->timestamp('opened_at')->nullable();

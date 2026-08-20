@@ -4,6 +4,7 @@ namespace App\Http\Resources\Tenant;
 
 use App\Services\KitchenBatchService;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Schema;
 
 class OrderResource extends JsonResource
 {
@@ -239,7 +240,7 @@ class OrderResource extends JsonResource
     {
         $session = $this->loadedTableSession();
 
-        if ($session) {
+        if ($session && $this->hasTableSessionTables()) {
             return $session->tables
                 ->map(fn ($table) => $this->tablePayload($table))
                 ->filter()
@@ -254,7 +255,7 @@ class OrderResource extends JsonResource
     private function primaryTablePayload(): ?array
     {
         $session = $this->loadedTableSession();
-        $table = $session?->primaryTable ?: $this->table;
+        $table = ($session && $this->hasTableSessionTables() ? $session->primaryTable : null) ?: $this->table;
 
         return $this->tablePayload($table);
     }
@@ -263,7 +264,7 @@ class OrderResource extends JsonResource
     {
         $session = $this->loadedTableSession();
 
-        if (! $session) {
+        if (! $session || ! $this->hasTableSessionTables()) {
             return collect();
         }
 
@@ -296,9 +297,16 @@ class OrderResource extends JsonResource
             return null;
         }
 
-        $session->loadMissing(['tables', 'primaryTable', 'linkedTables']);
+        if ($this->hasTableSessionTables()) {
+            $session->loadMissing(['tables', 'primaryTable', 'linkedTables']);
+        }
 
         return $session;
+    }
+
+    private function hasTableSessionTables(): bool
+    {
+        return Schema::connection('tenant')->hasTable('table_session_tables');
     }
 
     private function tablePayload($table): ?array
@@ -318,7 +326,7 @@ class OrderResource extends JsonResource
     {
         $session = $batch->tableSession ?: $this->loadedTableSession();
 
-        if ($session) {
+        if ($session && $this->hasTableSessionTables()) {
             $session->loadMissing(['tables']);
 
             if ($session->table_display) {

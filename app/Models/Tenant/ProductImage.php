@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductImage extends Model
 {
+    private static array $publicDiskExistsCache = [];
+
     protected $fillable = [
         'product_id',
         'image_path',
@@ -41,7 +43,7 @@ class ProductImage extends Model
         return asset('storage/' . $this->publicStoragePath());
     }
 
-    private function publicStoragePath(): string
+    public function publicStoragePath(): string
     {
         $path = ltrim(str_replace(['\\', '"'], '', (string) $this->image_path), '/');
 
@@ -57,5 +59,24 @@ class ProductImage extends Model
         }
 
         return $path;
+    }
+
+    public function hasRenderableImage(): bool
+    {
+        if (! $this->image_path) {
+            return false;
+        }
+
+        if (preg_match('/^(https?:|data:|blob:)/i', $this->image_path)) {
+            return true;
+        }
+
+        $path = $this->publicStoragePath();
+
+        if (! array_key_exists($path, self::$publicDiskExistsCache)) {
+            self::$publicDiskExistsCache[$path] = Storage::disk('public')->exists($path);
+        }
+
+        return self::$publicDiskExistsCache[$path];
     }
 }

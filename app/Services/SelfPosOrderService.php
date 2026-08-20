@@ -6,6 +6,7 @@ use App\Events\KitchenBatchCreated;
 use App\Http\Resources\Tenant\OrderResource;
 use App\Models\Tenant\Order;
 use App\Models\Tenant\Payment;
+use App\Models\Tenant\TableSession;
 use App\Services\KitchenBatchService;
 use App\Services\Payments\PaymentService;
 use App\Support\IndustryNormalizer;
@@ -69,6 +70,7 @@ class SelfPosOrderService
             return $locked->fresh(['items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'token', 'kitchenBatches.items.product']);
         });
 
+        $order = $this->ensureTableSessionForSelfPos($order);
         $payment = $this->ensurePendingPayment($order, $method, $payload);
         $this->attachPaymentSnapshot($order, $payment);
         $kitchen = $this->ensureKitchenSideEffects($order->fresh(['items.product', 'token', 'tableSession', 'kitchenBatches.items.product']));
@@ -85,6 +87,7 @@ class SelfPosOrderService
             'kitchenQr' => $kitchenQr,
             'kitchen' => $kitchen,
             'requires_biller_confirmation' => true,
+            'payment_display_status' => $method === 'upi' ? 'processed_pending_verification' : 'cash_pending_collection',
             'invoice_generated' => false,
         ];
     }
@@ -211,6 +214,63 @@ class SelfPosOrderService
                 'requires_biller_confirmation' => true,
             ],
         ]);
+    }
+
+    private function ensureTableSessionForSelfPos(Order $order): Order
+    {
+        $fresh = $order->fresh(['tableSession']);
+
+        if (! $this->isTableService($fresh) || ! $fresh->table_id || in_array($fresh->status, ['completed', 'cancelled'], true)) {
+            return $fresh;
+        }
+
+        if ($fresh->tableSession && $fresh->tableSession->status === 'active') {
+            if (strtolower((string) $fresh->order_type) !== 'dine_in') {
+                $fresh->update(['order_type' => 'dine_in']);
+            }
+
+            return $fresh->fresh(['tableSession']);
+        }
+
+        $activeForOrder = TableSession::query()
+            ->where('order_id', $fresh->id)
+            ->where('status', 'active')
+            ->latest('id')
+            ->first();
+
+        if ($activeForOrder) {
+            $fresh->update([
+                'table_id' => $activeForOrder->table_id,
+                'table_session_id' => $activeForOrder->id,
+                'guest_count' => $fresh->guest_count ?: $activeForOrder->guest_count,
+                'dining_flow' => 'table_service',
+                'order_type' => 'dine_in',
+            ]);
+
+            return $fresh->fresh(['tableSession']);
+        }
+
+        if (strtolower((string) $fresh->order_type) !== 'dine_in') {
+            $fresh->update(['order_type' => 'dine_in']);
+            $fresh = $fresh->fresh(['tableSession']);
+        }
+
+        try {
+            $this->tableSessions->assignOrder(
+                $fresh,
+                (int) $fresh->table_id,
+                $fresh->guest_count ?: 1
+            );
+
+            return $fresh->fresh(['tableSession']);
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first()
+                ?: 'This table is already active. Please contact staff.';
+
+            throw ValidationException::withMessages([
+                'table_id' => $message,
+            ]);
+        }
     }
 
     private function pendingPaymentFromPayload(Order $order, string $method, float $amount, array $payload): ?Payment

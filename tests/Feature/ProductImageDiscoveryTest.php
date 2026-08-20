@@ -228,6 +228,27 @@ class ProductImageDiscoveryTest extends TestCase
         $this->assertStringEndsWith('/storage/products/image.jpg', $local->url);
     }
 
+    public function test_product_resolved_image_skips_missing_local_path_and_uses_external_fallback(): void
+    {
+        $product = $this->product();
+        ProductImage::create([
+            'product_id' => $product->id,
+            'image_path' => 'products/missing-local.jpg',
+            'source' => 'merchant_upload',
+        ]);
+        ProductImage::create([
+            'product_id' => $product->id,
+            'image_path' => 'https://images.pexels.test/fallback.jpg',
+            'source' => 'external_approved',
+            'provider' => 'pexels',
+        ]);
+
+        $fresh = $product->fresh('images');
+
+        $this->assertSame('https://images.pexels.test/fallback.jpg', $fresh->resolved_image_url);
+        $this->assertSame('external_approved', $fresh->resolved_image_source);
+    }
+
     private function product(array $overrides = []): Product
     {
         return Product::create(array_merge([
