@@ -13,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            \App\Services\ProductImages\Contracts\ProductImageProviderInterface::class,
+            \App\Services\ProductImages\PexelsProductImageProvider::class
+        );
     }
 
     /**

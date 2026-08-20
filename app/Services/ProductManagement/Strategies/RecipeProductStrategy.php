@@ -54,7 +54,7 @@ class RecipeProductStrategy extends DefaultProductStrategy
                     if ($path) {
                         $product->images()->updateOrCreate(
                             ['image_path' => $path],
-                            ['image_path' => $path]
+                            $this->productImagePayload($path, $img instanceof \Illuminate\Http\UploadedFile ? 'merchant_upload' : 'imported_path')
                         );
                     }
                 }

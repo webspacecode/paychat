@@ -185,6 +185,7 @@ class OrderKitchenDispatchService
         return match ($reason) {
             'classic_pos_order_created' => TokenService::STAGE_DRAFT_CREATED,
             'classic_pos_items_synced' => TokenService::STAGE_ITEMS_SYNCED,
+            'self_pos_submitted' => TokenService::STAGE_SELF_POS_SUBMITTED,
             'offline_order_synced' => TokenService::STAGE_OFFLINE_COMPLETED,
             default => TokenService::STAGE_PAYMENT_SUCCESS,
         };

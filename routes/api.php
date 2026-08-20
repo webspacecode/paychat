@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\Tenant\ProductController;
+use App\Http\Controllers\Api\Tenant\ProductImageSuggestionController;
 use App\Http\Controllers\Api\Tenant\PosFavoriteProductController;
 use App\Http\Controllers\Api\Tenant\CategoryController;
 use App\Http\Controllers\Api\Tenant\LocationController;
@@ -24,6 +25,8 @@ use App\Http\Controllers\Api\Tenant\KitchenSettingsController;
 use App\Http\Controllers\Api\Tenant\TableController;
 use App\Http\Controllers\Api\Tenant\TableSessionController;
 use App\Http\Controllers\Api\Tenant\PhonePeController;
+use App\Http\Controllers\Api\Tenant\SelfPosOrderController;
+use App\Http\Controllers\Api\Tenant\SelfPosQrController;
 use App\Http\Controllers\Api\Tenant\TokenController;
 use App\Http\Controllers\Api\Tenant\UpiProfileController;
 use App\Http\Controllers\Api\DemoLeadController;
@@ -57,12 +60,14 @@ Route::middleware(['api-public'])->prefix('kiosk/{tenant_slug}')->group(function
 
     Route::get('/locations', [LocationController::class, 'index']);
     Route::get('/payments/methods', [PaymentController::class, 'list']);
+    Route::get('/tables', [TableController::class, 'index']);
     Route::get('/categories/search', [CategoryController::class, 'search']);
     Route::get('/products', [ProductController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'create']);
     Route::put('/orders/{order}/items', [OrderController::class, 'updateItems'])->whereNumber('order');
     Route::post('/orders/{order}/pending-payment', [OrderController::class, 'moveToPayment']);
     Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment']);
+    Route::post('/orders/{order}/self-pos-submit', [SelfPosOrderController::class, 'submit'])->whereNumber('order');
     Route::patch('/orders/{order}/customer', [OrderController::class, 'attachCustomer'])->whereNumber('order');
     Route::post('/payments/{payment}/success', [PaymentController::class, 'markSuccess']);
     Route::get('/orders/{order}', [OrderController::class, 'show'])->whereNumber('order');
@@ -79,6 +84,8 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::get('/bootstrap', [BootstrapController::class, 'show']);
     Route::put('/settings/modules/{module}', [ModuleSettingsController::class, 'updateEnabled'])
         ->middleware('permission:tenant.modules.manage');
+    Route::match(['get', 'post'], '/self-pos/qr', [SelfPosQrController::class, 'tenant'])
+        ->middleware('permission:settings.manage');
     Route::get('/registration/access', [ModuleSettingsController::class, 'access'])
         ->middleware('module.access:registration_management,registration.access');
     Route::prefix('registration')->group(function () {
@@ -165,6 +172,9 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::get('/',        [ProductController::class, 'index']);   // search/list
         Route::post('/',       [ProductController::class, 'store'])->middleware('permission:product.manage');   // create
         Route::post('/bulk',       [ProductController::class, 'bulkUpload'])->middleware('permission:product.manage');   // bulk create
+        Route::post('/{product}/image-suggestions', [ProductImageSuggestionController::class, 'store'])->middleware('permission:product.manage')->whereNumber('product');
+        Route::post('/{product}/image-suggestions/{suggestion}/accept', [ProductImageSuggestionController::class, 'accept'])->middleware('permission:product.manage')->whereNumber('product')->whereNumber('suggestion');
+        Route::post('/{product}/image-suggestions/{suggestion}/reject', [ProductImageSuggestionController::class, 'reject'])->middleware('permission:product.manage')->whereNumber('product')->whereNumber('suggestion');
         Route::get('/{product}/stock-movements', [ProductController::class, 'stockMovements'])->middleware(['feature:inventory', 'permission:product.manage']);
         Route::get('/{id}',    [ProductController::class, 'show']);    // read one
         Route::put('/{product}',   [ProductController::class, 'update'])->middleware('permission:product.manage');  // update
@@ -190,6 +200,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::prefix('tables')->middleware(['feature:dine_in', 'permission:table.manage'])->group(function () {
         Route::get('/', [TableController::class, 'index']);
         Route::post('/', [TableController::class, 'store']);
+        Route::get('/{table}/self-pos-qr', [SelfPosQrController::class, 'table'])->middleware('permission:settings.manage')->whereNumber('table');
         Route::match(['put', 'patch'], '/{table}', [TableController::class, 'update'])->whereNumber('table');
         Route::patch('/{table}/status', [TableController::class, 'updateStatus'])->whereNumber('table');
         Route::post('/{table}/release', [TableController::class, 'release'])->whereNumber('table');
@@ -239,6 +250,8 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
 
     // 3️⃣ Move To Pending Payment
     Route::post('/orders/{order}/pending-payment', [OrderController::class, 'moveToPayment']);
+    Route::post('/orders/{order}/self-pos-submit', [SelfPosOrderController::class, 'submit'])->middleware(['feature:pos', 'permission:order.create'])->whereNumber('order');
+    Route::post('/orders/{order}/confirm-self-pos-payment', [SelfPosOrderController::class, 'confirmPayment'])->middleware(['feature:pos', 'permission:payment.collect'])->whereNumber('order');
 
     // 3️⃣ Complete Payment
     Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment'])->middleware(['feature:pos', 'permission:payment.collect']);

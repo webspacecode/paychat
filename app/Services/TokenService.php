@@ -14,6 +14,7 @@ class TokenService
 {
     public const STAGE_DRAFT_CREATED = 'draft_created';
     public const STAGE_ITEMS_SYNCED = 'items_synced';
+    public const STAGE_SELF_POS_SUBMITTED = 'self_pos_submitted';
     public const STAGE_PAYMENT_SUCCESS = 'payment_success';
     public const STAGE_OFFLINE_COMPLETED = 'offline_completed';
 
@@ -46,11 +47,18 @@ class TokenService
         return $this->generate($order, self::STAGE_PAYMENT_SUCCESS);
     }
 
+    public function generateForSelfPosSubmission(Order $order): ?OrderToken
+    {
+        return $this->generate($order, self::STAGE_SELF_POS_SUBMITTED);
+    }
+
     public function shouldGenerateQsrToken(Order $order, string $stage): bool
     {
         $context = $this->logContext($order, $stage);
 
-        if (! in_array($stage, self::GENERATION_STAGES, true)) {
+        $isSelfPosSubmission = $stage === self::STAGE_SELF_POS_SUBMITTED && $this->isSelfPosOrder($order);
+
+        if (! $isSelfPosSubmission && ! in_array($stage, self::GENERATION_STAGES, true)) {
             Log::debug('token.generation.skipped_stage', $context);
             return false;
         }
@@ -65,12 +73,12 @@ class TokenService
             return false;
         }
 
-        if ($this->isTableService($order)) {
+        if ($this->isTableService($order) && ! $isSelfPosSubmission) {
             Log::debug('token.generation.skipped_table_service', $context);
             return false;
         }
 
-        if (! $this->isQsrOrderType($order)) {
+        if (! $isSelfPosSubmission && ! $this->isQsrOrderType($order)) {
             Log::debug('token.generation.skipped_order_type', $context);
             return false;
         }
@@ -80,7 +88,7 @@ class TokenService
             return false;
         }
 
-        if ($order->payment_status !== 'paid') {
+        if (! $isSelfPosSubmission && $order->payment_status !== 'paid') {
             Log::debug('token.generation.skipped_payment_status', $context);
             return false;
         }
@@ -181,6 +189,13 @@ class TokenService
     private function isTableService(Order $order): bool
     {
         return strtolower(trim((string) $order->dining_flow)) === self::TABLE_SERVICE_FLOW;
+    }
+
+    private function isSelfPosOrder(Order $order): bool
+    {
+        return strtolower(trim((string) $order->source)) === 'self_pos'
+            || data_get($order->meta, 'source') === 'self_pos'
+            || data_get($order->meta, 'self_pos.submitted') === true;
     }
 
     private function itemCount(Order $order): int

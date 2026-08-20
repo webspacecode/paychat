@@ -41,4 +41,10 @@ return [
         'chrome_path' => env('BROWSERSHOT_CHROME_PATH', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
     ],
 
+    'pexels' => [
+        'enabled' => env('PEXELS_ENABLED', true),
+        'key' => env('PEXELS_API_KEY'),
+        'base_url' => env('PEXELS_BASE_URL', 'https://api.pexels.com/v1'),
+    ],
+
 ];

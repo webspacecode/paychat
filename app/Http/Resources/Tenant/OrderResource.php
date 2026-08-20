@@ -30,6 +30,7 @@ class OrderResource extends JsonResource
             |--------------------------------------------------------------------------
             */
             'order_type' => $this->order_type,
+            'source' => $this->source,
             'delivery_channel' => $this->delivery_channel,
             'delivery_channel_label' => $this->delivery_channel_label,
             'external_order_reference' => $this->external_order_reference,

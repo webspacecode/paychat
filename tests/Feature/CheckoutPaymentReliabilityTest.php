@@ -20,6 +20,7 @@ use App\Services\OfflineOrderSyncService;
 use App\Services\OrderKitchenDispatchService;
 use App\Services\Orders\OrderService;
 use App\Services\Payments\PaymentService;
+use App\Services\SelfPosOrderService;
 use App\Services\TableSessionService;
 use App\Services\TokenService;
 use Illuminate\Database\Schema\Blueprint;
@@ -661,6 +662,168 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame(0, Payment::count());
     }
 
+    public function test_self_pos_cash_submit_creates_pending_payment_and_token_without_invoice_or_completion(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $order = $this->order(total: 150, status: 'draft');
+
+        $first = app(SelfPosOrderService::class)->submit($order, [
+            'payment_method' => 'cash',
+            'amount' => 150,
+            'customer' => ['name' => 'Walk In', 'phone' => '9999999999'],
+        ]);
+        $second = app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'cash',
+            'amount' => 150,
+        ]);
+
+        $fresh = $order->fresh();
+        $this->assertTrue($first['requires_biller_confirmation']);
+        $this->assertSame('pending_payment', $fresh->status);
+        $this->assertSame('unpaid', $fresh->payment_status);
+        $this->assertNull($fresh->invoice_id);
+        $this->assertNull($fresh->invoice_no);
+        $this->assertSame(1, Payment::where('payment_method', 'cash')->where('status', 'pending')->count());
+        $this->assertSame(1, OrderToken::count());
+        $this->assertSame(OrderToken::first()->id, $fresh->token_id);
+        $this->assertSame(Payment::first()->id, $second['payment']->id);
+    }
+
+    public function test_self_pos_biller_confirmation_completes_order_and_generates_invoice(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $this->bindSelfPosInvoiceService();
+
+        $order = $this->order(total: 175, status: 'draft');
+        app(SelfPosOrderService::class)->submit($order, [
+            'payment_method' => 'cash',
+            'amount' => 175,
+        ]);
+
+        $result = app(SelfPosOrderService::class)->confirmPayment($order->fresh(), 'cash');
+        $fresh = $order->fresh();
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('completed', $fresh->status);
+        $this->assertSame('paid', $fresh->payment_status);
+        $this->assertSame('success', Payment::first()->fresh()->status);
+        $this->assertNotNull($fresh->invoice_id);
+        $this->assertSame('PC26-SELF-'.$fresh->id, $fresh->invoice_no);
+    }
+
+    public function test_self_pos_upi_submit_uses_backend_payable_amount_when_browser_total_is_stale(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create([
+            'type' => 'upi',
+            'mode' => 'personal',
+            'enabled' => true,
+            'config' => ['upi_id' => 'store@upi', 'name' => 'Store'],
+        ]);
+        $order = $this->order(total: 220, status: 'pending_payment');
+
+        $result = app(SelfPosOrderService::class)->submit($order, [
+            'payment_method' => 'upi',
+            'amount' => 260,
+        ]);
+
+        $payment = Payment::first();
+        $fresh = $order->fresh();
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('pending_payment', $fresh->status);
+        $this->assertSame('unpaid', $fresh->payment_status);
+        $this->assertSame('upi', $payment->payment_method);
+        $this->assertSame('pending', $payment->status);
+        $this->assertSame(220.0, (float) $payment->amount);
+        $this->assertNotNull($payment->upi_qr_url);
+        $this->assertNull($fresh->invoice_id);
+    }
+
+    public function test_self_pos_upi_submit_reuses_existing_pending_payment_attempt(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create([
+            'type' => 'upi',
+            'mode' => 'personal',
+            'enabled' => true,
+            'config' => ['upi_id' => 'store@upi', 'name' => 'Store'],
+        ]);
+        $order = $this->order(total: 220, status: 'pending_payment');
+        $payment = app(PaymentService::class)->createPayment($order, 'upi', 220);
+
+        $result = app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'upi',
+            'payment_id' => $payment->id,
+            'amount' => 220,
+        ]);
+
+        $fresh = $order->fresh();
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($payment->id, $result['payment']->id);
+        $this->assertSame(1, Payment::count());
+        $this->assertSame('pending', $payment->fresh()->status);
+        $this->assertSame('pending_payment', $fresh->status);
+        $this->assertSame('unpaid', $fresh->payment_status);
+        $this->assertSame($payment->id, data_get($fresh->meta, 'self_pos.payment_id'));
+        $this->assertTrue(data_get($fresh->meta, 'self_pos.customer_submitted_after_upi'));
+        $this->assertNotNull($result['kitchen_qr']);
+        $this->assertNull($fresh->invoice_id);
+    }
+
+    public function test_self_pos_upi_submit_rejects_payment_id_from_another_order(): void
+    {
+        PaymentMethod::create([
+            'type' => 'upi',
+            'mode' => 'personal',
+            'enabled' => true,
+            'config' => ['upi_id' => 'store@upi', 'name' => 'Store'],
+        ]);
+        $order = $this->order(total: 220, status: 'pending_payment');
+        $other = $this->order(total: 220, status: 'pending_payment');
+        $payment = app(PaymentService::class)->createPayment($other, 'upi', 220);
+
+        $this->expectException(ValidationException::class);
+
+        app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'upi',
+            'payment_id' => $payment->id,
+            'amount' => 220,
+        ]);
+    }
+
+    public function test_self_pos_biller_confirmation_marks_reused_upi_payment_success_and_generates_invoice(): void
+    {
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create([
+            'type' => 'upi',
+            'mode' => 'personal',
+            'enabled' => true,
+            'config' => ['upi_id' => 'store@upi', 'name' => 'Store'],
+        ]);
+        $this->bindSelfPosInvoiceService();
+        $order = $this->order(total: 220, status: 'pending_payment');
+        $payment = app(PaymentService::class)->createPayment($order, 'upi', 220);
+        app(SelfPosOrderService::class)->submit($order->fresh(), [
+            'payment_method' => 'upi',
+            'payment_id' => $payment->id,
+            'amount' => 220,
+        ]);
+
+        $result = app(SelfPosOrderService::class)->confirmPayment($order->fresh(), 'upi');
+        $fresh = $order->fresh();
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('success', $payment->fresh()->status);
+        $this->assertSame('completed', $fresh->status);
+        $this->assertSame('paid', $fresh->payment_status);
+        $this->assertSame('PC26-SELF-'.$fresh->id, $fresh->invoice_no);
+        $this->assertSame(1, Payment::count());
+    }
+
     private function order(
         float $total,
         string $status = 'pending_payment',
@@ -704,6 +867,42 @@ class CheckoutPaymentReliabilityTest extends TestCase
         ]);
 
         return $order;
+    }
+
+    private function bindSelfPosInvoiceService(): void
+    {
+        app()->instance(InvoiceService::class, new class extends InvoiceService {
+            public function generate($order, $tenant, $industry, $paper, bool $includeCustomerInfo = false)
+            {
+                $orderId = data_get($order, 'id');
+                $invoiceNo = 'PC26-SELF-'.$orderId;
+
+                $invoice = Invoice::on('mysql')->create([
+                    'tenant_id' => $tenant->id,
+                    'order_id' => $orderId,
+                    'uuid' => $invoiceNo,
+                    'industry' => $industry,
+                    'paper_size' => $paper,
+                    'order_data' => $order,
+                ]);
+
+                $tenantOrder = Order::findOrFail($orderId);
+                $meta = $tenantOrder->meta ?? [];
+                $meta['invoice'] = [
+                    'id' => $invoice->id,
+                    'number' => $invoiceNo,
+                    'url' => url("/billing/invoices/{$invoiceNo}"),
+                ];
+
+                $tenantOrder->update([
+                    'invoice_id' => $invoice->id,
+                    'invoice_no' => $invoiceNo,
+                    'meta' => $meta,
+                ]);
+
+                return ['url' => url("/billing/invoices/{$invoiceNo}")];
+            }
+        });
     }
 
     private function tableServiceOrder(): Order

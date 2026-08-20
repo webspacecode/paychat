@@ -12,6 +12,7 @@ use App\Models\Tenant\ProductInventory;
 use App\Models\Tenant\StockMovement;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use App\Services\ProductManagement\Contracts\ProductStrategyInterface;
 
@@ -58,7 +59,7 @@ class DefaultProductStrategy implements ProductStrategyInterface
                     if ($path) {
                         $product->images()->updateOrCreate(
                             ['image_path' => $path],
-                            ['image_path' => $path]
+                            $this->productImagePayload($path, $img instanceof \Illuminate\Http\UploadedFile ? 'merchant_upload' : 'imported_path')
                         );
                     }
                 }
@@ -188,10 +189,10 @@ class DefaultProductStrategy implements ProductStrategyInterface
                     if ($img instanceof \Illuminate\Http\UploadedFile) {
                         // store file into storage/app/public/products
                         $path = $img->store('products', 'public');
-                        $product->images()->create(['image_path' => $path]);
+                        $product->images()->create($this->productImagePayload($path, 'merchant_upload'));
                     } elseif (is_string($img)) {
                         // fallback: accept string paths (maybe from API sync)
-                        $product->images()->create(['image_path' => $img]);
+                        $product->images()->create($this->productImagePayload($img, 'imported_path'));
                     }
                 }
             }
@@ -202,6 +203,17 @@ class DefaultProductStrategy implements ProductStrategyInterface
         }
 
         return $product->fresh()->load(['images','categories:id,name,description','inventories','recipe.items']);
+    }
+
+    protected function productImagePayload(string $path, string $source): array
+    {
+        $payload = ['image_path' => $path];
+
+        if (Schema::hasColumn('product_images', 'source')) {
+            $payload['source'] = $source;
+        }
+
+        return $payload;
     }
 
     public function delete(Product $product): bool

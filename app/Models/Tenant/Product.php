@@ -3,9 +3,15 @@
 namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
 {
+    protected $appends = [
+        'resolved_image_url',
+        'resolved_image_source',
+    ];
+
     protected $fillable = [
         'name',
         'sku',
@@ -35,5 +41,34 @@ class Product extends Model
     public function categories()
     {
         return $this->belongsToMany(Category::class);
+    }
+
+    public function getResolvedImageUrlAttribute(): ?string
+    {
+        $image = $this->resolvedImage();
+
+        return $image?->url;
+    }
+
+    public function getResolvedImageSourceAttribute(): ?string
+    {
+        $image = $this->resolvedImage();
+
+        return $image?->source;
+    }
+
+    private function resolvedImage(): ?ProductImage
+    {
+        if (! Schema::hasTable('product_images')) {
+            return null;
+        }
+
+        $images = $this->relationLoaded('images')
+            ? $this->images
+            : $this->images()->get();
+
+        return $images->first(fn ($image) => in_array($image->source, [null, '', 'merchant_upload', 'bulk_upload', 'imported_path'], true))
+            ?: $images->first(fn ($image) => $image->source === 'external_approved')
+            ?: $images->first();
     }
 }
