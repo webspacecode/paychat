@@ -99,6 +99,37 @@ class SelfPosQrTest extends TestCase
         $this->assertSame($originalSvg, $second->json('qr_svg'));
     }
 
+    public function test_tenant_self_pos_qr_prefers_request_origin_over_configured_url(): void
+    {
+        Config::set('services.frontend_url', 'http://hardcoded.example');
+
+        $response = $this
+            ->withHeader('Origin', 'https://menu.example.com')
+            ->getJson('/api/frozen-cafe/self-pos/qr');
+
+        $response->assertOk()
+            ->assertJson([
+                'target_url' => 'https://menu.example.com/pos#/self-pos/61OtxUm8aVglxPi38WJZOlffFTnrkfpZ',
+            ]);
+    }
+
+    public function test_tenant_self_pos_qr_regenerates_old_file_without_target_metadata(): void
+    {
+        $path = 'tenants/23/self-pos/self-pos.svg';
+        Storage::disk('public')->put($path, '<svg>old-hardcoded-domain</svg>');
+
+        $response = $this
+            ->withHeader('Origin', 'https://live-menu.example.com')
+            ->getJson('/api/frozen-cafe/self-pos/qr');
+
+        $response->assertOk()->assertJson(['generated' => true]);
+        $this->assertNotSame('<svg>old-hardcoded-domain</svg>', Storage::disk('public')->get($path));
+        $this->assertSame(
+            'https://live-menu.example.com/pos#/self-pos/61OtxUm8aVglxPi38WJZOlffFTnrkfpZ',
+            $response->json('target_url')
+        );
+    }
+
     public function test_tenant_self_pos_qr_refresh_regenerates_file(): void
     {
         $first = $this->getJson('/api/frozen-cafe/self-pos/qr')->assertOk();
@@ -144,6 +175,27 @@ class SelfPosQrTest extends TestCase
 
         $this->assertStringContainsString('<svg', $response->json('qr_svg'));
         $this->assertCount(0, Storage::disk('public')->allFiles());
+    }
+
+    public function test_table_self_pos_qr_prefers_request_origin_over_configured_url(): void
+    {
+        Config::set('services.frontend_url', 'http://hardcoded.example');
+
+        $table = Resource::create([
+            'type' => 'table',
+            'location_id' => 1,
+            'name' => 'Table 2',
+            'code' => 'T2',
+        ]);
+
+        $response = $this
+            ->withHeader('Origin', 'https://guest-menu.example.com')
+            ->getJson("/api/frozen-cafe/tables/{$table->id}/self-pos-qr");
+
+        $response->assertOk()
+            ->assertJson([
+                'target_url' => 'https://guest-menu.example.com/pos#/self-pos/61OtxUm8aVglxPi38WJZOlffFTnrkfpZ?table=T2',
+            ]);
     }
 
     public function test_table_self_pos_qr_falls_back_to_table_id_when_code_is_missing(): void

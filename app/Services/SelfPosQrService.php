@@ -14,12 +14,20 @@ class SelfPosQrService
     {
         $targetUrl = $this->selfPosUrl($tenant, $request);
         $path = $this->tenantQrPath($tenant);
+        $metaPath = $this->tenantQrMetaPath($tenant);
         $disk = Storage::disk('public');
         $exists = $disk->exists($path);
+        $storedTargetUrl = $this->storedTenantQrTargetUrl($disk, $metaPath);
+        $targetUnknown = $exists && $storedTargetUrl === null;
+        $targetChanged = $exists && $storedTargetUrl !== null && $storedTargetUrl !== $targetUrl;
         $generated = false;
 
-        if ($refresh || ! $exists) {
+        if ($refresh || ! $exists || $targetUnknown || $targetChanged) {
             $disk->put($path, $this->qrSvg($targetUrl));
+            $disk->put($metaPath, json_encode([
+                'target_url' => $targetUrl,
+                'generated_at' => now()->toISOString(),
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             $generated = true;
         }
 
@@ -80,21 +88,71 @@ class SelfPosQrService
 
     private function frontendOrigin(Request $request): string
     {
-        $configured = config('services.frontend_url')
-            ?: config('app.frontend_url')
-            ?: env('FRONTEND_URL')
-            ?: env('POS_FRONTEND_URL');
+        $requestOrigin = $this->originFromHeader($request->headers->get('origin'))
+            ?: $this->originFromHeader($request->headers->get('referer'));
+
+        if ($requestOrigin) {
+            return $requestOrigin;
+        }
+
+        $configured = $this->originFromHeader(config('services.frontend_url'))
+            ?: $this->originFromHeader(config('app.frontend_url'))
+            ?: $this->originFromHeader(env('FRONTEND_URL'))
+            ?: $this->originFromHeader(env('POS_FRONTEND_URL'));
 
         if ($configured) {
-            return rtrim((string) $configured, '/');
+            return $configured;
         }
 
         return rtrim($request->getSchemeAndHttpHost() ?: config('app.url'), '/');
     }
 
+    private function originFromHeader(mixed $value): ?string
+    {
+        $url = trim((string) $value);
+
+        if ($url === '') {
+            return null;
+        }
+
+        $parts = parse_url($url);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = $parts['host'] ?? null;
+
+        if (! in_array($scheme, ['http', 'https'], true) || ! $host) {
+            return null;
+        }
+
+        $origin = "{$scheme}://{$host}";
+
+        if (isset($parts['port'])) {
+            $origin .= ":{$parts['port']}";
+        }
+
+        return rtrim($origin, '/');
+    }
+
     private function tenantQrPath(Tenant $tenant): string
     {
         return "tenants/{$tenant->id}/self-pos/self-pos.svg";
+    }
+
+    private function tenantQrMetaPath(Tenant $tenant): string
+    {
+        return "tenants/{$tenant->id}/self-pos/self-pos.json";
+    }
+
+    private function storedTenantQrTargetUrl($disk, string $path): ?string
+    {
+        if (! $disk->exists($path)) {
+            return null;
+        }
+
+        $meta = json_decode((string) $disk->get($path), true);
+
+        return is_array($meta) && isset($meta['target_url'])
+            ? (string) $meta['target_url']
+            : null;
     }
 
     private function qrSvg(string $url): string
