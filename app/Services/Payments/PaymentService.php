@@ -561,7 +561,9 @@ class PaymentService
     {
         $orderNo = trim((string) ($order->order_no ?: $order->id));
 
-        return trim("PayChat Order {$orderNo}");
+        $lastSixDigits = substr($orderNo, -6);
+
+        return trim("PayChat Order {$lastSixDigits}");
     }
 
     private function upiReference(Order $order): string
