@@ -1,0 +1,8 @@
+const m=(e="")=>/^(https?:|data:image\/|blob:)/i.test(String(e||"")),d=`data:image/svg+xml;base64,${btoa(`
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240">
+  <rect width="320" height="240" rx="28" fill="#F3F4F6"/>
+  <circle cx="160" cy="102" r="34" fill="#D1D5DB"/>
+  <rect x="86" y="154" width="148" height="18" rx="9" fill="#D1D5DB"/>
+  <rect x="118" y="184" width="84" height="12" rx="6" fill="#E5E7EB"/>
+</svg>
+`)}`,h=(e="")=>String(e||"").replace(/\\/g,"").replace(/"/g,"").replace(/^\/+/,"").trim(),f=(e="")=>{const t=h(e),a=sessionStorage.getItem("paychat_kiosk_tenant_id")||localStorage.getItem("tenant_id"),r=a&&t&&!t.startsWith("tenants/")?`tenants/${a}/${t}`:t;return r?`${window.location.origin}/storage/${r}`:""},u=(e,t)=>{const a=String(e||"").trim();return a?m(a)||a.startsWith("/")?a:t(a):""},g=(e={},t={})=>{const a=t.fallback||d,r=t.localPathResolver||f,c=Array.isArray(e.images)?e.images:[],l=typeof t.extraCandidates=="function"?t.extraCandidates(e):t.extraCandidates,o=[e.resolved_image_url,e.resolvedImageUrl,e.image_url,e.imageUrl,e.image_path,e.image,...c.flatMap((n={})=>[n.url,n.image_url,n.imageUrl,n.image_path]),...Array.isArray(l)?l:[l]],s=[];for(const n of o){const i=u(n,r);i&&!s.includes(i)&&s.push(i)}return a&&!s.includes(a)&&s.push(a),s},x=(e={},t={})=>g(e,t)[0]||t.fallback||d,I=(e,t={},a={})=>{const r=e?.target;if(!r)return;const c=g(t,a),l=r.currentSrc||r.src||"",o=c.findIndex(i=>i===l||l.endsWith(i)),s=Number(r.dataset.fallbackIndex||o||0),n=c[s+1]||a.fallback||d;!n||n===l||(r.dataset.fallbackIndex=String(s+1),r.src=n)};export{I as a,x as r};
