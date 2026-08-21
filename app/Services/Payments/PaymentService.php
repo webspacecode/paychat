@@ -553,7 +553,7 @@ class PaymentService
             'am' => number_format($amount, 2, '.', ''),
             'cu' => 'INR',
             'tn' => $note ?: 'PayChat Order',
-            'tr' => $reference,
+            // 'tr' => $reference,
         ], '', '&', PHP_QUERY_RFC3986);
     }
 
