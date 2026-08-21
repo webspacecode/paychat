@@ -17,13 +17,20 @@ class SelfPosQrService
         $metaPath = $this->tenantQrMetaPath($tenant);
         $disk = Storage::disk('public');
         $exists = $disk->exists($path);
+        $printableExists = $disk->exists($this->tenantPrintableQrPath($tenant));
         $storedTargetUrl = $this->storedTenantQrTargetUrl($disk, $metaPath);
         $targetUnknown = $exists && $storedTargetUrl === null;
         $targetChanged = $exists && $storedTargetUrl !== null && $storedTargetUrl !== $targetUrl;
         $generated = false;
 
-        if ($refresh || ! $exists || $targetUnknown || $targetChanged) {
+        if ($refresh || ! $exists || ! $printableExists || $targetUnknown || $targetChanged) {
             $disk->put($path, $this->qrSvg($targetUrl));
+            $disk->put($this->tenantPrintableQrPath($tenant), $this->printableQrSvg(
+                $this->qrSvg($targetUrl),
+                $tenant->name ?: 'PayChat',
+                'Scan to order',
+                'Scan to order quickly — no need to wait at the counter'
+            ));
             $disk->put($metaPath, json_encode([
                 'target_url' => $targetUrl,
                 'generated_at' => now()->toISOString(),
@@ -38,7 +45,11 @@ class SelfPosQrService
             'target_url' => $targetUrl,
             'qr_public_url' => $disk->url($path),
             'qr_svg' => $qrSvg,
-            'download_url' => $disk->url($path),
+            'printable_qr_svg' => $disk->exists($this->tenantPrintableQrPath($tenant))
+                ? $disk->get($this->tenantPrintableQrPath($tenant))
+                : null,
+            'download_url' => $disk->url($this->tenantPrintableQrPath($tenant)),
+            'raw_download_url' => $disk->url($path),
             'path' => $path,
             'generated' => $generated,
         ];
@@ -54,7 +65,13 @@ class SelfPosQrService
         return [
             'success' => true,
             'target_url' => $targetUrl,
-            'qr_svg' => $this->qrSvg($targetUrl),
+            'qr_svg' => $qrSvg = $this->qrSvg($targetUrl),
+            'printable_qr_svg' => $this->printableQrSvg(
+                $qrSvg,
+                $tenant->name ?: 'PayChat',
+                'Scan to order from this table',
+                'Table '.$this->safeLabel($table->name ?: $table->code ?: $table->id)
+            ),
             'table_reference' => $tableReference,
             'table' => [
                 'id' => $table->id,
@@ -181,6 +198,11 @@ class SelfPosQrService
         return "tenants/{$tenant->id}/self-pos/self-pos.svg";
     }
 
+    private function tenantPrintableQrPath(Tenant $tenant): string
+    {
+        return "tenants/{$tenant->id}/self-pos/self-pos-printable.svg";
+    }
+
     private function tenantQrMetaPath(Tenant $tenant): string
     {
         return "tenants/{$tenant->id}/self-pos/self-pos.json";
@@ -202,5 +224,40 @@ class SelfPosQrService
     private function qrSvg(string $url): string
     {
         return (new Generator())->format('svg')->size(360)->margin(1)->generate($url);
+    }
+
+    private function printableQrSvg(string $qrSvg, string $brand, string $heading, string $instruction): string
+    {
+        $qr = $this->stripXmlDeclaration($qrSvg);
+        $brand = $this->safeLabel($brand);
+        $heading = $this->safeLabel($heading);
+        $instruction = $this->safeLabel($instruction);
+
+        return <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1748" viewBox="0 0 1240 1748" role="img" aria-label="{$heading}">
+  <rect width="1240" height="1748" fill="#ffffff"/>
+  <rect x="96" y="96" width="1048" height="1556" rx="36" fill="#ffffff" stroke="#111827" stroke-width="6"/>
+  <text x="620" y="210" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="800" fill="#111827">{$brand}</text>
+  <text x="620" y="315" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#111827">{$heading}</text>
+  <g transform="translate(370 450)">
+    <rect x="-36" y="-36" width="572" height="572" rx="18" fill="#ffffff"/>
+    <g transform="scale(1.3889)">{$qr}</g>
+  </g>
+  <text x="620" y="1120" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="40" font-weight="700" fill="#111827">{$instruction}</text>
+  <text x="620" y="1210" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#4b5563">Open camera, scan, and place your order</text>
+  <rect x="336" y="1320" width="568" height="120" rx="60" fill="#C9F73B"/>
+  <text x="620" y="1394" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#111827">Powered by PayChat</text>
+</svg>
+SVG;
+    }
+
+    private function stripXmlDeclaration(string $svg): string
+    {
+        return preg_replace('/<\?xml[^>]*\?>\s*/i', '', $svg) ?: $svg;
+    }
+
+    private function safeLabel(mixed $value): string
+    {
+        return e(preg_replace('/\s+/', ' ', trim((string) $value)) ?: 'PayChat');
     }
 }

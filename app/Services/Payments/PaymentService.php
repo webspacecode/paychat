@@ -389,9 +389,10 @@ class PaymentService
     private function handleProfileUpi(Order $order, $amount, UpiProfile $profile)
     {
         $payeeName = $profile->payee_name ?: $profile->label;
-        $ref = "ORD-{$order->id}";
+        $ref = $this->upiReference($order);
+        $note = $this->upiPaymentNote($order);
 
-        $upiQr = $this->buildUpiPayload($profile->upi_id, $payeeName, $amount, $ref);
+        $upiQr = $this->buildUpiPayload($profile->upi_id, $payeeName, $amount, $ref, $note);
         $profileSnapshot = $this->upiProfileSnapshot($profile);
 
         $payment = Payment::create([
@@ -407,7 +408,7 @@ class PaymentService
             'upi_qr_url' => $upiQr,
             'meta' => [
                 'upi_id' => $profile->upi_id,
-                'note' => "{$profile->label}#{$order->order_no}",
+                'note' => $note,
                 'upi_profile' => $profileSnapshot,
             ],
         ]);
@@ -426,17 +427,10 @@ class PaymentService
             throw new PaymentException('UPI ID not configured', 'UPI_NOT_CONFIGURED', 422);
         }
 
-        // 🔥 Clean store name (remove spaces/special chars for better display)
-        $cleanName = Str::of($name)->replace(' ', '');
+        $note = $this->upiPaymentNote($order);
+        $ref = $this->upiReference($order);
 
-        // 🔥 SHORT note (very important — UPI apps ignore long ones)
-        // Keep under ~25 chars
-        $note = "{$cleanName}#{$order->order_no}";
-
-        // 🔥 System reference (used later for webhook / tracking)
-        $ref = "ORD-{$order->id}";
-
-        $upiQr = $this->buildUpiPayload($upiId, $name, $amount, $ref);
+        $upiQr = $this->buildUpiPayload($upiId, $name, $amount, $ref, $note);
 
         // 🔥 Create payment record
         $payment = Payment::create([
@@ -534,16 +528,45 @@ class PaymentService
         ];
     }
 
-    private function buildUpiPayload(string $upiId, string $payeeName, $amount, string $reference): string
+    private function buildUpiPayload(string $upiId, string $payeeName, $amount, string $reference, ?string $note = null): string
     {
+        $upiId = trim($upiId);
+        $payeeName = trim($payeeName);
+        $amount = $this->money($amount);
+        $reference = preg_replace('/[^A-Za-z0-9._-]/', '', trim($reference));
+
+        if ($upiId === '' || ! preg_match('/^[A-Za-z0-9.\-_]{2,}@[A-Za-z0-9.\-_]{2,}$/', $upiId)) {
+            throw new PaymentException('UPI ID not configured correctly', 'UPI_ID_INVALID', 422);
+        }
+
+        if ($amount <= 0) {
+            throw new PaymentException('UPI amount must be greater than zero', 'UPI_AMOUNT_INVALID', 422);
+        }
+
+        if ($reference === '') {
+            $reference = 'PC'.now()->format('ymdHis').Str::upper(Str::random(6));
+        }
+
         return "upi://pay?" . http_build_query([
             'pa' => $upiId,
-            'pn' => $payeeName,
-            'am' => $amount,
+            'pn' => $payeeName !== '' ? $payeeName : 'PayChat',
+            'am' => number_format($amount, 2, '.', ''),
             'cu' => 'INR',
-            'tn' => 'Pay now',
+            'tn' => $note ?: 'PayChat Order',
             'tr' => $reference,
-        ]);
+        ], '', '&', PHP_QUERY_RFC3986);
+    }
+
+    private function upiPaymentNote(Order $order): string
+    {
+        $orderNo = trim((string) ($order->order_no ?: $order->id));
+
+        return trim("PayChat Order {$orderNo}");
+    }
+
+    private function upiReference(Order $order): string
+    {
+        return 'PC'.now()->format('ymdHis').'-'.$order->id.'-'.Str::upper(Str::random(6));
     }
 
     private function upiProfileSnapshot(UpiProfile $profile): array
