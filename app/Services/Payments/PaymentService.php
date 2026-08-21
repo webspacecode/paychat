@@ -566,7 +566,7 @@ class PaymentService
 
     private function upiReference(Order $order): string
     {
-        return 'PC'.now()->format('ymdHis').'-'.$order->id.'-'.Str::upper(Str::random(6));
+        return 'PC'.now()->format('ymdHis').$order->id.Str::upper(Str::random(6));
     }
 
     private function upiProfileSnapshot(UpiProfile $profile): array
