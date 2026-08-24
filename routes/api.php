@@ -308,6 +308,12 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::get('/top-products', [ReportController::class, 'topProducts']);
         Route::get('/hourly', [ReportController::class, 'hourly']);
         Route::get('/billing-by-user', [ReportController::class, 'billingByUser']);
+        Route::get('/daily-sales', [ReportController::class, 'dailySales']);
+        Route::get('/item-wise-sales', [ReportController::class, 'itemWiseSales']);
+        Route::get('/best-selling-products', [ReportController::class, 'bestSellingProducts']);
+        Route::get('/cashiers', [ReportController::class, 'cashiers']);
+        Route::get('/outlets', [ReportController::class, 'outlets']);
+        Route::get('/export', [ReportController::class, 'export']);
     });
 
 });

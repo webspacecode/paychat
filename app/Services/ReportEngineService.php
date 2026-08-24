@@ -233,6 +233,205 @@ class ReportEngineService
         ];
     }
 
+    public function dailySalesReport($tenantId, string $startDate, string $endDate, ?int $locationId = null): array
+    {
+        $sales = DB::table('report_daily_sales')
+            ->where('tenant_id', $tenantId)
+            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $paymentRows = DB::table('report_payment_breakdowns')
+            ->where('tenant_id', $tenantId)
+            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
+            ->whereBetween('date', [$startDate, $endDate])
+            ->select('date', 'payment_method', DB::raw('COALESCE(SUM(total_amount), 0) as amount'))
+            ->groupBy('date', 'payment_method')
+            ->get()
+            ->groupBy('date');
+
+        $rows = [];
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $key = $date->toDateString();
+            $day = $sales->get($key);
+            $payments = $paymentRows->get($key, collect())->keyBy('payment_method');
+
+            $rows[] = [
+                'date' => $key,
+                'orders' => (int) ($day->total_orders ?? 0),
+                'gross_sales' => round((float) ($day->total_sales ?? 0), 2),
+                'discount' => round((float) ($day->total_discount ?? 0), 2),
+                'tax' => round((float) ($day->total_tax ?? 0), 2),
+                'net_sales' => round((float) ($day->net_sales ?? 0), 2),
+                'avg_order_value' => round((float) ($day->avg_order_value ?? 0), 2),
+                'cash_total' => round((float) ($payments->get('cash')->amount ?? 0), 2),
+                'upi_total' => round((float) ($payments->get('upi')->amount ?? 0), 2),
+                'card_total' => round((float) ($payments->get('card')->amount ?? 0), 2),
+                'other_total' => round((float) $paymentRows->get($key, collect())
+                    ->whereNotIn('payment_method', ['cash', 'upi', 'card'])
+                    ->sum('amount'), 2),
+            ];
+        }
+
+        return [
+            'summary' => $this->summarizeSalesRows($rows),
+            'rows' => $rows,
+        ];
+    }
+
+    public function itemWiseSalesReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, ?int $limit = null): array
+    {
+        $rows = DB::table('pos_order_items')
+            ->join('pos_orders', 'pos_orders.id', '=', 'pos_order_items.order_id')
+            ->join('products', 'products.id', '=', 'pos_order_items.product_id')
+            ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
+            ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->select(
+                'products.id as product_id',
+                'products.name as product_name',
+                'products.sku',
+                DB::raw('COALESCE(SUM(pos_order_items.quantity), 0) as quantity_sold'),
+                DB::raw('COALESCE(SUM(pos_order_items.price * pos_order_items.quantity), 0) as gross_revenue'),
+                DB::raw('COALESCE(SUM(pos_order_items.discount), 0) as discount'),
+                DB::raw('COALESCE(SUM(pos_order_items.tax), 0) as tax'),
+                DB::raw('COALESCE(SUM(pos_order_items.total), 0) as net_revenue')
+            )
+            ->groupBy('products.id', 'products.name', 'products.sku')
+            ->orderByDesc('net_revenue')
+            ->when($limit, fn ($q) => $q->limit($limit))
+            ->get()
+            ->map(fn ($row) => [
+                'product_id' => (int) $row->product_id,
+                'product_name' => $row->product_name,
+                'sku' => $row->sku,
+                'quantity_sold' => (int) $row->quantity_sold,
+                'gross_revenue' => round((float) $row->gross_revenue, 2),
+                'discount' => round((float) $row->discount, 2),
+                'tax' => round((float) $row->tax, 2),
+                'net_revenue' => round((float) $row->net_revenue, 2),
+                'avg_price' => (int) $row->quantity_sold > 0
+                    ? round((float) $row->net_revenue / (int) $row->quantity_sold, 2)
+                    : 0,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'summary' => [
+                'products' => count($rows),
+                'quantity_sold' => array_sum(array_column($rows, 'quantity_sold')),
+                'gross_revenue' => round(array_sum(array_column($rows, 'gross_revenue')), 2),
+                'discount' => round(array_sum(array_column($rows, 'discount')), 2),
+                'tax' => round(array_sum(array_column($rows, 'tax')), 2),
+                'net_revenue' => round(array_sum(array_column($rows, 'net_revenue')), 2),
+            ],
+            'rows' => $rows,
+        ];
+    }
+
+    public function bestSellingProductsReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, int $limit = 20): array
+    {
+        $report = $this->itemWiseSalesReport($tenantId, $startDate, $endDate, $locationId, $limit);
+        $totalRevenue = max(0.0, (float) ($report['summary']['net_revenue'] ?? 0));
+
+        $report['rows'] = collect($report['rows'])->values()->map(function ($row, $index) use ($totalRevenue) {
+            return [
+                'rank' => $index + 1,
+                ...$row,
+                'contribution_percent' => $totalRevenue > 0
+                    ? round(((float) $row['net_revenue'] / $totalRevenue) * 100, 2)
+                    : 0,
+            ];
+        })->all();
+
+        return $report;
+    }
+
+    public function cashierReport($tenantId, Carbon $start, Carbon $end, ?int $locationId = null, ?int $userId = null): array
+    {
+        return $this->billingByUser($tenantId, $start, $end, $locationId, $userId);
+    }
+
+    public function outletReport($tenantId, string $startDate, string $endDate): array
+    {
+        $locations = DB::table('locations')->pluck('name', 'id');
+
+        $orderTotals = DB::table('pos_orders')
+            ->where('payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES)
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->select('location_id')
+            ->selectRaw('COUNT(*) as orders')
+            ->selectRaw('COALESCE(SUM(total), 0) as gross_sales')
+            ->groupBy('location_id')
+            ->get()
+            ->keyBy('location_id');
+
+        $paymentTotals = DB::table('pos_payments')
+            ->join('pos_orders', 'pos_orders.id', '=', 'pos_payments.order_id')
+            ->where('pos_payments.status', 'success')
+            ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->select('pos_orders.location_id')
+            ->selectRaw('COALESCE(SUM(pos_payments.amount), 0) as paid_total')
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method = 'cash' THEN pos_payments.amount ELSE 0 END), 0) as cash_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method = 'upi' THEN pos_payments.amount ELSE 0 END), 0) as upi_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method = 'card' THEN pos_payments.amount ELSE 0 END), 0) as card_total")
+            ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method NOT IN ('cash', 'upi', 'card') THEN pos_payments.amount ELSE 0 END), 0) as other_total")
+            ->groupBy('pos_orders.location_id')
+            ->get()
+            ->keyBy('location_id');
+
+        $locationIds = collect($locations->keys())
+            ->merge($orderTotals->keys())
+            ->merge($paymentTotals->keys())
+            ->filter(fn ($id) => $id !== null)
+            ->unique()
+            ->values();
+
+        $rows = $locationIds->map(function ($locationId) use ($locations, $orderTotals, $paymentTotals) {
+            $orders = $orderTotals->get($locationId);
+            $payments = $paymentTotals->get($locationId);
+            $orderCount = (int) ($orders->orders ?? 0);
+            $gross = round((float) ($orders->gross_sales ?? 0), 2);
+
+            return [
+                'location_id' => (int) $locationId,
+                'location_name' => $locations[$locationId] ?? "Outlet #{$locationId}",
+                'orders' => $orderCount,
+                'gross_sales' => $gross,
+                'paid_total' => round((float) ($payments->paid_total ?? 0), 2),
+                'cash_total' => round((float) ($payments->cash_total ?? 0), 2),
+                'upi_total' => round((float) ($payments->upi_total ?? 0), 2),
+                'card_total' => round((float) ($payments->card_total ?? 0), 2),
+                'other_total' => round((float) ($payments->other_total ?? 0), 2),
+                'avg_order_value' => $orderCount > 0 ? round($gross / $orderCount, 2) : 0,
+            ];
+        })->sortByDesc('gross_sales')->values()->all();
+
+        return [
+            'summary' => [
+                'outlets' => count($rows),
+                'orders' => array_sum(array_column($rows, 'orders')),
+                'gross_sales' => round(array_sum(array_column($rows, 'gross_sales')), 2),
+                'paid_total' => round(array_sum(array_column($rows, 'paid_total')), 2),
+                'cash_total' => round(array_sum(array_column($rows, 'cash_total')), 2),
+                'upi_total' => round(array_sum(array_column($rows, 'upi_total')), 2),
+                'card_total' => round(array_sum(array_column($rows, 'card_total')), 2),
+                'other_total' => round(array_sum(array_column($rows, 'other_total')), 2),
+            ],
+            'rows' => $rows,
+        ];
+    }
+
     private function billingBaseQuery(Carbon $start, Carbon $end, ?int $locationId, ?int $userId, string $actorExpression)
     {
         return DB::table('pos_payments')
@@ -374,13 +573,14 @@ class ReportEngineService
             ->where($this->identity($tenantId, $date, $locationId))
             ->delete();
 
+        $hourExpression = $this->hourExpression();
         $data = $this->ordersForDate($date, $locationId)
             ->select(
-                DB::raw('HOUR(created_at) as hour'),
+                DB::raw("{$hourExpression} as hour"),
                 DB::raw('COUNT(*) as orders'),
                 DB::raw('SUM(total) as revenue')
             )
-            ->groupBy(DB::raw('HOUR(created_at)'))
+            ->groupBy(DB::raw($hourExpression))
             ->get();
 
         foreach ($data as $row) {
@@ -459,6 +659,45 @@ class ReportEngineService
         }
 
         $query->whereDate('pos_orders.created_at', $date);
+    }
+
+    private function applyOrderDateRangeFilter($query, string $startDate, string $endDate): void
+    {
+        if (Schema::hasColumn('pos_orders', 'business_date')) {
+            $query->whereBetween('pos_orders.business_date', [$startDate, $endDate]);
+            return;
+        }
+
+        $query->whereBetween('pos_orders.created_at', [
+            Carbon::parse($startDate)->startOfDay(),
+            Carbon::parse($endDate)->endOfDay(),
+        ]);
+    }
+
+    private function summarizeSalesRows(array $rows): array
+    {
+        $orders = array_sum(array_column($rows, 'orders'));
+        $gross = round(array_sum(array_column($rows, 'gross_sales')), 2);
+
+        return [
+            'orders' => $orders,
+            'gross_sales' => $gross,
+            'discount' => round(array_sum(array_column($rows, 'discount')), 2),
+            'tax' => round(array_sum(array_column($rows, 'tax')), 2),
+            'net_sales' => round(array_sum(array_column($rows, 'net_sales')), 2),
+            'avg_order_value' => $orders > 0 ? round($gross / $orders, 2) : 0,
+            'cash_total' => round(array_sum(array_column($rows, 'cash_total')), 2),
+            'upi_total' => round(array_sum(array_column($rows, 'upi_total')), 2),
+            'card_total' => round(array_sum(array_column($rows, 'card_total')), 2),
+            'other_total' => round(array_sum(array_column($rows, 'other_total')), 2),
+        ];
+    }
+
+    private function hourExpression(): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "CAST(strftime('%H', created_at) AS INTEGER)"
+            : 'HOUR(created_at)';
     }
 
     private function identity($tenantId, string $date, ?int $locationId): array

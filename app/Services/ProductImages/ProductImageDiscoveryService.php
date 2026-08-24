@@ -10,6 +10,7 @@ use App\Services\ProductImages\Contracts\ProductImageProviderInterface;
 use App\Support\Observability;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -130,6 +131,8 @@ class ProductImageDiscoveryService
         }
 
         $path = $this->storeExternalImage($product, $suggestion, $tenant);
+        $supportsSourceMetadata = Schema::hasColumn('product_images', 'source');
+        $supportsPrimary = Schema::hasColumn('product_images', 'is_primary');
         $payload = [
             'image_path' => $path,
             'source' => 'external_approved',
@@ -140,11 +143,13 @@ class ProductImageDiscoveryService
             'author_url' => $suggestion->photographer_url,
             'license' => $suggestion->license,
             'meta' => ['suggestion_id' => $suggestion->id],
-            'is_primary' => false,
+            'is_primary' => true,
         ];
 
-        if (! Schema::hasColumn('product_images', 'source')) {
+        if (! $supportsSourceMetadata) {
             $payload = ['image_path' => $path];
+        } elseif (! $supportsPrimary) {
+            unset($payload['is_primary']);
         }
 
         $identity = ['product_id' => $product->id, 'image_path' => $path];
@@ -156,12 +161,20 @@ class ProductImageDiscoveryService
             ];
         }
 
-        ProductImage::updateOrCreate($identity, array_merge(['product_id' => $product->id], $payload));
+        DB::transaction(function () use ($product, $suggestion, $identity, $payload, $supportsPrimary) {
+            if ($supportsPrimary) {
+                ProductImage::query()
+                    ->where('product_id', $product->id)
+                    ->update(['is_primary' => false]);
+            }
 
-        $suggestion->update([
-            'status' => 'accepted',
-            'accepted_at' => now(),
-        ]);
+            ProductImage::updateOrCreate($identity, array_merge(['product_id' => $product->id], $payload));
+
+            $suggestion->update([
+                'status' => 'accepted',
+                'accepted_at' => now(),
+            ]);
+        });
 
         return $product->fresh(['images', 'categories:id,name,description', 'inventories', 'recipe.items']);
     }
@@ -247,6 +260,7 @@ class ProductImageDiscoveryService
 
     private function checkQuota(Tenant $tenant, string $provider): array
     {
+        $cache = Cache::store($this->quotaCacheStore());
         $userId = auth()->id() ?: 'guest';
         $keys = [
             ['key' => "product-image:{$tenant->id}:{$provider}:hour:".now()->format('YmdH'), 'limit' => self::TENANT_HOUR_LIMIT, 'ttl' => now()->addHour()],
@@ -255,21 +269,26 @@ class ProductImageDiscoveryService
         ];
 
         foreach ($keys as $entry) {
-            $count = (int) Cache::get($entry['key'], 0);
+            $count = (int) $cache->get($entry['key'], 0);
             if ($count >= $entry['limit']) {
                 return ['allowed' => false, 'key' => $entry['key']];
             }
         }
 
         foreach ($keys as $entry) {
-            if (! Cache::has($entry['key'])) {
-                Cache::put($entry['key'], 1, $entry['ttl']);
+            if (! $cache->has($entry['key'])) {
+                $cache->put($entry['key'], 1, $entry['ttl']);
             } else {
-                Cache::increment($entry['key']);
+                $cache->increment($entry['key']);
             }
         }
 
         return ['allowed' => true];
+    }
+
+    private function quotaCacheStore(): string
+    {
+        return config('cache.default') === 'database' ? 'file' : (string) config('cache.default', 'file');
     }
 
     private function storeExternalImage(Product $product, ExternalProductImageSuggestion $suggestion, Tenant $tenant): string
