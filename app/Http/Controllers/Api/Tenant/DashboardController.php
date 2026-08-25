@@ -8,10 +8,14 @@ use App\Services\ProductManagement\Strategies\CategoryStrategyResolver;
 use Illuminate\Http\Request;
 use App\Models\Tenant\Order;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 
 class DashboardController extends Controller
 {
+    private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded'];
+    private const PAID_PAYMENT_STATUS = 'paid';
+
     protected $resolver;
 
     public function __construct()
@@ -29,14 +33,18 @@ class DashboardController extends Controller
         }
 
         // 🔥 TODAY FILTER
-        $todayQuery = (clone $query)->whereDate('created_at', now());
+        $todayQuery = (clone $query);
+        $this->applyTodayBusinessDateFilter($todayQuery);
 
         // 🔥 SUMMARY
-        $todayOrders = $todayQuery->count();
+        $paidTodayQuery = (clone $todayQuery)
+            ->where('payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES);
 
-        $sales = (clone $todayQuery)
-    ->where('payment_status', 'paid')
-    ->sum(DB::raw('CAST(total AS DECIMAL(10,2))'));
+        $todayOrders = (clone $paidTodayQuery)->count();
+
+        $sales = (clone $paidTodayQuery)
+            ->sum(DB::raw('CAST(total AS DECIMAL(10,2))'));
 
         $customers = (clone $todayQuery)
             ->whereNotNull('customer_id')
@@ -77,5 +85,15 @@ class DashboardController extends Controller
             ],
             'recent_orders' => $recentOrders
         ]);
+    }
+
+    private function applyTodayBusinessDateFilter($query): void
+    {
+        if (Schema::hasColumn('pos_orders', 'business_date')) {
+            $query->whereDate('pos_orders.business_date', now()->toDateString());
+            return;
+        }
+
+        $query->whereDate('created_at', now());
     }
 }

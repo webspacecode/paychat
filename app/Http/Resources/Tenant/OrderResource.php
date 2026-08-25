@@ -180,10 +180,14 @@ class OrderResource extends JsonResource
                     'payment_method' => $payment->payment_method,
                     'upi_profile_id' => $payment->upi_profile_id,
                     'upi_profile' => $this->paymentUpiProfile($payment),
+                    'upi_qr_url' => $payment->upi_qr_url ?? data_get($payment->meta, 'upi_qr_url'),
                     'amount' => $payment->amount,
                     'transaction_id' => $payment->transaction_id ?? null,
                     'status' => $payment->status,
                     'paid_at' => $payment->updated_at,
+                    'meta' => [
+                        'upi_qr_url' => data_get($payment->meta, 'upi_qr_url'),
+                    ],
                 ];
             }),
 

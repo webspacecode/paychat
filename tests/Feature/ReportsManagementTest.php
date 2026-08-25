@@ -90,6 +90,69 @@ class ReportsManagementTest extends TestCase
         $this->assertStringContainsString('paychat-daily-sales-2026-08-01-to-2026-08-02.csv', $response->headers->get('content-disposition'));
     }
 
+    public function test_report_generation_is_idempotent_for_all_locations(): void
+    {
+        $reports = app(ReportEngineService::class);
+
+        $reports->generateDailyReports(77, '2026-08-01');
+        $reports->generateDailyReports(77, '2026-08-01');
+        $reports->generateDailyReports(77, '2026-08-01');
+
+        $summary = $reports->rangeSummary(77, '2026-08-01', '2026-08-01');
+        $payments = $reports->rangePayments(77, '2026-08-01', '2026-08-01')->keyBy('payment_method');
+        $topProducts = $reports->rangeTopProducts(77, '2026-08-01', '2026-08-01')->keyBy('product_name');
+        $hourly = $reports->rangeHourly(77, '2026-08-01', '2026-08-01')->keyBy('hour');
+
+        $this->assertSame(2, $summary['total_orders']);
+        $this->assertSame(200.0, $summary['total_sales']);
+        $this->assertSame(100.0, $summary['avg_order_value']);
+
+        $this->assertSame(120.0, $payments->get('cash')['total_amount']);
+        $this->assertSame(1, $payments->get('cash')['transaction_count']);
+        $this->assertSame(80.0, $payments->get('upi')['total_amount']);
+        $this->assertSame(1, $payments->get('upi')['transaction_count']);
+
+        $this->assertSame(2, $topProducts->get('Latte')['quantity_sold']);
+        $this->assertSame(120.0, $topProducts->get('Latte')['revenue']);
+        $this->assertSame(1, $topProducts->get('Cake')['quantity_sold']);
+        $this->assertSame(80.0, $topProducts->get('Cake')['revenue']);
+
+        $this->assertSame(1, $hourly->get(10)['orders_count']);
+        $this->assertSame(120.0, $hourly->get(10)['revenue']);
+        $this->assertSame(1, $hourly->get(11)['orders_count']);
+        $this->assertSame(80.0, $hourly->get(11)['revenue']);
+
+        $this->assertAggregateRowCount('report_daily_sales', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01'], 1);
+        $this->assertAggregateRowCount('report_payment_breakdowns', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'payment_method' => 'cash'], 1);
+        $this->assertAggregateRowCount('report_top_products_daily', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'product_id' => 10], 1);
+        $this->assertAggregateRowCount('report_hourly_sales', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'hour' => 10], 1);
+        $this->assertAggregateRowCount('report_kpi_summaries', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01'], 1);
+    }
+
+    public function test_report_generation_removes_stale_payment_product_and_hour_rows(): void
+    {
+        DB::table('pos_payments')->where('payment_method', 'upi')->delete();
+        DB::table('pos_order_items')->where('product_id', 11)->delete();
+        DB::table('pos_orders')->where('id', 101)->delete();
+
+        $reports = app(ReportEngineService::class);
+        $reports->generateDailyReports(77, '2026-08-01');
+
+        $summary = $reports->rangeSummary(77, '2026-08-01', '2026-08-01');
+        $payments = $reports->rangePayments(77, '2026-08-01', '2026-08-01')->keyBy('payment_method');
+        $topProducts = $reports->rangeTopProducts(77, '2026-08-01', '2026-08-01')->keyBy('product_name');
+        $hourly = $reports->rangeHourly(77, '2026-08-01', '2026-08-01')->keyBy('hour');
+
+        $this->assertSame(1, $summary['total_orders']);
+        $this->assertSame(120.0, $summary['total_sales']);
+        $this->assertTrue($payments->has('cash'));
+        $this->assertFalse($payments->has('upi'));
+        $this->assertTrue($topProducts->has('Latte'));
+        $this->assertFalse($topProducts->has('Cake'));
+        $this->assertTrue($hourly->has(10));
+        $this->assertFalse($hourly->has(11));
+    }
+
     private function createCentralSchema(): void
     {
         Schema::connection('mysql')->create('users', function (Blueprint $table) {
@@ -160,6 +223,7 @@ class ReportsManagementTest extends TestCase
             '2026_05_10_134652_create_report_top_products_daily_table.php',
             '2026_05_10_134711_create_report_report_hourly_sales_table.php',
             '2026_05_10_134731_create_report_kpi_summaries_table.php',
+            '2026_08_25_000001_normalize_report_aggregate_location_identity.php',
         ] as $migration) {
             (include database_path("migrations/tenant/{$migration}"))->up();
         }
@@ -203,5 +267,16 @@ class ReportsManagementTest extends TestCase
             ['order_id' => 101, 'payment_method' => 'upi', 'amount' => 80, 'status' => 'success', 'collected_by' => null, 'created_at' => '2026-08-01 11:05:00', 'updated_at' => now()],
             ['order_id' => 102, 'payment_method' => 'cash', 'amount' => 500, 'status' => 'success', 'collected_by' => 5, 'created_at' => '2026-08-01 12:05:00', 'updated_at' => now()],
         ]);
+    }
+
+    private function assertAggregateRowCount(string $table, array $where, int $count): void
+    {
+        $query = DB::table($table);
+
+        foreach ($where as $column => $value) {
+            $query->where($column, $value);
+        }
+
+        $this->assertSame($count, $query->count());
     }
 }

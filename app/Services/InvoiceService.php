@@ -234,15 +234,21 @@ class InvoiceService
             $orderData = [];
         }
 
-        $orderData['items'] = collect($orderData['items'] ?? [])
+        $orderData['items'] = collect($this->extractOrderItems($orderData))
             ->map(function ($item) {
                 $quantity = (float) ($item['quantity'] ?? $item['qty'] ?? 0);
                 $price = (float) ($item['price'] ?? $item['rate'] ?? 0);
                 $total = (float) ($item['total'] ?? $item['subtotal'] ?? ($quantity * $price));
+                $name = $item['name']
+                    ?? $item['product_name']
+                    ?? data_get($item, 'product.name')
+                    ?? data_get($item, 'menu_item.name')
+                    ?? data_get($item, 'product_snapshot.name')
+                    ?? 'Item';
 
                 return array_merge($item, [
-                    'name' => $item['name'] ?? $item['product_name'] ?? 'Item',
-                    'product_name' => $item['product_name'] ?? $item['name'] ?? 'Item',
+                    'name' => $name,
+                    'product_name' => $item['product_name'] ?? $name,
                     'qty' => $item['qty'] ?? $quantity,
                     'quantity' => $item['quantity'] ?? $quantity,
                     'rate' => $item['rate'] ?? $price,
@@ -255,6 +261,36 @@ class InvoiceService
             ->all();
 
         return $orderData;
+    }
+
+    private function extractOrderItems(array $orderData): array
+    {
+        foreach ([
+            'items',
+            'order_items',
+            'orderItems',
+            'line_items',
+            'lineItems',
+            'cart_items',
+            'cartItems',
+            'invoice_items',
+            'invoiceItems',
+            'details',
+            'order_details',
+            'orderDetails',
+        ] as $key) {
+            $items = data_get($orderData, $key);
+
+            if ($items instanceof \Illuminate\Contracts\Support\Arrayable) {
+                $items = $items->toArray();
+            }
+
+            if (is_array($items) && count($items) > 0) {
+                return $items;
+            }
+        }
+
+        return [];
     }
 
     private function publicInvoiceUrl(string $uuid, bool $includeCustomerInfo = false): string
@@ -817,6 +853,7 @@ class InvoiceService
                 'amount' => (float) ($payment['amount'] ?? 0),
                 'status' => $payment['status'] ?? null,
                 'paid_at' => $payment['paid_at'] ?? null,
+                'upi_qr_url' => $payment['upi_qr_url'] ?? data_get($payment, 'meta.upi_qr_url'),
             ])
             ->values();
 
@@ -836,6 +873,13 @@ class InvoiceService
             ->unique()
             ->values()
             ->all();
+
+        $upiPayment = $payments->first(fn ($payment) => ($payment['method'] ?? '') === 'UPI' && ! empty($payment['upi_qr_url']));
+        $upiQrPayload = $this->firstNonEmpty(
+            $order['upi_qr_url'] ?? null,
+            data_get($order, 'payment.upi_qr_url'),
+            $upiPayment['upi_qr_url'] ?? null
+        );
 
         return [
             'merchant' => [
@@ -895,8 +939,23 @@ class InvoiceService
                 'invoice_url' => $invoiceUrl,
                 'review_url' => $invoiceUrl,
                 'qr_svg_or_url' => $qrSvg,
+                'upi_qr_url' => $upiQrPayload,
+                'upi_qr_svg' => $upiQrPayload ? $this->safeQrSvg($upiQrPayload) : null,
             ],
         ];
+    }
+
+    private function firstNonEmpty(...$values): ?string
+    {
+        foreach ($values as $value) {
+            $text = trim((string) ($value ?? ''));
+
+            if ($text !== '') {
+                return $text;
+            }
+        }
+
+        return null;
     }
 
     private function invoiceLogoSrc($branding, bool $inline = false): ?string

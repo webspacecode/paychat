@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schema;
 
 class ReportEngineService
 {
+    private const ALL_LOCATIONS_ID = 0;
     private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded'];
     private const PAID_PAYMENT_STATUS = 'paid';
 
@@ -18,11 +19,13 @@ class ReportEngineService
         $date = Carbon::parse($date)->toDateString();
 
         foreach ($this->reportLocationIds($tenantId, $date) as $locationId) {
-            $this->generateSales($tenantId, $date, $locationId);
-            $this->generatePayments($tenantId, $date, $locationId);
-            $this->generateTopProducts($tenantId, $date, $locationId);
-            $this->generateHourly($tenantId, $date, $locationId);
-            $this->generateKPI($tenantId, $date, $locationId);
+            DB::connection('tenant')->transaction(function () use ($tenantId, $date, $locationId) {
+                $this->generateSales($tenantId, $date, $locationId);
+                $this->generatePayments($tenantId, $date, $locationId);
+                $this->generateTopProducts($tenantId, $date, $locationId);
+                $this->generateHourly($tenantId, $date, $locationId);
+                $this->generateKPI($tenantId, $date, $locationId);
+            });
         }
     }
 
@@ -490,10 +493,6 @@ class ReportEngineService
 
     private function generatePayments($tenantId, string $date, ?int $locationId): void
     {
-        DB::table('report_payment_breakdowns')
-            ->where($this->identity($tenantId, $date, $locationId))
-            ->delete();
-
         $data = DB::table('pos_payments')
             ->join('pos_orders', 'pos_orders.id', '=', 'pos_payments.order_id')
             ->select(
@@ -510,28 +509,38 @@ class ReportEngineService
             ->get();
 
         $total = $data->sum('total');
+        $seenMethods = [];
 
         foreach ($data as $row) {
-            DB::table('report_payment_breakdowns')->updateOrInsert(
+            $seenMethods[] = $row->payment_method;
+
+            DB::table('report_payment_breakdowns')->upsert([
                 array_merge($this->identity($tenantId, $date, $locationId), [
                     'payment_method' => $row->payment_method,
-                ]),
-                [
                     'total_amount' => $row->total,
                     'transaction_count' => $row->count,
                     'percentage' => $total > 0 ? round(($row->total / $total) * 100, 2) : 0,
+                    'created_at' => now(),
                     'updated_at' => now(),
-                ]
+                ]),
+            ],
+                ['tenant_id', 'location_id', 'date', 'payment_method'],
+                ['total_amount', 'transaction_count', 'percentage', 'updated_at']
             );
         }
+
+        $stale = DB::table('report_payment_breakdowns')
+            ->where($this->identity($tenantId, $date, $locationId));
+
+        if ($seenMethods) {
+            $stale->whereNotIn('payment_method', $seenMethods);
+        }
+
+        $stale->delete();
     }
 
     private function generateTopProducts($tenantId, string $date, ?int $locationId): void
     {
-        DB::table('report_top_products_daily')
-            ->where($this->identity($tenantId, $date, $locationId))
-            ->delete();
-
         $data = DB::table('pos_order_items')
             ->join('pos_orders', 'pos_orders.id', '=', 'pos_order_items.order_id')
             ->join('products', 'products.id', '=', 'pos_order_items.product_id')
@@ -550,29 +559,39 @@ class ReportEngineService
             ->get();
 
         $rank = 1;
+        $seenProductIds = [];
 
         foreach ($data as $item) {
-            DB::table('report_top_products_daily')->updateOrInsert(
+            $seenProductIds[] = $item->id;
+
+            DB::table('report_top_products_daily')->upsert([
                 array_merge($this->identity($tenantId, $date, $locationId), [
                     'product_id' => $item->id,
-                ]),
-                [
                     'product_name' => $item->name,
                     'quantity_sold' => $item->qty,
                     'revenue' => $item->revenue,
                     'rank' => $rank++,
+                    'created_at' => now(),
                     'updated_at' => now(),
-                ]
+                ]),
+            ],
+                ['tenant_id', 'location_id', 'date', 'product_id'],
+                ['product_name', 'quantity_sold', 'revenue', 'rank', 'updated_at']
             );
         }
+
+        $stale = DB::table('report_top_products_daily')
+            ->where($this->identity($tenantId, $date, $locationId));
+
+        if ($seenProductIds) {
+            $stale->whereNotIn('product_id', $seenProductIds);
+        }
+
+        $stale->delete();
     }
 
     private function generateHourly($tenantId, string $date, ?int $locationId): void
     {
-        DB::table('report_hourly_sales')
-            ->where($this->identity($tenantId, $date, $locationId))
-            ->delete();
-
         $hourExpression = $this->hourExpression();
         $data = $this->ordersForDate($date, $locationId)
             ->select(
@@ -583,18 +602,33 @@ class ReportEngineService
             ->groupBy(DB::raw($hourExpression))
             ->get();
 
+        $seenHours = [];
+
         foreach ($data as $row) {
-            DB::table('report_hourly_sales')->updateOrInsert(
+            $seenHours[] = $row->hour;
+
+            DB::table('report_hourly_sales')->upsert([
                 array_merge($this->identity($tenantId, $date, $locationId), [
                     'hour' => $row->hour,
-                ]),
-                [
                     'orders_count' => $row->orders,
                     'revenue' => $row->revenue,
+                    'created_at' => now(),
                     'updated_at' => now(),
-                ]
+                ]),
+            ],
+                ['tenant_id', 'location_id', 'date', 'hour'],
+                ['orders_count', 'revenue', 'updated_at']
             );
         }
+
+        $stale = DB::table('report_hourly_sales')
+            ->where($this->identity($tenantId, $date, $locationId));
+
+        if ($seenHours) {
+            $stale->whereNotIn('hour', $seenHours);
+        }
+
+        $stale->delete();
     }
 
     private function generateKPI($tenantId, string $date, ?int $locationId): void
@@ -637,6 +671,7 @@ class ReportEngineService
             ->distinct()
             ->pluck('location_id')
             ->map(fn ($locationId) => (int) $locationId)
+            ->filter(fn ($locationId) => $locationId > self::ALL_LOCATIONS_ID)
             ->all();
 
         return array_merge([null], array_values(array_unique(array_merge($locations, $existingReportLocations))));
@@ -704,19 +739,19 @@ class ReportEngineService
     {
         return [
             'tenant_id' => $tenantId,
-            'location_id' => $locationId,
+            'location_id' => $this->reportLocationId($locationId),
             'date' => $date,
         ];
     }
 
     private function applyReportLocationFilter($query, ?int $locationId): void
     {
-        if ($locationId === null) {
-            $query->whereNull('location_id');
-            return;
-        }
+        $query->where('location_id', $this->reportLocationId($locationId));
+    }
 
-        $query->where('location_id', $locationId);
+    private function reportLocationId(?int $locationId): int
+    {
+        return $locationId ?? self::ALL_LOCATIONS_ID;
     }
 
     private function paymentPercentage($payments, string $paymentMethod): float

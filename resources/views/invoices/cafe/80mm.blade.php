@@ -232,6 +232,8 @@
         ->filter()
         ->unique()
         ->implode(' + ');
+    $upiQrPayload = $qrData['upi_qr_url'] ?? null;
+    $upiQrSvg = $qrData['upi_qr_svg'] ?? null;
 @endphp
 
 <div class="receipt">
@@ -381,14 +383,18 @@
         </div>
     @endif
 
-    @if(!empty($qrData['qr_svg_or_url']))
+    @if(!empty($upiQrSvg) || !empty($qrData['qr_svg_or_url']))
         <div class="divider"></div>
         <div class="qr-wrap">
             <div class="qr-box">
-                {!! $qrData['qr_svg_or_url'] !!}
+                @if(!empty($upiQrSvg))
+                    {!! $upiQrSvg !!}
+                @else
+                    {!! $qrData['qr_svg_or_url'] !!}
+                @endif
             </div>
-            <div class="muted">Scan for invoice / feedback</div>
-            @if(!empty($qrData['invoice_url']))
+            <div class="muted">{{ !empty($upiQrPayload) ? 'Scan QR to pay via UPI' : 'Scan for invoice / feedback' }}</div>
+            @if(empty($upiQrPayload) && !empty($qrData['invoice_url']))
                 <div class="muted">{{ $qrData['invoice_url'] }}</div>
             @endif
         </div>
