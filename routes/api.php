@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Tenant\CategoryController;
 use App\Http\Controllers\Api\Tenant\LocationController;
 use App\Http\Controllers\Api\Tenant\OrderController;
 use App\Http\Controllers\Api\Tenant\PaymentController;
+use App\Http\Controllers\Api\Tenant\PaymentCorrectionController;
 use App\Http\Controllers\Api\Tenant\WebhookController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\InventoryController;
@@ -255,6 +256,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
 
     // 3️⃣ Complete Payment
     Route::post('/orders/{order}/payments', [PaymentController::class, 'createPayment'])->middleware(['feature:pos', 'permission:payment.collect']);
+    Route::post('/orders/{order}/payment-correction', [PaymentCorrectionController::class, 'store'])->middleware(['feature:pos', 'permission:payment.correct'])->whereNumber('order');
 
     Route::get('/payments/methods', [PaymentController::class, 'list']);
 

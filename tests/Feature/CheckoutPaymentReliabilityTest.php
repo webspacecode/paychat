@@ -10,15 +10,18 @@ use App\Models\Tenant\Order;
 use App\Models\Tenant\OrderItem;
 use App\Models\Tenant\OrderToken;
 use App\Models\Tenant\Payment;
+use App\Models\Tenant\PaymentMethodCorrection;
 use App\Models\Tenant\PaymentMethod;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\ProductInventory;
 use App\Models\Tenant\Recipe;
+use App\Models\Tenant\UpiProfile;
 use App\Services\InvoiceService;
 use App\Services\KitchenBatchService;
 use App\Services\OfflineOrderSyncService;
 use App\Services\OrderKitchenDispatchService;
 use App\Services\Orders\OrderService;
+use App\Services\PaymentMethodCorrectionService;
 use App\Services\Payments\PaymentService;
 use App\Services\SelfPosOrderService;
 use App\Services\TableSessionService;
@@ -194,6 +197,120 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame('completed', $result['order']->status);
         $this->assertSame('paid', $result['order']->payment_status);
         $this->assertSame(1, Payment::count());
+    }
+
+    public function test_payment_method_correction_updates_payment_invoice_report_and_audit(): void
+    {
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        PaymentMethod::create(['type' => 'upi', 'enabled' => true]);
+        $profile = UpiProfile::create([
+            'label' => 'Main UPI',
+            'upi_id' => 'store@upi',
+            'location_id' => 1,
+            'is_active' => true,
+        ]);
+        $order = $this->order(total: 250, status: 'completed', paymentStatus: 'paid');
+        $order->forceFill(['business_date' => now()->toDateString()])->save();
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'cash',
+            'amount' => 250,
+            'status' => 'success',
+        ]);
+        Invoice::on('mysql')->create([
+            'tenant_id' => 23,
+            'order_id' => $order->id,
+            'uuid' => 'PC26-CORRECT-'.$order->id,
+            'industry' => 'cafe',
+            'paper_size' => '80mm',
+            'order_data' => [
+                'id' => $order->id,
+                'payments' => [[
+                    'id' => $payment->id,
+                    'payment_method' => 'cash',
+                    'amount' => 250,
+                    'status' => 'success',
+                ]],
+            ],
+        ]);
+
+        $result = app(PaymentMethodCorrectionService::class)->correct($order, [
+            'payment_id' => $payment->id,
+            'new_method' => 'upi',
+            'upi_profile_id' => $profile->id,
+            'reason' => 'Customer paid using UPI but cash was selected.',
+        ], null, 'payment-correction-test-1');
+
+        $this->assertTrue($result['success']);
+        $this->assertTrue($result['changed']);
+        $this->assertSame('updated', $result['side_effects']['invoice_snapshot']);
+        $this->assertSame('refreshed', $result['side_effects']['reports']);
+        $this->assertSame('upi', $payment->fresh()->payment_method);
+        $this->assertSame($profile->id, $payment->fresh()->upi_profile_id);
+        $this->assertSame(1, PaymentMethodCorrection::count());
+
+        $invoicePayment = Invoice::on('mysql')->first()->order_data['payments'][0];
+        $this->assertSame('upi', $invoicePayment['payment_method']);
+        $this->assertSame($profile->id, $invoicePayment['upi_profile_id']);
+
+        $this->assertDatabaseHas('report_payment_breakdowns', [
+            'tenant_id' => 23,
+            'location_id' => 1,
+            'payment_method' => 'upi',
+        ], 'tenant');
+    }
+
+    public function test_payment_method_correction_blocks_multiple_successful_payments_without_selection(): void
+    {
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        PaymentMethod::create(['type' => 'upi', 'enabled' => true]);
+        $order = $this->order(total: 250, status: 'completed', paymentStatus: 'paid');
+        Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'cash',
+            'amount' => 100,
+            'status' => 'success',
+        ]);
+        Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'upi',
+            'amount' => 150,
+            'status' => 'success',
+        ]);
+
+        $this->expectException(ValidationException::class);
+
+        app(PaymentMethodCorrectionService::class)->correct($order, [
+            'new_method' => 'cash',
+            'reason' => 'Correction requires explicit split payment selection.',
+        ], null, 'payment-correction-test-2');
+    }
+
+    public function test_payment_method_correction_is_idempotent(): void
+    {
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        PaymentMethod::create(['type' => 'phonepe', 'enabled' => true]);
+        $order = $this->order(total: 120, status: 'completed', paymentStatus: 'paid');
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'cash',
+            'amount' => 120,
+            'status' => 'success',
+        ]);
+
+        $payload = [
+            'payment_id' => $payment->id,
+            'new_method' => 'phonepe',
+            'reason' => 'Customer paid through PhonePe.',
+        ];
+
+        $first = app(PaymentMethodCorrectionService::class)->correct($order, $payload, null, 'payment-correction-test-3');
+        $second = app(PaymentMethodCorrectionService::class)->correct($order, $payload, null, 'payment-correction-test-3');
+
+        $this->assertTrue($first['changed']);
+        $this->assertSame($first['correction']['id'], $second['correction']['id']);
+        $this->assertSame('phonepe', $payment->fresh()->payment_method);
+        $this->assertSame(1, PaymentMethodCorrection::count());
     }
 
     public function test_kot_send_batches_fresh_items_once(): void
@@ -1186,6 +1303,23 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::connection('tenant')->create('idempotency_requests', function (Blueprint $table) {
+            $table->id();
+            $table->string('scope', 100);
+            $table->char('idempotency_key_hash', 64);
+            $table->char('request_hash', 64);
+            $table->string('status', 20)->default('processing');
+            $table->unsignedSmallInteger('response_code')->nullable();
+            $table->text('response_body')->nullable();
+            $table->string('resource_type', 100)->nullable();
+            $table->unsignedBigInteger('resource_id')->nullable();
+            $table->dateTime('locked_at')->nullable();
+            $table->dateTime('completed_at')->nullable();
+            $table->dateTime('expires_at')->nullable();
+            $table->timestamps();
+            $table->unique(['scope', 'idempotency_key_hash']);
+        });
+
         Schema::connection('tenant')->create('locations', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable();
@@ -1344,6 +1478,23 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::connection('tenant')->create('payment_method_corrections', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('payment_id');
+            $table->string('old_payment_method', 50);
+            $table->string('new_payment_method', 50);
+            $table->unsignedBigInteger('old_upi_profile_id')->nullable();
+            $table->unsignedBigInteger('new_upi_profile_id')->nullable();
+            $table->decimal('amount', 12, 2);
+            $table->text('reason');
+            $table->unsignedBigInteger('corrected_by')->nullable();
+            $table->timestamp('corrected_at')->nullable();
+            $table->char('idempotency_key_hash', 64)->nullable();
+            $table->json('meta')->nullable();
+            $table->timestamps();
+        });
+
         Schema::connection('tenant')->create('payment_methods', function (Blueprint $table) {
             $table->id();
             $table->string('type');
@@ -1373,6 +1524,78 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->date('token_date');
             $table->string('status')->default('waiting');
             $table->timestamps();
+        });
+
+        Schema::connection('tenant')->create('report_daily_sales', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('tenant_id');
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->date('date');
+            $table->integer('total_orders')->default(0);
+            $table->decimal('total_sales', 12, 2)->default(0);
+            $table->decimal('total_tax', 12, 2)->default(0);
+            $table->decimal('total_discount', 12, 2)->default(0);
+            $table->decimal('net_sales', 12, 2)->default(0);
+            $table->decimal('avg_order_value', 12, 2)->default(0);
+            $table->timestamps();
+            $table->unique(['tenant_id', 'location_id', 'date']);
+        });
+
+        Schema::connection('tenant')->create('report_payment_breakdowns', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('tenant_id');
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->date('date');
+            $table->string('payment_method');
+            $table->decimal('total_amount', 12, 2)->default(0);
+            $table->integer('transaction_count')->default(0);
+            $table->decimal('percentage', 5, 2)->default(0);
+            $table->timestamps();
+            $table->unique(['tenant_id', 'location_id', 'date', 'payment_method'], 'report_payments_identity_unique');
+        });
+
+        Schema::connection('tenant')->create('report_top_products_daily', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('tenant_id');
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->date('date');
+            $table->unsignedBigInteger('product_id');
+            $table->string('product_name');
+            $table->integer('quantity_sold')->default(0);
+            $table->decimal('revenue', 12, 2)->default(0);
+            $table->integer('rank')->default(0);
+            $table->timestamps();
+            $table->unique(['tenant_id', 'location_id', 'date', 'product_id'], 'report_products_identity_unique');
+        });
+
+        Schema::connection('tenant')->create('report_hourly_sales', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('tenant_id');
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->date('date');
+            $table->tinyInteger('hour');
+            $table->integer('orders_count')->default(0);
+            $table->decimal('revenue', 12, 2)->default(0);
+            $table->timestamps();
+            $table->unique(['tenant_id', 'location_id', 'date', 'hour'], 'report_hourly_identity_unique');
+        });
+
+        Schema::connection('tenant')->create('report_kpi_summaries', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('tenant_id');
+            $table->unsignedBigInteger('location_id')->nullable();
+            $table->date('date');
+            $table->decimal('sales', 12, 2)->default(0);
+            $table->integer('orders')->default(0);
+            $table->decimal('avg_order', 12, 2)->default(0);
+            $table->decimal('growth_percent', 5, 2)->default(0);
+            $table->tinyInteger('peak_hour')->nullable();
+            $table->unsignedBigInteger('top_product_id')->nullable();
+            $table->decimal('upi_percent', 5, 2)->default(0);
+            $table->decimal('cash_percent', 5, 2)->default(0);
+            $table->decimal('card_percent', 5, 2)->default(0);
+            $table->timestamps();
+            $table->unique(['tenant_id', 'location_id', 'date']);
         });
     }
 

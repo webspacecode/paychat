@@ -26,7 +26,8 @@ class OfflineOrderSyncService
         private OrderService $orderService,
         private PaymentService $paymentService,
         private OrderKitchenDispatchService $kitchenDispatch,
-        private InvoiceService $invoiceService
+        private InvoiceService $invoiceService,
+        private TableSessionService $tableSessionService
     ) {
     }
 
@@ -79,7 +80,7 @@ class OfflineOrderSyncService
             });
 
             $order = $this->generateInvoiceAfterSync($tenant, $payload, $result['order'], $preferredInvoiceNumber);
-            $response = $this->buildResponse($payload, $order, $result['payment']);
+            $response = $this->buildResponse($payload, $order, $result['payment'], $result['side_effects'] ?? []);
 
             $sync->update([
                 'backend_order_id' => $result['order']->id,
@@ -186,9 +187,9 @@ class OfflineOrderSyncService
             $customerId,
             $payload['order_type'] ?? 'pos',
             $payload['table_id'] ?? null,
-            null,
-            null,
-            null,
+            $payload['dining_flow'] ?? null,
+            $payload['guest_count'] ?? null,
+            $payload['table_session_id'] ?? null,
             [
                 'delivery_channel' => $payload['delivery_channel'] ?? null,
                 'delivery_channel_label' => $payload['delivery_channel_label'] ?? null,
@@ -198,15 +199,44 @@ class OfflineOrderSyncService
 
         $this->applyOfflineOrderMetadata($order, $payload);
         $this->syncItems($order, $payload);
+        $this->replayTableContext($order->fresh(), $payload);
         $this->attachCustomerSnapshot($order, $payload['customer'] ?? null);
         $this->orderService->moveToPendingPayment($order->fresh());
 
         $payment = $this->createAndCompletePayment($order->fresh(), $payload);
+        $sideEffects = [
+            'table_session' => $this->closeTableSessionAfterPayment($order->fresh(), $payment),
+        ];
 
         return [
             'order' => $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'token'),
             'payment' => $payment->fresh(),
+            'side_effects' => $sideEffects,
         ];
+    }
+
+    private function replayTableContext(Order $order, array $payload): void
+    {
+        $diningFlow = $payload['dining_flow'] ?? null;
+        $primaryTableId = $payload['primary_table_id'] ?? $payload['table_id'] ?? null;
+
+        if ($diningFlow !== 'table_service' || ! $primaryTableId) {
+            return;
+        }
+
+        $linkedTableIds = collect($payload['linked_table_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0 && $id !== (int) $primaryTableId)
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->tableSessionService->assignOrderTables(
+            $order,
+            (int) $primaryTableId,
+            $linkedTableIds,
+            isset($payload['guest_count']) ? (int) $payload['guest_count'] : null
+        );
     }
 
     private function syncItems(Order $order, array $payload): void
@@ -253,6 +283,29 @@ class OfflineOrderSyncService
         $this->kitchenDispatch->ensureTokenAndDispatchWhenReady($order->fresh(), 'offline_order_synced');
 
         return $payment;
+    }
+
+    private function closeTableSessionAfterPayment(Order $order, Payment $payment): string
+    {
+        if ($order->dining_flow !== 'table_service' || $order->payment_status !== 'paid') {
+            return 'pending';
+        }
+
+        try {
+            $this->tableSessionService->closeForOrder($order);
+            return 'success';
+        } catch (\Throwable $e) {
+            Observability::logFailure('offline.table_service.close_after_payment.failed', $e, [
+                'tenant_id' => app()->bound('currentTenant') ? app('currentTenant')->id : null,
+                'order_id' => $order->id,
+                'payment_id' => $payment->id,
+                'table_session_id' => $order->table_session_id,
+                'local_order_id' => data_get($order->meta, 'local_order_id'),
+                'action' => 'offline.table_service.close_after_payment',
+            ]);
+
+            return 'failed';
+        }
     }
 
     private function resolveCustomerId(?array $customer): ?int
@@ -311,6 +364,10 @@ class OfflineOrderSyncService
                 'offline_created_at' => $payload['offline_created_at'] ?? null,
                 'offline_invoice_number' => $payload['invoice']['offline_invoice_number'] ?? null,
                 'offline_token_number' => $payload['token']['offline_token_number'] ?? null,
+                'source_flow' => $payload['source_flow'] ?? null,
+                'table_group_label' => $payload['table_group_label'] ?? null,
+                'table_snapshot' => $payload['table_snapshot'] ?? null,
+                'table_session_snapshot' => $payload['table_session_snapshot'] ?? null,
                 'discount' => $payload['discount'] ?? null,
                 'tax_summary' => $payload['tax_summary'] ?? null,
             ]),
@@ -341,7 +398,7 @@ class OfflineOrderSyncService
         ]);
     }
 
-    private function buildResponse(array $payload, Order $order, Payment $payment): array
+    private function buildResponse(array $payload, Order $order, Payment $payment, array $sideEffects = []): array
     {
         $orderResource = (new OrderResource($order))->resolve();
         $invoiceUrl = data_get($order->meta, 'invoice.url');
@@ -358,6 +415,9 @@ class OfflineOrderSyncService
             'payment_id' => $payment->id,
             'token_id' => $order->token?->id,
             'token_number' => $order->token?->token_code,
+            'side_effects' => array_merge([
+                'table_session' => 'pending',
+            ], $sideEffects),
             'message' => 'Offline order synced successfully',
             'order' => $orderResource,
         ];
