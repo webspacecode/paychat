@@ -13,29 +13,52 @@ class ReportEngineService
     private const ALL_LOCATIONS_ID = 0;
     private const EXCLUDED_ORDER_STATUSES = ['draft', 'cancelled', 'void', 'refunded'];
     private const PAID_PAYMENT_STATUS = 'paid';
+    private const DEADLOCK_RETRY_ATTEMPTS = 5;
+    private const AGGREGATE_UNIQUE_INDEXES = [
+        'report_payment_breakdowns' => 'report_payments_unique_identity',
+        'report_top_products_daily' => 'report_top_products_unique_identity',
+        'report_hourly_sales' => 'report_hourly_sales_unique_identity',
+    ];
+    private const AGGREGATE_SECTIONS = ['sales', 'payments', 'top_products', 'hourly', 'kpi'];
 
-    public function generateDailyReports($tenantId, $date)
+    public function generateDailyReports($tenantId, $date, ?array $sections = null)
     {
         $date = Carbon::parse($date)->toDateString();
+        $sections = $this->normalizeAggregateSections($sections);
 
         foreach ($this->reportLocationIds($tenantId, $date) as $locationId) {
-            DB::connection('tenant')->transaction(function () use ($tenantId, $date, $locationId) {
-                $this->generateSales($tenantId, $date, $locationId);
-                $this->generatePayments($tenantId, $date, $locationId);
-                $this->generateTopProducts($tenantId, $date, $locationId);
-                $this->generateHourly($tenantId, $date, $locationId);
-                $this->generateKPI($tenantId, $date, $locationId);
-            });
+            DB::connection('tenant')->transaction(function () use ($tenantId, $date, $locationId, $sections) {
+                if (in_array('sales', $sections, true)) {
+                    $this->generateSales($tenantId, $date, $locationId);
+                }
+
+                if (in_array('payments', $sections, true)) {
+                    $this->generatePayments($tenantId, $date, $locationId);
+                }
+
+                if (in_array('top_products', $sections, true)) {
+                    $this->generateTopProducts($tenantId, $date, $locationId);
+                }
+
+                if (in_array('hourly', $sections, true)) {
+                    $this->generateHourly($tenantId, $date, $locationId);
+                }
+
+                if (in_array('kpi', $sections, true)) {
+                    $this->generateKPI($tenantId, $date, $locationId);
+                }
+            }, self::DEADLOCK_RETRY_ATTEMPTS);
         }
     }
 
-    public function generateReportsForRange($tenantId, $startDate, $endDate): void
+    public function generateReportsForRange($tenantId, $startDate, $endDate, ?array $sections = null): void
     {
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
+        $sections = $this->normalizeAggregateSections($sections);
 
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
-            $this->generateDailyReports($tenantId, $date->toDateString());
+            $this->generateDailyReports($tenantId, $date->toDateString(), $sections);
         }
     }
 
@@ -693,7 +716,13 @@ class ReportEngineService
             ]);
         }
 
-        $this->replaceAggregateRows('report_payment_breakdowns', $this->identity($tenantId, $date, $locationId), $rows);
+        $this->replaceAggregateRows(
+            'report_payment_breakdowns',
+            $this->identity($tenantId, $date, $locationId),
+            $rows,
+            ['tenant_id', 'location_id', 'date', 'payment_method'],
+            ['total_amount', 'transaction_count', 'percentage', 'updated_at']
+        );
     }
 
     private function generateTopProducts($tenantId, string $date, ?int $locationId): void
@@ -730,7 +759,13 @@ class ReportEngineService
             ]);
         }
 
-        $this->replaceAggregateRows('report_top_products_daily', $this->identity($tenantId, $date, $locationId), $rows);
+        $this->replaceAggregateRows(
+            'report_top_products_daily',
+            $this->identity($tenantId, $date, $locationId),
+            $rows,
+            ['tenant_id', 'location_id', 'date', 'product_id'],
+            ['product_name', 'quantity_sold', 'revenue', 'rank', 'updated_at']
+        );
     }
 
     private function generateHourly($tenantId, string $date, ?int $locationId): void
@@ -757,7 +792,13 @@ class ReportEngineService
             ]);
         }
 
-        $this->replaceAggregateRows('report_hourly_sales', $this->identity($tenantId, $date, $locationId), $rows);
+        $this->replaceAggregateRows(
+            'report_hourly_sales',
+            $this->identity($tenantId, $date, $locationId),
+            $rows,
+            ['tenant_id', 'location_id', 'date', 'hour'],
+            ['orders_count', 'revenue', 'updated_at']
+        );
     }
 
     private function generateKPI($tenantId, string $date, ?int $locationId): void
@@ -878,13 +919,84 @@ class ReportEngineService
         $query->where('location_id', $this->reportLocationId($locationId));
     }
 
-    private function replaceAggregateRows(string $table, array $identity, array $rows): void
+    private function normalizeAggregateSections(?array $sections): array
     {
-        DB::table($table)->where($identity)->delete();
-
-        if ($rows) {
-            DB::table($table)->insert($rows);
+        if ($sections === null) {
+            return self::AGGREGATE_SECTIONS;
         }
+
+        $sections = array_values(array_intersect(self::AGGREGATE_SECTIONS, $sections));
+
+        return $sections ?: self::AGGREGATE_SECTIONS;
+    }
+
+    private function replaceAggregateRows(string $table, array $identity, array $rows, array $uniqueBy, array $updateColumns): void
+    {
+        if (! $this->hasAggregateUniqueIndex($table)) {
+            DB::table($table)->where($identity)->delete();
+
+            if ($rows) {
+                DB::table($table)->insert($rows);
+            }
+
+            return;
+        }
+
+        if (! $rows) {
+            DB::table($table)->where($identity)->delete();
+            return;
+        }
+
+        $dimensionColumns = array_values(array_diff($uniqueBy, array_keys($identity)));
+
+        if (count($dimensionColumns) === 1) {
+            $dimensionColumn = $dimensionColumns[0];
+            $currentValues = collect($rows)->pluck($dimensionColumn)->all();
+
+            DB::table($table)
+                ->where($identity)
+                ->whereNotIn($dimensionColumn, $currentValues)
+                ->delete();
+        } else {
+            DB::table($table)->where($identity)->delete();
+        }
+
+        usort($rows, function (array $a, array $b) use ($uniqueBy) {
+            foreach ($uniqueBy as $column) {
+                $comparison = $a[$column] <=> $b[$column];
+
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+            }
+
+            return 0;
+        });
+
+        DB::table($table)->upsert($rows, $uniqueBy, $updateColumns);
+    }
+
+    private function hasAggregateUniqueIndex(string $table): bool
+    {
+        $index = self::AGGREGATE_UNIQUE_INDEXES[$table] ?? null;
+
+        if ($index === null || ! Schema::hasTable($table)) {
+            return false;
+        }
+
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            return DB::selectOne("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND name = ?", [$table, $index]) !== null;
+        }
+
+        if ($driver === 'mysql') {
+            $safeTable = str_replace('`', '``', $table);
+
+            return DB::selectOne("SHOW INDEX FROM `{$safeTable}` WHERE Key_name = ?", [$index]) !== null;
+        }
+
+        return false;
     }
 
     private function reportLocationId(?int $locationId): int

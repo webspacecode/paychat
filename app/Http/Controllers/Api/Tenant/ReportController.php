@@ -18,7 +18,7 @@ class ReportController extends Controller
         $locationId = $this->locationId($request);
         [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
         $this->logAggregationRange('summary', $tenantId, $start, $end, $locationId);
-        $this->refreshAggregates($reports, $tenantId, $start, $end);
+        $this->refreshAggregates($reports, $tenantId, $start, $end, ['sales', 'payments', 'hourly']);
 
         $totals = $reports->rangeSummary($tenantId, $start, $end, $locationId);
         $peakHour = $this->peakHourPayload($reports->rangeHourly($tenantId, $start, $end, $locationId));
@@ -49,7 +49,7 @@ class ReportController extends Controller
         $locationId = $this->locationId($request);
         [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
         $this->logAggregationRange('payments', $tenantId, $start, $end, $locationId);
-        $this->refreshAggregates($reports, $tenantId, $start, $end);
+        $this->refreshAggregates($reports, $tenantId, $start, $end, ['payments']);
 
         return $reports->rangePayments($tenantId, $start, $end, $locationId);
     }
@@ -60,7 +60,7 @@ class ReportController extends Controller
         $locationId = $this->locationId($request);
         [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
         $this->logAggregationRange('top_products', $tenantId, $start, $end, $locationId);
-        $this->refreshAggregates($reports, $tenantId, $start, $end);
+        $this->refreshAggregates($reports, $tenantId, $start, $end, ['top_products']);
 
         return $reports->rangeTopProducts(
             $tenantId,
@@ -77,7 +77,7 @@ class ReportController extends Controller
         $locationId = $this->locationId($request);
         [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
         $this->logAggregationRange('hourly', $tenantId, $start, $end, $locationId);
-        $this->refreshAggregates($reports, $tenantId, $start, $end);
+        $this->refreshAggregates($reports, $tenantId, $start, $end, ['hourly']);
 
         return $reports->rangeHourly($tenantId, $start, $end, $locationId);
     }
@@ -111,7 +111,7 @@ class ReportController extends Controller
     public function dailySales(Request $request, ReportEngineService $reports)
     {
         $filters = $this->reportFilters($request);
-        $this->refreshAggregates($reports, $this->tenantId(), $filters['start_date'], $filters['end_date']);
+        $this->refreshAggregates($reports, $this->tenantId(), $filters['start_date'], $filters['end_date'], ['sales', 'payments']);
 
         return response()->json($this->reportPayload(
             'daily-sales',
@@ -134,7 +134,6 @@ class ReportController extends Controller
     public function bestSellingProducts(Request $request, ReportEngineService $reports)
     {
         $filters = $this->reportFilters($request);
-        $this->refreshAggregates($reports, $this->tenantId(), $filters['start_date'], $filters['end_date']);
 
         return response()->json($this->reportPayload(
             'best-selling-products',
@@ -157,7 +156,6 @@ class ReportController extends Controller
     public function outlets(Request $request, ReportEngineService $reports)
     {
         $filters = $this->reportFilters($request);
-        $this->refreshAggregates($reports, $this->tenantId(), $filters['start_date'], $filters['end_date']);
 
         return response()->json($this->reportPayload(
             'outlets',
@@ -383,7 +381,7 @@ class ReportController extends Controller
         ]);
     }
 
-    private function refreshAggregates(ReportEngineService $reports, $tenantId, string $startDate, string $endDate): void
+    private function refreshAggregates(ReportEngineService $reports, $tenantId, string $startDate, string $endDate, ?array $sections = null): void
     {
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
@@ -392,13 +390,13 @@ class ReportController extends Controller
             return;
         }
 
-        $reports->generateReportsForRange($tenantId, $startDate, $endDate);
+        $reports->generateReportsForRange($tenantId, $startDate, $endDate, $sections);
     }
 
     private function exportReportPayload(string $report, array $filters, ReportEngineService $reports): array
     {
-        if (in_array($report, ['daily-sales', 'best-selling-products', 'outlets', 'full-summary'], true)) {
-            $this->refreshAggregates($reports, $this->tenantId(), $filters['start_date'], $filters['end_date']);
+        if ($report === 'daily-sales' || $report === 'full-summary') {
+            $this->refreshAggregates($reports, $this->tenantId(), $filters['start_date'], $filters['end_date'], ['sales', 'payments']);
         }
 
         return match ($report) {

@@ -225,6 +225,27 @@ class ReportsManagementTest extends TestCase
         $this->assertFalse($hourly->has(11));
     }
 
+    public function test_selective_report_generation_updates_only_requested_aggregates(): void
+    {
+        DB::table('pos_payments')->where('payment_method', 'upi')->delete();
+        DB::table('pos_order_items')->where('product_id', 11)->delete();
+
+        $reports = app(ReportEngineService::class);
+        $reports->generateReportsForRange(77, '2026-08-01', '2026-08-01', ['payments']);
+
+        $payments = $reports->rangePayments(77, '2026-08-01', '2026-08-01')->keyBy('payment_method');
+        $topProducts = $reports->rangeTopProducts(77, '2026-08-01', '2026-08-01')->keyBy('product_name');
+
+        $this->assertFalse($payments->has('upi'));
+        $this->assertTrue($topProducts->has('Cake'));
+
+        $reports->generateReportsForRange(77, '2026-08-01', '2026-08-01', ['top_products']);
+
+        $topProducts = $reports->rangeTopProducts(77, '2026-08-01', '2026-08-01')->keyBy('product_name');
+
+        $this->assertFalse($topProducts->has('Cake'));
+    }
+
     private function createCentralSchema(): void
     {
         Schema::connection('mysql')->create('users', function (Blueprint $table) {

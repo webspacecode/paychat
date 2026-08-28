@@ -650,9 +650,9 @@
         </div>
     @endforeach
 
-    <div id="tenant-logs-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/80 px-3 py-4" data-modal aria-hidden="true">
-        <div class="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
-            <div class="flex flex-col gap-4 bg-slate-950 px-5 py-4 text-white lg:flex-row lg:items-center lg:justify-between">
+    <div id="tenant-logs-modal" class="fixed inset-0 z-[60] hidden bg-white" data-modal aria-hidden="true">
+        <div class="flex h-screen h-[100dvh] w-full flex-col overflow-hidden bg-white">
+            <div class="flex shrink-0 flex-col gap-4 bg-slate-950 px-5 py-4 text-white lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h2 class="text-xl font-semibold">Operational Logs</h2>
                     <p id="logs-tenant-name" class="mt-1 text-sm text-slate-300"></p>
@@ -662,8 +662,8 @@
                 </button>
             </div>
 
-            <div class="border-b border-slate-200 px-5 py-4">
-                <div class="grid gap-3 md:grid-cols-6">
+            <div class="shrink-0 border-b border-slate-200 px-5 py-4">
+                <div class="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
                     <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         Date
                         <input id="logs-date" type="date" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-slate-900">
@@ -713,10 +713,10 @@
                 </div>
             </div>
 
-            <div class="min-h-0 flex-1 overflow-auto">
+            <div class="min-h-0 flex-1 overflow-auto overscroll-contain">
                 <div id="logs-status" class="hidden px-5 py-4 text-sm text-slate-600"></div>
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="sticky top-0 bg-slate-50">
+                    <thead class="sticky top-0 z-10 bg-slate-50">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Time</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Level</th>
@@ -732,7 +732,7 @@
                 </table>
             </div>
 
-            <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-600">
+            <div class="flex shrink-0 items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-600">
                 <span id="logs-page-summary">No logs loaded</span>
                 <div class="flex gap-2">
                     <button id="logs-prev" type="button" class="master-action px-3 py-2 disabled:opacity-40">Prev</button>
