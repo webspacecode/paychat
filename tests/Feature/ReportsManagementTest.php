@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Api\Tenant\ReportController;
 use App\Services\ReportEngineService;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -244,6 +245,33 @@ class ReportsManagementTest extends TestCase
         $topProducts = $reports->rangeTopProducts(77, '2026-08-01', '2026-08-01')->keyBy('product_name');
 
         $this->assertFalse($topProducts->has('Cake'));
+    }
+
+    public function test_report_endpoints_serve_cached_data_when_refresh_deadlocks(): void
+    {
+        $reports = new class extends ReportEngineService {
+            public function generateReportsForRange($tenantId, $startDate, $endDate, ?array $sections = null): void
+            {
+                throw new QueryException(
+                    'tenant',
+                    'delete from `report_top_products_daily` where (`tenant_id` = ?)',
+                    [77],
+                    new \Exception('SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock'),
+                    ['40001', 1213, 'Deadlock found when trying to get lock']
+                );
+            }
+        };
+
+        $request = Request::create('/api/reports/summary', 'GET', [
+            'period' => 'custom',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-01',
+        ]);
+
+        $response = app(ReportController::class)->summary($request, $reports);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertEquals(200.0, $response->getData(true)['total_sales']);
     }
 
     private function createCentralSchema(): void

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Tenant;
 use App\Http\Controllers\Controller;
 use App\Services\ReportEngineService;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -390,7 +391,34 @@ class ReportController extends Controller
             return;
         }
 
-        $reports->generateReportsForRange($tenantId, $startDate, $endDate, $sections);
+        try {
+            $reports->generateReportsForRange($tenantId, $startDate, $endDate, $sections);
+        } catch (QueryException $exception) {
+            if (! $this->isReportRefreshConcurrencyError($exception)) {
+                throw $exception;
+            }
+
+            Log::warning('Dashboard report refresh skipped after database concurrency error', [
+                'tenant_id' => $tenantId,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'sections' => $sections,
+                'sql_state' => $exception->errorInfo[0] ?? null,
+                'driver_code' => $exception->errorInfo[1] ?? null,
+            ]);
+        }
+    }
+
+    private function isReportRefreshConcurrencyError(QueryException $exception): bool
+    {
+        $sqlState = (string) ($exception->errorInfo[0] ?? '');
+        $driverCode = (string) ($exception->errorInfo[1] ?? '');
+        $message = strtolower($exception->getMessage());
+
+        return $sqlState === '40001'
+            || in_array($driverCode, ['1205', '1213'], true)
+            || str_contains($message, 'deadlock')
+            || str_contains($message, 'lock wait timeout');
     }
 
     private function exportReportPayload(string $report, array $filters, ReportEngineService $reports): array
