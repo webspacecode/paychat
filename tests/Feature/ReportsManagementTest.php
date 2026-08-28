@@ -90,6 +90,56 @@ class ReportsManagementTest extends TestCase
         $this->assertStringContainsString('paychat-daily-sales-2026-08-01-to-2026-08-02.csv', $response->headers->get('content-disposition'));
     }
 
+    public function test_summary_payload_includes_peak_hour_from_hourly_aggregates(): void
+    {
+        $request = Request::create('/reports/summary', 'GET', [
+            'period' => 'custom',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-01',
+            'location_id' => 'all',
+        ]);
+
+        $payload = app(ReportController::class)->summary($request, app(ReportEngineService::class))->getData(true);
+
+        $this->assertSame(2, $payload['orders']);
+        $this->assertEquals(200.0, $payload['sales']);
+        $this->assertSame(10, $payload['peak_hour']);
+        $this->assertSame('10:00 - 11:00', $payload['peak_hour_label']);
+        $this->assertSame(1, $payload['peak_hour_orders']);
+        $this->assertEquals(120.0, $payload['peak_hour_revenue']);
+    }
+
+    public function test_customer_report_tracks_customers_for_range_and_all_customers(): void
+    {
+        $reports = app(ReportEngineService::class);
+
+        $today = $reports->customerReport(77, '2026-08-01', '2026-08-01', null, 'today');
+        $all = $reports->customerReport(77, '2026-08-01', '2026-08-02', null, 'all');
+
+        $this->assertSame(1, $today['summary']['total_customers']);
+        $this->assertSame(1, $today['summary']['customers_with_sales']);
+        $this->assertSame(120.0, $today['summary']['total_spend']);
+        $this->assertSame(1, $today['summary']['walk_in_orders']);
+        $this->assertSame('Asha Customer', $today['rows'][0]['name']);
+        $this->assertSame(120.0, $today['rows'][0]['range_spend']);
+
+        $this->assertSame(2, $all['summary']['total_customers']);
+        $this->assertSame(2, $all['meta']['total']);
+    }
+
+    public function test_customer_report_respects_location_and_search_filters(): void
+    {
+        $reports = app(ReportEngineService::class);
+
+        $locationOne = $reports->customerReport(77, '2026-08-01', '2026-08-02', 1, 'today');
+        $search = $reports->customerReport(77, '2026-08-01', '2026-08-02', null, 'all', 'all', 'noorder');
+
+        $this->assertSame(1, $locationOne['summary']['total_customers']);
+        $this->assertSame('Asha Customer', $locationOne['rows'][0]['name']);
+        $this->assertSame(1, $search['summary']['total_customers']);
+        $this->assertSame('No Order Customer', $search['rows'][0]['name']);
+    }
+
     public function test_report_generation_is_idempotent_for_all_locations(): void
     {
         $reports = app(ReportEngineService::class);
@@ -127,6 +177,28 @@ class ReportsManagementTest extends TestCase
         $this->assertAggregateRowCount('report_top_products_daily', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'product_id' => 10], 1);
         $this->assertAggregateRowCount('report_hourly_sales', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'hour' => 10], 1);
         $this->assertAggregateRowCount('report_kpi_summaries', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01'], 1);
+    }
+
+    public function test_report_generation_remains_idempotent_when_unique_aggregate_indexes_are_missing(): void
+    {
+        DB::statement('DROP INDEX IF EXISTS report_payments_unique_identity');
+        DB::statement('DROP INDEX IF EXISTS report_top_products_unique_identity');
+        DB::statement('DROP INDEX IF EXISTS report_hourly_sales_unique_identity');
+
+        $reports = app(ReportEngineService::class);
+
+        $reports->generateDailyReports(77, '2026-08-01');
+        $reports->generateDailyReports(77, '2026-08-01');
+        $reports->generateDailyReports(77, '2026-08-01');
+
+        $summary = $reports->dailySalesReport(77, '2026-08-01', '2026-08-01');
+
+        $this->assertSame(2, $summary['summary']['orders']);
+        $this->assertSame(120.0, $summary['summary']['cash_total']);
+        $this->assertSame(80.0, $summary['summary']['upi_total']);
+        $this->assertAggregateRowCount('report_payment_breakdowns', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'payment_method' => 'cash'], 1);
+        $this->assertAggregateRowCount('report_top_products_daily', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'product_id' => 10], 1);
+        $this->assertAggregateRowCount('report_hourly_sales', ['tenant_id' => 77, 'location_id' => 0, 'date' => '2026-08-01', 'hour' => 10], 1);
     }
 
     public function test_report_generation_removes_stale_payment_product_and_hour_rows(): void
@@ -179,9 +251,22 @@ class ReportsManagementTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::connection('tenant')->create('pos_customers', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('email')->nullable();
+            $table->integer('loyalty_points')->default(0);
+            $table->integer('total_visits')->default(0);
+            $table->decimal('total_spend', 15, 2)->default(0);
+            $table->timestamp('last_visit_at')->nullable();
+            $table->timestamps();
+        });
+
         Schema::connection('tenant')->create('pos_orders', function (Blueprint $table) {
             $table->id();
             $table->string('order_no')->unique();
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->unsignedBigInteger('location_id')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('completed_by')->nullable();
@@ -250,10 +335,15 @@ class ReportsManagementTest extends TestCase
             ['id' => 11, 'name' => 'Cake', 'sku' => 'CAK', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
+        DB::table('pos_customers')->insert([
+            ['id' => 1, 'name' => 'Asha Customer', 'phone' => '919999000001', 'email' => 'asha@example.test', 'loyalty_points' => 24, 'total_visits' => 1, 'total_spend' => 120, 'last_visit_at' => '2026-08-01 10:05:00', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'name' => 'No Order Customer', 'phone' => 'noorder', 'email' => null, 'loyalty_points' => 0, 'total_visits' => 0, 'total_spend' => 0, 'last_visit_at' => null, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         DB::table('pos_orders')->insert([
-            ['id' => 100, 'order_no' => 'R-100', 'location_id' => 1, 'created_by' => 5, 'completed_by' => 5, 'business_date' => '2026-08-01', 'status' => 'completed', 'payment_status' => 'paid', 'subtotal' => 100, 'discount' => 0, 'tax' => 20, 'total' => 120, 'created_at' => '2026-08-01 10:00:00', 'updated_at' => now()],
-            ['id' => 101, 'order_no' => 'R-101', 'location_id' => 2, 'created_by' => null, 'completed_by' => null, 'business_date' => '2026-08-01', 'status' => 'completed', 'payment_status' => 'paid', 'subtotal' => 80, 'discount' => 0, 'tax' => 0, 'total' => 80, 'created_at' => '2026-08-01 11:00:00', 'updated_at' => now()],
-            ['id' => 102, 'order_no' => 'R-102', 'location_id' => 1, 'created_by' => 5, 'completed_by' => 5, 'business_date' => '2026-08-01', 'status' => 'cancelled', 'payment_status' => 'paid', 'subtotal' => 500, 'discount' => 0, 'tax' => 0, 'total' => 500, 'created_at' => '2026-08-01 12:00:00', 'updated_at' => now()],
+            ['id' => 100, 'order_no' => 'R-100', 'customer_id' => 1, 'location_id' => 1, 'created_by' => 5, 'completed_by' => 5, 'business_date' => '2026-08-01', 'status' => 'completed', 'payment_status' => 'paid', 'subtotal' => 100, 'discount' => 0, 'tax' => 20, 'total' => 120, 'created_at' => '2026-08-01 10:00:00', 'updated_at' => now()],
+            ['id' => 101, 'order_no' => 'R-101', 'customer_id' => null, 'location_id' => 2, 'created_by' => null, 'completed_by' => null, 'business_date' => '2026-08-01', 'status' => 'completed', 'payment_status' => 'paid', 'subtotal' => 80, 'discount' => 0, 'tax' => 0, 'total' => 80, 'created_at' => '2026-08-01 11:00:00', 'updated_at' => now()],
+            ['id' => 102, 'order_no' => 'R-102', 'customer_id' => 1, 'location_id' => 1, 'created_by' => 5, 'completed_by' => 5, 'business_date' => '2026-08-01', 'status' => 'cancelled', 'payment_status' => 'paid', 'subtotal' => 500, 'discount' => 0, 'tax' => 0, 'total' => 500, 'created_at' => '2026-08-01 12:00:00', 'updated_at' => now()],
         ]);
 
         DB::table('pos_order_items')->insert([

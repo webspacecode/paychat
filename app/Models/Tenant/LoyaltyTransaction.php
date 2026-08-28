@@ -18,6 +18,7 @@ class LoyaltyTransaction extends Model
         'description',
         'meta',
         'created_by',
+        'redemption_key',
     ];
 
     protected $casts = [

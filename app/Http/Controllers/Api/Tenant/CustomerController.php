@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\LoyaltyTransaction;
 use App\Models\Tenant\Order;
+use App\Services\LoyaltyService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CustomerController extends Controller
 {
@@ -36,6 +39,9 @@ class CustomerController extends Controller
                 'location_id',
                 'customer_type',
                 'loyalty_points',
+                'total_visits',
+                'total_spend',
+                'last_visit_at',
                 'created_at',
             ])
             ->when($search, function ($query, $search) {
@@ -65,9 +71,11 @@ class CustomerController extends Controller
         return response()->json($this->customerPayload($customer));
     }
 
-    public function summary(string $tenantSlug, Customer $customer)
+    public function summary(string $tenantSlug, Customer $customer, ?LoyaltyService $loyalty = null)
     {
-        $customer->loadMissing('loyaltyTransactions');
+        $loyalty ??= app(LoyaltyService::class);
+        $loyaltySettings = $loyalty->settings();
+        $rewardTiers = $loyalty->eligibleRewardTiers((int) $customer->loyalty_points, $loyaltySettings);
 
         $recentOrders = $this->completedPaidOrders($customer)
             ->latest()
@@ -76,18 +84,26 @@ class CustomerController extends Controller
             ->map(fn (Order $order) => $this->orderPayload($order))
             ->values();
 
-        $recentTransactions = $customer->loyaltyTransactions()
-            ->latest()
-            ->limit(10)
-            ->get()
-            ->map(fn (LoyaltyTransaction $transaction) => $this->transactionPayload($transaction))
-            ->values();
+        $recentTransactions = collect();
+
+        if (Schema::hasTable('loyalty_transactions')) {
+            $recentTransactions = $customer->loyaltyTransactions()
+                ->latest()
+                ->latest('id')
+                ->limit(10)
+                ->get()
+                ->map(fn (LoyaltyTransaction $transaction) => $this->transactionPayload($transaction))
+                ->values();
+        }
 
         return response()->json([
             'customer' => $this->customerPayload($customer),
             'loyalty_points' => (int) $customer->loyalty_points,
             'total_visits' => (int) $customer->total_visits,
             'total_spend' => (float) $customer->total_spend,
+            'reward_threshold' => (int) $loyaltySettings['reward_threshold'],
+            'reward_eligible' => count($rewardTiers) > 0,
+            'reward_tiers' => $rewardTiers,
             'average_order_value' => $customer->total_visits > 0
                 ? round(((float) $customer->total_spend) / ((int) $customer->total_visits), 2)
                 : 0,
@@ -126,8 +142,30 @@ class CustomerController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
+        if (! Schema::hasTable('loyalty_transactions')) {
+            return response()->json([
+                'data' => [],
+                'links' => [
+                    'first' => null,
+                    'last' => null,
+                    'prev' => null,
+                    'next' => null,
+                ],
+                'meta' => [
+                    'current_page' => 1,
+                    'from' => null,
+                    'last_page' => 1,
+                    'path' => $request->url(),
+                    'per_page' => $validated['per_page'] ?? 20,
+                    'to' => null,
+                    'total' => 0,
+                ],
+            ]);
+        }
+
         $transactions = $customer->loyaltyTransactions()
             ->latest()
+            ->latest('id')
             ->paginate($validated['per_page'] ?? 20);
 
         $transactions->getCollection()->transform(
@@ -135,6 +173,29 @@ class CustomerController extends Controller
         );
 
         return response()->json($transactions);
+    }
+
+    public function redeemLoyalty(string $tenantSlug, Request $request, Customer $customer, LoyaltyService $loyalty)
+    {
+        $validated = $request->validate([
+            'reward_tier_id' => ['required', 'string', 'max:80'],
+            'qr_token' => ['required', 'string', 'max:1000'],
+            'order_id' => ['nullable', 'integer'],
+            'idempotency_key' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        if (! empty($validated['order_id']) && ! Order::query()->whereKey($validated['order_id'])->exists()) {
+            throw ValidationException::withMessages([
+                'order_id' => ['Selected order was not found.'],
+            ]);
+        }
+
+        return response()->json($loyalty->redeem($customer, $validated));
+    }
+
+    public function voidLoyaltyRedemption(string $tenantSlug, Customer $customer, LoyaltyTransaction $transaction, LoyaltyService $loyalty)
+    {
+        return response()->json($loyalty->voidRedemption($customer, $transaction));
     }
 
     private function completedPaidOrders(Customer $customer)

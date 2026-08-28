@@ -129,6 +129,13 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::get('/customers/{customer}/summary', [CustomerController::class, 'summary'])->whereNumber('customer');
     Route::get('/customers/{customer}/orders', [CustomerController::class, 'orders'])->whereNumber('customer');
     Route::get('/customers/{customer}/loyalty-transactions', [CustomerController::class, 'loyaltyTransactions'])->whereNumber('customer');
+    Route::post('/customers/{customer}/loyalty/redeem', [CustomerController::class, 'redeemLoyalty'])
+        ->middleware('permission:payment.collect')
+        ->whereNumber('customer');
+    Route::post('/customers/{customer}/loyalty/redemptions/{transaction}/void', [CustomerController::class, 'voidLoyaltyRedemption'])
+        ->middleware('permission:payment.collect')
+        ->whereNumber('customer')
+        ->whereNumber('transaction');
 
     Route::prefix('bakery')->middleware(['industry:bakery', 'feature:bakery_management', 'permission:bakery.manage'])->group(function () {
         Route::get('/orders', [BakeryOrderController::class, 'index']);
@@ -315,6 +322,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::get('/best-selling-products', [ReportController::class, 'bestSellingProducts']);
         Route::get('/cashiers', [ReportController::class, 'cashiers']);
         Route::get('/outlets', [ReportController::class, 'outlets']);
+        Route::get('/customers', [ReportController::class, 'customers']);
         Route::get('/export', [ReportController::class, 'export']);
     });
 

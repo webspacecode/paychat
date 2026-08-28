@@ -70,14 +70,21 @@ class OrderResource extends JsonResource
             'customer' => $this->customer ? [
                 'id' => $this->customer->id,
                 'name' => $this->customer->name,
+                'email' => $this->customer->email,
                 'phone' => $this->customer->phone,
                 'address' => $this->customer->address,
+                'loyalty_points' => (int) $this->customer->loyalty_points,
+                'total_visits' => (int) $this->customer->total_visits,
+                'total_spend' => (float) $this->customer->total_spend,
             ] : null,
 
             'walk_in_customer' => [
                 'name' => $this->customer_name,
                 'phone' => $this->customer_phone,
             ],
+
+            'loyalty_award' => $this->when($this->loyalty_award !== null, $this->loyalty_award),
+            'loyalty_context' => $this->when($this->loyalty_context !== null, $this->loyalty_context),
 
             /*
             |--------------------------------------------------------------------------

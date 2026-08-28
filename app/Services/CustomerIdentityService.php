@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Tenant\Customer;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Schema;
 
 class CustomerIdentityService
 {
@@ -42,12 +44,17 @@ class CustomerIdentityService
 
     public function create(array $data): Customer
     {
-        return Customer::create([
+        $payload = [
             'name' => $data['name'] ?? null,
             'phone' => $this->normalizePhone($data['phone'] ?? null),
             'email' => $data['email'] ?? null,
-            'address' => $data['address'] ?? null,
-        ]);
+        ];
+
+        if (Schema::hasColumn((new Customer())->getTable(), 'address')) {
+            $payload['address'] = $data['address'] ?? null;
+        }
+
+        return Customer::create($payload);
     }
 
     public function resolveOrCreate(array $data): ?Customer
@@ -55,9 +62,48 @@ class CustomerIdentityService
         if (! empty($data['customer_id'])) {
             return Customer::find($data['customer_id']);
         }
+
         $phone = $this->normalizePhone($data['phone'] ?? null);
         if (! $phone) return null;
+
         $customer = Customer::whereIn('phone', $this->phoneCandidates($data['phone'] ?? null, $phone))->first();
-        return $customer ?: $this->create($data);
+        if ($customer) {
+            return $this->fillMissingIdentity($customer, $data);
+        }
+
+        try {
+            return $this->create($data);
+        } catch (QueryException $exception) {
+            $customer = Customer::whereIn('phone', $this->phoneCandidates($data['phone'] ?? null, $phone))->first();
+
+            if ($customer) {
+                return $this->fillMissingIdentity($customer, $data);
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function fillMissingIdentity(Customer $customer, array $data): Customer
+    {
+        $updates = [];
+
+        foreach (['name', 'email', 'address'] as $field) {
+            if (! Schema::hasColumn($customer->getTable(), $field)) {
+                continue;
+            }
+
+            $value = $data[$field] ?? null;
+
+            if (! $customer->{$field} && is_string($value) && trim($value) !== '') {
+                $updates[$field] = trim($value);
+            }
+        }
+
+        if ($updates) {
+            $customer->forceFill($updates)->save();
+        }
+
+        return $customer;
     }
 }

@@ -421,7 +421,13 @@ That is the purpose of this system.
 
 To run migrations on specific tenants db
 ```
-php artisan tenant:migrate-db tenant_idli_junction --path=database/migrations/tenant/2026_07_01_000001_add_dispatch_channel_to_kitchen_batches.php
+php artisan tenant:migrate-db tenant_paloma_coffee_co --path=database/migrations/tenant/2026_08_27_000002_add_address_to_pos_customers_table.php
+
+php artisan tenant:migrate-db tenant_paloma_coffee_co --path=database/migrations/tenant/2026_08_27_000003_create_loyalty_reward_tokens_table.php
+
+php artisan tenant:migrate-db tenant_paloma_coffee_co --path=database/migrations/tenant/2026_08_27_000004_add_redemption_key_to_loyalty_transactions_table.php
+
+
 php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --pretend
 php artisan tenant:migrate-db tenant_frozen_cafe --path=database/migrations/tenant --step
 ```

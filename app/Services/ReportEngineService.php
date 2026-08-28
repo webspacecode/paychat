@@ -435,6 +435,152 @@ class ReportEngineService
         ];
     }
 
+    public function customerReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, string $period = 'today', string $customerType = 'all', ?string $search = null, int $perPage = 50): array
+    {
+        if (! Schema::hasTable('pos_customers') || ! Schema::hasColumn('pos_orders', 'customer_id')) {
+            return [
+                'summary' => $this->emptyCustomerSummary($startDate, $endDate, $locationId),
+                'rows' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'per_page' => max(1, min(200, $perPage)),
+                    'total' => 0,
+                    'last_page' => 1,
+                ],
+            ];
+        }
+
+        $period = strtolower((string) $period);
+        $perPage = max(1, min(200, $perPage));
+        $customerType = in_array($customerType, ['all', 'new', 'repeat', 'vip', 'inactive'], true) ? $customerType : 'all';
+
+        $orderTotals = DB::table('pos_orders')
+            ->where('payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES)
+            ->whereNotNull('customer_id')
+            ->when($locationId !== null, fn ($q) => $q->where('location_id', $locationId))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->select('customer_id')
+            ->selectRaw('COUNT(*) as orders_in_range')
+            ->selectRaw('COALESCE(SUM(total), 0) as spend_in_range')
+            ->selectRaw('MIN(created_at) as first_order_at')
+            ->selectRaw('MAX(created_at) as last_order_at')
+            ->groupBy('customer_id');
+
+        $selects = [
+            'pos_customers.id',
+            $this->customerColumn('name', "''").' as name',
+            $this->customerColumn('phone', "''").' as phone',
+            $this->customerColumn('email', "''").' as email',
+            $this->customerColumn('loyalty_points', '0').' as loyalty_points',
+            $this->customerColumn('total_visits', '0').' as total_visits',
+            $this->customerColumn('total_spend', '0').' as lifetime_spend',
+            $this->customerColumn('last_visit_at', 'NULL').' as last_visit_at',
+            'COALESCE(range_orders.orders_in_range, 0) as orders_in_range',
+            'COALESCE(range_orders.spend_in_range, 0) as spend_in_range',
+            'range_orders.first_order_at',
+            'range_orders.last_order_at',
+        ];
+
+        $base = DB::table('pos_customers')
+            ->leftJoinSub($orderTotals, 'range_orders', 'range_orders.customer_id', '=', 'pos_customers.id')
+            ->selectRaw(implode(', ', $selects));
+
+        if ($period !== 'all') {
+            $base->whereNotNull('range_orders.orders_in_range');
+        }
+
+        $search = trim((string) $search);
+        if ($search !== '') {
+            $base->where(function ($query) use ($search) {
+                foreach (['name', 'phone', 'email'] as $column) {
+                    if (Schema::hasColumn('pos_customers', $column)) {
+                        $query->orWhere("pos_customers.{$column}", 'like', "%{$search}%");
+                    }
+                }
+            });
+        }
+
+        match ($customerType) {
+            'new' => $base->whereRaw('COALESCE(range_orders.orders_in_range, 0) > 0')
+                ->whereRaw($this->customerColumn('total_visits', 'COALESCE(range_orders.orders_in_range, 0)').' <= 1'),
+            'repeat' => $base->whereRaw($this->customerColumn('total_visits', 'COALESCE(range_orders.orders_in_range, 0)').' > 1'),
+            'vip' => $base->whereRaw($this->customerColumn('total_spend', 'COALESCE(range_orders.spend_in_range, 0)').' >= 10000'),
+            'inactive' => $base->where(function ($query) {
+                $lastVisit = $this->customerColumn('last_visit_at', 'NULL');
+                $query->whereRaw("{$lastVisit} IS NULL")
+                    ->orWhereRaw("{$lastVisit} < ?", [now()->subDays(30)->toDateTimeString()]);
+            }),
+            default => null,
+        };
+
+        $summaryRow = DB::query()
+            ->fromSub(clone $base, 'customers_report')
+            ->selectRaw('COUNT(*) as total_customers')
+            ->selectRaw('COALESCE(SUM(CASE WHEN orders_in_range > 0 THEN 1 ELSE 0 END), 0) as customers_with_sales')
+            ->selectRaw('COALESCE(SUM(CASE WHEN total_visits <= 1 AND orders_in_range > 0 THEN 1 ELSE 0 END), 0) as new_customers')
+            ->selectRaw('COALESCE(SUM(CASE WHEN total_visits > 1 THEN 1 ELSE 0 END), 0) as returning_customers')
+            ->selectRaw('COALESCE(SUM(orders_in_range), 0) as total_visits')
+            ->selectRaw('COALESCE(SUM(spend_in_range), 0) as total_spend')
+            ->selectRaw('COALESCE(SUM(loyalty_points), 0) as loyalty_points')
+            ->first();
+
+        $walkInOrders = DB::table('pos_orders')
+            ->where('payment_status', self::PAID_PAYMENT_STATUS)
+            ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES)
+            ->whereNull('customer_id')
+            ->when($locationId !== null, fn ($q) => $q->where('location_id', $locationId))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->count();
+
+        $paginator = $base
+            ->orderByDesc('spend_in_range')
+            ->orderByDesc('orders_in_range')
+            ->orderBy('name')
+            ->paginate($perPage);
+
+        $rows = collect($paginator->items())->map(fn ($row) => [
+            'customer_id' => (int) $row->id,
+            'name' => $row->name ?: 'Walk-in saved customer',
+            'phone' => $row->phone ?: '-',
+            'email' => $row->email ?: '-',
+            'orders' => (int) $row->orders_in_range,
+            'range_spend' => round((float) $row->spend_in_range, 2),
+            'lifetime_visits' => (int) $row->total_visits,
+            'lifetime_spend' => round((float) $row->lifetime_spend, 2),
+            'loyalty_points' => (int) $row->loyalty_points,
+            'first_order_at' => $row->first_order_at,
+            'last_order_at' => $row->last_order_at,
+            'last_visit_at' => $row->last_visit_at,
+        ])->values()->all();
+
+        $totalCustomers = (int) ($summaryRow->total_customers ?? 0);
+        $totalSpend = round((float) ($summaryRow->total_spend ?? 0), 2);
+
+        return [
+            'summary' => [
+                'total_customers' => $totalCustomers,
+                'customers_with_sales' => (int) ($summaryRow->customers_with_sales ?? 0),
+                'new_customers' => (int) ($summaryRow->new_customers ?? 0),
+                'returning_customers' => (int) ($summaryRow->returning_customers ?? 0),
+                'total_visits' => (int) ($summaryRow->total_visits ?? 0),
+                'total_spend' => $totalSpend,
+                'avg_spend_per_customer' => $totalCustomers > 0 ? round($totalSpend / $totalCustomers, 2) : 0,
+                'loyalty_points' => (int) ($summaryRow->loyalty_points ?? 0),
+                'walk_in_orders' => (int) $walkInOrders,
+                'date_from' => $startDate,
+                'date_to' => $endDate,
+            ],
+            'rows' => $rows,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ];
+    }
+
     private function billingBaseQuery(Carbon $start, Carbon $end, ?int $locationId, ?int $userId, string $actorExpression)
     {
         return DB::table('pos_payments')
@@ -466,6 +612,31 @@ class ReportEngineService
         return count($columns) > 1
             ? 'COALESCE('.implode(', ', $columns).')'
             : ($columns[0] ?? 'NULL');
+    }
+
+    private function customerColumn(string $column, string $fallback): string
+    {
+        return Schema::hasColumn('pos_customers', $column)
+            ? "pos_customers.{$column}"
+            : $fallback;
+    }
+
+    private function emptyCustomerSummary(string $startDate, string $endDate, ?int $locationId): array
+    {
+        return [
+            'total_customers' => 0,
+            'customers_with_sales' => 0,
+            'new_customers' => 0,
+            'returning_customers' => 0,
+            'total_visits' => 0,
+            'total_spend' => 0,
+            'avg_spend_per_customer' => 0,
+            'loyalty_points' => 0,
+            'walk_in_orders' => 0,
+            'date_from' => $startDate,
+            'date_to' => $endDate,
+            'location_id' => $locationId,
+        ];
     }
 
     private function generateSales($tenantId, string $date, ?int $locationId): void
@@ -509,34 +680,20 @@ class ReportEngineService
             ->get();
 
         $total = $data->sum('total');
-        $seenMethods = [];
+        $rows = [];
 
         foreach ($data as $row) {
-            $seenMethods[] = $row->payment_method;
-
-            DB::table('report_payment_breakdowns')->upsert([
-                array_merge($this->identity($tenantId, $date, $locationId), [
+            $rows[] = array_merge($this->identity($tenantId, $date, $locationId), [
                     'payment_method' => $row->payment_method,
                     'total_amount' => $row->total,
                     'transaction_count' => $row->count,
                     'percentage' => $total > 0 ? round(($row->total / $total) * 100, 2) : 0,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]),
-            ],
-                ['tenant_id', 'location_id', 'date', 'payment_method'],
-                ['total_amount', 'transaction_count', 'percentage', 'updated_at']
-            );
+            ]);
         }
 
-        $stale = DB::table('report_payment_breakdowns')
-            ->where($this->identity($tenantId, $date, $locationId));
-
-        if ($seenMethods) {
-            $stale->whereNotIn('payment_method', $seenMethods);
-        }
-
-        $stale->delete();
+        $this->replaceAggregateRows('report_payment_breakdowns', $this->identity($tenantId, $date, $locationId), $rows);
     }
 
     private function generateTopProducts($tenantId, string $date, ?int $locationId): void
@@ -559,13 +716,10 @@ class ReportEngineService
             ->get();
 
         $rank = 1;
-        $seenProductIds = [];
+        $rows = [];
 
         foreach ($data as $item) {
-            $seenProductIds[] = $item->id;
-
-            DB::table('report_top_products_daily')->upsert([
-                array_merge($this->identity($tenantId, $date, $locationId), [
+            $rows[] = array_merge($this->identity($tenantId, $date, $locationId), [
                     'product_id' => $item->id,
                     'product_name' => $item->name,
                     'quantity_sold' => $item->qty,
@@ -573,21 +727,10 @@ class ReportEngineService
                     'rank' => $rank++,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]),
-            ],
-                ['tenant_id', 'location_id', 'date', 'product_id'],
-                ['product_name', 'quantity_sold', 'revenue', 'rank', 'updated_at']
-            );
+            ]);
         }
 
-        $stale = DB::table('report_top_products_daily')
-            ->where($this->identity($tenantId, $date, $locationId));
-
-        if ($seenProductIds) {
-            $stale->whereNotIn('product_id', $seenProductIds);
-        }
-
-        $stale->delete();
+        $this->replaceAggregateRows('report_top_products_daily', $this->identity($tenantId, $date, $locationId), $rows);
     }
 
     private function generateHourly($tenantId, string $date, ?int $locationId): void
@@ -602,33 +745,19 @@ class ReportEngineService
             ->groupBy(DB::raw($hourExpression))
             ->get();
 
-        $seenHours = [];
+        $rows = [];
 
         foreach ($data as $row) {
-            $seenHours[] = $row->hour;
-
-            DB::table('report_hourly_sales')->upsert([
-                array_merge($this->identity($tenantId, $date, $locationId), [
+            $rows[] = array_merge($this->identity($tenantId, $date, $locationId), [
                     'hour' => $row->hour,
                     'orders_count' => $row->orders,
                     'revenue' => $row->revenue,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]),
-            ],
-                ['tenant_id', 'location_id', 'date', 'hour'],
-                ['orders_count', 'revenue', 'updated_at']
-            );
+            ]);
         }
 
-        $stale = DB::table('report_hourly_sales')
-            ->where($this->identity($tenantId, $date, $locationId));
-
-        if ($seenHours) {
-            $stale->whereNotIn('hour', $seenHours);
-        }
-
-        $stale->delete();
+        $this->replaceAggregateRows('report_hourly_sales', $this->identity($tenantId, $date, $locationId), $rows);
     }
 
     private function generateKPI($tenantId, string $date, ?int $locationId): void
@@ -747,6 +876,15 @@ class ReportEngineService
     private function applyReportLocationFilter($query, ?int $locationId): void
     {
         $query->where('location_id', $this->reportLocationId($locationId));
+    }
+
+    private function replaceAggregateRows(string $table, array $identity, array $rows): void
+    {
+        DB::table($table)->where($identity)->delete();
+
+        if ($rows) {
+            DB::table($table)->insert($rows);
+        }
     }
 
     private function reportLocationId(?int $locationId): int

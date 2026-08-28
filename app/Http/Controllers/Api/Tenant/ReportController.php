@@ -21,17 +21,25 @@ class ReportController extends Controller
         $this->refreshAggregates($reports, $tenantId, $start, $end);
 
         $totals = $reports->rangeSummary($tenantId, $start, $end, $locationId);
+        $peakHour = $this->peakHourPayload($reports->rangeHourly($tenantId, $start, $end, $locationId));
 
         return response()->json([
             'date_from' => $start,
             'date_to' => $end,
             'location_id' => $request->get('location_id'),
             'sales' => $totals['total_sales'],
+            'total_sales' => $totals['total_sales'],
             'orders' => $totals['total_orders'],
+            'total_orders' => $totals['total_orders'],
             'avg_order' => $totals['avg_order_value'],
+            'avg_order_value' => $totals['avg_order_value'],
+            'total_tax' => $totals['total_tax'],
+            'total_discount' => $totals['total_discount'],
+            'net_sales' => $totals['net_sales'],
             'upi_percent' => $totals['upi_percent'],
             'cash_percent' => $totals['cash_percent'],
             'card_percent' => $totals['card_percent'],
+            ...$peakHour,
         ]);
     }
 
@@ -158,10 +166,36 @@ class ReportController extends Controller
         ));
     }
 
+    public function customers(Request $request, ReportEngineService $reports)
+    {
+        $filters = $this->reportFilters($request);
+        $validated = $request->validate([
+            'customer_type' => ['nullable', 'string', 'in:all,new,repeat,vip,inactive'],
+            'search' => ['nullable', 'string', 'max:150'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return response()->json($this->reportPayload(
+            'customers',
+            $filters,
+            $reports->customerReport(
+                $this->tenantId(),
+                $filters['start_date'],
+                $filters['end_date'],
+                $filters['location_id'],
+                $filters['period'],
+                $validated['customer_type'] ?? 'all',
+                $validated['search'] ?? null,
+                (int) ($validated['per_page'] ?? 50)
+            )
+        ));
+    }
+
     public function export(Request $request, ReportEngineService $reports)
     {
         $validated = $request->validate([
-            'report' => ['required', 'string', 'in:daily-sales,item-wise-sales,best-selling-products,cashiers,outlets,full-summary'],
+            'report' => ['required', 'string', 'in:daily-sales,item-wise-sales,best-selling-products,cashiers,outlets,customers,full-summary'],
             'format' => ['required', 'string', 'in:csv,pdf,html'],
         ]);
 
@@ -247,6 +281,37 @@ class ReportController extends Controller
             'location_id' => $this->locationId($request),
             'user_id' => $userId !== null && $userId !== '' ? (int) $userId : null,
             'limit' => $request->filled('limit') ? max(1, min(500, (int) $request->get('limit'))) : null,
+            'customer_type' => $request->get('customer_type', 'all'),
+            'search' => $request->get('search'),
+        ];
+    }
+
+    private function peakHourPayload($hourly): array
+    {
+        $row = collect($hourly)
+            ->sortBy([
+                ['revenue', 'desc'],
+                ['orders_count', 'desc'],
+                ['hour', 'asc'],
+            ])
+            ->first();
+
+        if (! $row || ((float) ($row['revenue'] ?? 0) <= 0 && (int) ($row['orders_count'] ?? 0) <= 0)) {
+            return [
+                'peak_hour' => null,
+                'peak_hour_label' => null,
+                'peak_hour_orders' => 0,
+                'peak_hour_revenue' => 0,
+            ];
+        }
+
+        $hour = (int) $row['hour'];
+
+        return [
+            'peak_hour' => $hour,
+            'peak_hour_label' => sprintf('%02d:00 - %02d:00', $hour, ($hour + 1) % 24),
+            'peak_hour_orders' => (int) $row['orders_count'],
+            'peak_hour_revenue' => (float) $row['revenue'],
         ];
     }
 
@@ -293,7 +358,9 @@ class ReportController extends Controller
             ->where('tenant_id', $tenantId);
 
         if ($locationId === null) {
-            $query->whereNull('location_id');
+            $query->where(function ($scope) {
+                $scope->whereNull('location_id')->orWhere('location_id', 0);
+            });
         } else {
             $query->where('location_id', $locationId);
         }
@@ -340,6 +407,7 @@ class ReportController extends Controller
             'best-selling-products' => $this->reportPayload($report, $filters, $reports->bestSellingProductsReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'] ?: 20)),
             'cashiers' => $this->reportPayload($report, $filters, $reports->cashierReport($this->tenantId(), $filters['start'], $filters['end'], $filters['location_id'], $filters['user_id'])),
             'outlets' => $this->reportPayload($report, $filters, $reports->outletReport($this->tenantId(), $filters['start_date'], $filters['end_date'])),
+            'customers' => $this->reportPayload($report, $filters, $reports->customerReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['period'], $filters['customer_type'] ?? 'all', $filters['search'] ?? null, 500)),
             'full-summary' => $this->fullSummaryPayload($filters, $reports),
         };
     }
@@ -374,6 +442,7 @@ class ReportController extends Controller
             'last_refreshed_at' => now()->toISOString(),
             'summary' => $data['summary'] ?? [],
             'rows' => $data['rows'] ?? [],
+            'meta' => $data['meta'] ?? null,
         ];
     }
 
@@ -460,6 +529,7 @@ HTML;
             'best-selling-products' => 'Best-selling Products Report',
             'cashiers' => 'Cashier Report',
             'outlets' => 'Outlet Report',
+            'customers' => 'Customer Report',
             'full-summary' => 'Full Summary Report',
             default => 'PayChat Report',
         };

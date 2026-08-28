@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Tenant\InfoController;
 use App\Http\Controllers\PublicBillingController;
+use App\Http\Controllers\PublicLoyaltyRewardController;
 use App\Http\Controllers\Web\AuthenticatedSessionController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\RegisteredTenantController;
@@ -33,6 +34,7 @@ Route::view('/guide', 'guide')->name('guide');
 
 Route::get('/billing/tokens/{uuid}', [PublicBillingController::class, 'token'])->middleware(NoIndex::class);
 Route::get('/billing/invoices/{uuid}', [PublicBillingController::class, 'invoice'])->middleware(NoIndex::class);
+Route::get('/loyalty/rewards/{token}', [PublicLoyaltyRewardController::class, 'show'])->middleware(NoIndex::class);
 
 Route::get('/pos/{any?}', function () {
    return response()->file(public_path('pos/index.html'));

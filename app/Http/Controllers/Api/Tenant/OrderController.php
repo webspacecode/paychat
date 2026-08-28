@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Models\Tenant\Order;
+use App\Models\Tenant\Customer;
 use App\Events\KitchenBatchCreated;
 use Illuminate\Http\Request;
 use App\Services\Orders\OrderService;
 use App\Services\CustomerIdentityService;
+use App\Services\LoyaltyService;
 use App\Services\TableSessionService;
 use App\Services\KitchenBatchService;
 use App\Services\Payments\TaxService;
@@ -205,20 +207,29 @@ class OrderController extends Controller
         );
     }
 
-    public function attachCustomer(String $tenantSlug, Request $request, Order $order)
+    public function attachCustomer(String $tenantSlug, Request $request, Order $order, ?LoyaltyService $loyalty = null)
     {
         // if ($order->status === 'completed') {
         //     return response()->json(['message' => 'Completed order cannot be modified'], 422);
         // }
         $validated = $request->validate([
-            'customer_id' => ['nullable', 'integer', 'exists:pos_customers,id'],
+            'customer_id' => ['nullable', 'integer'],
             'name' => ['nullable', 'string', 'max:150'],
             'email' => ['nullable', 'email', 'max:150'],
             'phone' => ['nullable', 'string', 'max:50'],
         ]);
+        $loyalty ??= app(LoyaltyService::class);
 
         $phone = $this->customerIdentity->normalizePhone($validated['phone'] ?? null);
+
+        if (! empty($validated['customer_id']) && ! Customer::query()->whereKey($validated['customer_id'])->exists()) {
+            throw ValidationException::withMessages([
+                'customer_id' => ['Selected customer was not found.'],
+            ]);
+        }
+
         $customer = $this->customerIdentity->resolveOrCreate($validated);
+        $loyaltyAward = null;
 
         if ($customer) {
             $order->update([
@@ -226,11 +237,24 @@ class OrderController extends Controller
                 'customer_name' => $customer->name ?? ($validated['name'] ?? null),
                 'customer_phone' => $customer->phone ?? $phone,
             ]);
+
+            $loyaltyAward = $loyalty->awardForCompletedOrder($order->fresh());
         }
 
-        return new OrderResource(
-            $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product')
-        );
+        $freshOrder = $order->fresh()->load('items.product', 'customer', 'location', 'payments', 'table', 'tableSession', 'kitchenBatches.items.product');
+
+        if ($customer) {
+            $freshOrder->setAttribute('loyalty_award', [
+                'id' => $loyaltyAward?->id,
+                'type' => $loyaltyAward?->type,
+                'points' => $loyaltyAward ? (int) $loyaltyAward->points : 0,
+                'balance_after' => $loyaltyAward ? (int) $loyaltyAward->balance_after : (int) $freshOrder->customer?->loyalty_points,
+                'already_awarded' => $loyaltyAward ? $loyaltyAward->wasRecentlyCreated === false : false,
+            ]);
+            $freshOrder->setAttribute('loyalty_context', $loyalty->sharePayload($freshOrder->customer, $loyaltyAward));
+        }
+
+        return new OrderResource($freshOrder);
     }
 
     public function completeOrder(String $tenantSlug, Order $order, OrderService $service)
