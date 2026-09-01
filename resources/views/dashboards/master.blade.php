@@ -457,6 +457,8 @@
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tenant</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Branding</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tax</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</th>
+                        <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
                         <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Users</th>
                         <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Created</th>
                         <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
@@ -468,6 +470,7 @@
                             $branding = $tenant->branding;
                             $tax = $tenant->taxConfig;
                             $accent = $branding?->primary_color ?: '#6366f1';
+                            $selfPosEnabled = $tenant->selfPosEnabled();
                         @endphp
                         <tr
                             role="button"
@@ -503,6 +506,23 @@
                                     {{ $tax?->is_gst_enabled ? 'GST enabled' : 'GST disabled' }} · IGST {{ $tax?->igst_rate ?? 0 }}%
                                 </div>
                             </td>
+                            <td class="px-5 py-4">
+                                <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{{ $tenant->plan ?: 'trial' }}</span>
+                            </td>
+                            <td class="px-5 py-4">
+                                @if($tenant->is_active === false)
+                                    <span class="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Inactive</span>
+                                @else
+                                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Active</span>
+                                @endif
+                                <div class="mt-2">
+                                    @if($selfPosEnabled)
+                                        <span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">Self POS on</span>
+                                    @else
+                                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Self POS off</span>
+                                    @endif
+                                </div>
+                            </td>
                             <td class="px-5 py-4 text-sm text-slate-700">{{ $tenant->users->count() }}</td>
                             <td class="px-5 py-4 text-right text-sm text-slate-500">{{ $tenant->created_at?->format('d M Y') }}</td>
                             <td class="px-5 py-4 text-right">
@@ -529,7 +549,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-10 text-center text-sm text-slate-500">No tenants registered yet.</td>
+                            <td colspan="8" class="px-5 py-10 text-center text-sm text-slate-500">No tenants registered yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -717,6 +737,7 @@
             $tax = $tenant->taxConfig;
             $accent = $branding?->primary_color ?: '#6366f1';
             $isUserModalOpen = (int) session('tenant_user_tenant_id') === (int) $tenant->id;
+            $selfPosEnabled = $tenant->selfPosEnabled();
         @endphp
 
         <div
@@ -764,6 +785,9 @@
                                 <dl class="mt-4 space-y-3 text-sm">
                                     <div><dt class="text-slate-500">Name</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->name }}</dd></div>
                                     <div><dt class="text-slate-500">Industry</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->industry }}</dd></div>
+                                    <div><dt class="text-slate-500">Plan</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->plan ?: 'trial' }}</dd></div>
+                                    <div><dt class="text-slate-500">Access</dt><dd class="mt-1 font-medium text-slate-950">{{ $tenant->is_active === false ? 'Inactive' : 'Active' }}</dd></div>
+                                    <div><dt class="text-slate-500">Self POS</dt><dd class="mt-1 font-medium text-slate-950">{{ $selfPosEnabled ? 'Enabled' : 'Disabled' }}</dd></div>
                                     <div><dt class="text-slate-500">API key</dt><dd class="mt-1 break-all font-mono text-xs text-slate-700">{{ $tenant->api_key }}</dd></div>
                                 </dl>
                             </section>
@@ -796,6 +820,41 @@
                                 </dl>
                             </section>
                         </div>
+
+                        <section class="mt-5 rounded-xl bg-slate-50 p-5">
+                            <h3 class="text-sm font-semibold text-slate-950">Plan & Access</h3>
+                            <form method="POST" action="{{ route('master.tenants.access', $tenant) }}" class="mt-4 grid gap-4 md:grid-cols-[1fr_auto_auto_auto] md:items-end">
+                                @csrf
+                                @method('PATCH')
+
+                                <label class="grid gap-1 text-sm font-semibold text-slate-700">
+                                    Pricing plan
+                                    <select name="plan" class="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950">
+                                        <option value="trial" @selected(($tenant->plan ?: 'trial') === 'trial')>Trial</option>
+                                        @foreach($pricingPlans as $plan)
+                                            <option value="{{ $plan->key }}" @selected(($tenant->plan ?: 'trial') === $plan->key)>
+                                                {{ $plan->name }} - {{ $plan->currency }} {{ number_format((float) $plan->monthly_price, 2) }}/mo
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </label>
+
+                                <label class="flex min-h-[40px] items-center gap-2 text-sm font-semibold text-slate-700">
+                                    <input type="checkbox" name="is_active" value="1" @checked($tenant->is_active !== false) class="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-950">
+                                    Tenant active
+                                </label>
+
+                                <label class="flex min-h-[40px] items-center gap-2 text-sm font-semibold text-slate-700">
+                                    <input type="checkbox" name="self_pos_enabled" value="1" @checked($selfPosEnabled) class="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-950">
+                                    Self POS enabled
+                                </label>
+
+                                <button class="master-action master-action-primary px-4 py-2.5 text-sm">
+                                    Save Access
+                                </button>
+                            </form>
+                            <p class="mt-3 text-xs font-medium text-slate-500">Inactive tenants cannot log in or call tenant APIs. Disabled Self POS shows customers a PayChat support message while staff POS remains unaffected.</p>
+                        </section>
                     </div>
 
                     <div class="p-6 {{ $isUserModalOpen ? '' : 'hidden' }}" data-tenant-tab-panel="users">

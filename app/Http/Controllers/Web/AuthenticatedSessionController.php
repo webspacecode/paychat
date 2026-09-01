@@ -29,6 +29,17 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        $user = $request->user();
+        $tenant = $user?->tenant;
+
+        if ($user && ! $user->isMaster() && $tenant && $tenant->is_active === false) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'This workspace is inactive. Please contact PayChat support.',
+            ]);
+        }
+
         $request->session()->regenerate();
 
         return redirect()->intended($request->user()->isMaster()

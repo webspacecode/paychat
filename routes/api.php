@@ -2,8 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\InvoiceAccessController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\InvoiceController;
+use App\Http\Controllers\Api\PricingPlanController;
 use App\Http\Controllers\Api\Tenant\ProductController;
 use App\Http\Controllers\Api\Tenant\ProductImageSuggestionController;
 use App\Http\Controllers\Api\Tenant\PosFavoriteProductController;
@@ -54,7 +56,9 @@ Route::get('/ping', function() {
     return response()->json(['message' => 'pong']);
 });
 
-Route::middleware(['api-public'])->prefix('kiosk/{tenant_slug}')->group(function () {
+Route::get('/pricing-plans', [PricingPlanController::class, 'index']);
+
+Route::middleware(['api-public', 'self_pos.enabled'])->prefix('kiosk/{tenant_slug}')->group(function () {
     Route::get('/users', function() {
         return response()->json(['tenant' => app('currentTenant')->id]);
     });
@@ -200,6 +204,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::prefix('locations')->group(function () {
         Route::get('/', [LocationController::class, 'index']);       // List locations
         Route::post('/', [LocationController::class, 'store']);      // Create location
+        Route::put('/business-day-timing', [LocationController::class, 'updateBusinessDayTiming']);
         Route::get('/{id}', [LocationController::class, 'show']);    // Get location details
         Route::put('/{id}', [LocationController::class, 'update']);  // Update location
         Route::delete('/{id}', [LocationController::class, 'destroy']); // Delete location
@@ -340,6 +345,8 @@ Route::middleware('apikey')->get('/tenant/info',[InfoController::class,'index'])
 Route::get('/tenant/list',[InfoController::class,'list']);
 
 
+Route::get('/invoice/{uuid}/access-status', [InvoiceAccessController::class, 'status']);
+Route::post('/invoice/{uuid}/verify-access', [InvoiceAccessController::class, 'verify']);
 Route::get('/invoice/{uuid}/pdf',[InvoiceController::class,'downloadPdf'])->name('invoice.pdf');
 Route::get('/invoice/{uuid}',[InvoiceController::class,'view']);
 Route::get('/token/{uuid}',[InvoiceController::class,'viewToken']);

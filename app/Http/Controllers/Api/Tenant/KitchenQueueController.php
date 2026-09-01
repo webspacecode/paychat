@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\KitchenBatch;
 use App\Models\Tenant\OrderToken;
+use App\Services\BusinessDayService;
 use App\Services\KitchenBatchService;
 use App\Support\Observability;
 use Illuminate\Http\Request;
@@ -12,11 +13,12 @@ use Illuminate\Support\Facades\Schema;
 
 class KitchenQueueController extends Controller
 {
-    public function index(Request $request, KitchenBatchService $kitchenDates)
+    public function index(Request $request, KitchenBatchService $kitchenDates, BusinessDayService $businessDays)
     {
         $startedAt = microtime(true);
-        $businessDate = $request->get('business_date') ?: $kitchenDates->resolveBusinessDate();
         $locationId = $request->get('location_id');
+        $businessDate = $request->get('business_date')
+            ?: ($locationId ? $businessDays->currentForLocation((int) $locationId) : $kitchenDates->resolveBusinessDate());
         $status = $request->get('status');
         $source = $request->get('source', 'all');
 

@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class IdentifyTenant
@@ -25,6 +26,10 @@ class IdentifyTenant
 
         if (!$tenant) {
             throw new NotFoundHttpException("Tenant not found.");
+        }
+
+        if ($tenant->is_active === false) {
+            throw new HttpException(403, 'This workspace is inactive. Please contact PayChat support.');
         }
 
         // Set Industry
@@ -50,4 +55,3 @@ class IdentifyTenant
         return $next($request);
     }
 }
-

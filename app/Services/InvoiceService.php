@@ -13,6 +13,7 @@ use App\Support\IndustryNormalizer;
 use App\Support\Observability;
 use SimpleSoftwareIO\QrCode\Generator;
 use Spatie\Browsershot\Browsershot;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class InvoiceService
 {
@@ -555,6 +556,7 @@ class InvoiceService
     {
         $includeCustomerInfo = $this->includeCustomerInfo($includeCustomerInfo);
         $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
+        $this->ensurePublicInvoiceAccess($inv);
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
         
@@ -588,6 +590,7 @@ class InvoiceService
                 'pdfUrl'=>route('invoice.pdf', array_filter([
                     'uuid' => $uuid,
                     'custinfo' => $includeCustomerInfo ? 1 : null,
+                    'access_token' => request()->query('access_token'),
                 ])),
                 'logoSrc'=>$this->invoiceLogoSrc($tenant->branding),
                 'isPdf'=>false
@@ -600,6 +603,7 @@ class InvoiceService
         $includeCustomerInfo = $this->includeCustomerInfo($includeCustomerInfo);
         $startedAt = microtime(true);
         $inv = $this->invoiceQuery()->where('uuid',$uuid)->firstOrFail();
+        $this->ensurePublicInvoiceAccess($inv);
 
         [$config, $template] = $this->resolveInvoiceTemplate($inv->industry, $inv->paper_size);
 
@@ -1015,6 +1019,15 @@ class InvoiceService
                 'url_host' => parse_url($url, PHP_URL_HOST),
             ]);
             return null;
+        }
+    }
+
+    private function ensurePublicInvoiceAccess(Invoice $invoice): void
+    {
+        $access = app(InvoiceAccessService::class);
+
+        if (! $access->tokenAllows($invoice, request()->query('access_token'))) {
+            throw new HttpException(403, 'Invoice phone verification is required.');
         }
     }
 

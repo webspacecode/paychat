@@ -7,6 +7,32 @@
       <p>Preparing your invoice...</p>
     </div>
 
+    <div v-else-if="requiresVerification && !verified" class="gate">
+      <form class="gate-card" @submit.prevent="verifyPhone">
+        <p class="gate-kicker">Invoice verification</p>
+        <h1>Confirm registered phone</h1>
+        <p class="gate-copy">This invoice is more than 24 hours old. Enter the customer phone number linked with this invoice to open it.</p>
+
+        <label>
+          Contact number
+          <input
+            v-model.trim="phone"
+            type="tel"
+            autocomplete="tel"
+            placeholder="Registered phone number"
+          />
+        </label>
+
+        <div v-if="errorMessage" class="error-box">
+          {{ errorMessage }}
+        </div>
+
+        <button :disabled="verifying">
+          {{ verifying ? 'Checking...' : 'Open invoice' }}
+        </button>
+      </form>
+    </div>
+
     <!-- Content -->
     <div v-else class="content">
 
@@ -107,6 +133,11 @@ export default {
     return {
 
       loading: true,
+      requiresVerification: false,
+      verified: false,
+      accessToken: '',
+      phone: '',
+      verifying: false,
 
       rating: 0,
 
@@ -132,20 +163,98 @@ export default {
         url.searchParams.set('custinfo', '1');
       }
 
+      if (this.accessToken) {
+
+        url.searchParams.set('access_token', this.accessToken);
+      }
+
       return url.toString();
     }
   },
 
   mounted() {
-
-    setTimeout(() => {
-
-      this.loading = false;
-
-    }, 800);
+    this.loadAccessStatus();
   },
 
   methods: {
+    async loadAccessStatus() {
+      this.errorMessage = '';
+
+      try {
+
+        const response = await fetch(`/api/invoice/${encodeURIComponent(this.uuid)}/access-status`, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+
+          throw new Error(result.message || 'Invoice not found');
+        }
+
+        this.requiresVerification = Boolean(result.requires_verification);
+        this.verified = !this.requiresVerification;
+
+      } catch (error) {
+
+        this.errorMessage = error.message || 'Unable to prepare invoice';
+        this.requiresVerification = true;
+        this.verified = false;
+
+      } finally {
+
+        this.loading = false;
+      }
+    },
+
+    async verifyPhone() {
+      this.errorMessage = '';
+
+      if (!this.phone) {
+
+        this.errorMessage = 'Please enter the registered phone number';
+
+        return;
+      }
+
+      try {
+
+        this.verifying = true;
+
+        const response = await fetch(`/api/invoice/${encodeURIComponent(this.uuid)}/verify-access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          },
+          body: JSON.stringify({
+            phone: this.phone
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+
+          throw new Error(result.message || 'Phone number could not be verified');
+        }
+
+        this.accessToken = result.access_token || '';
+        this.verified = Boolean(this.accessToken);
+
+      } catch (error) {
+
+        this.errorMessage = error.message || 'Phone number could not be verified';
+
+      } finally {
+
+        this.verifying = false;
+      }
+    },
 
     async submitFeedback() {
 
@@ -252,6 +361,71 @@ export default {
   align-items: center;
   padding-top: 20px;
   padding-bottom: 60px;
+}
+
+.gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f8fafc;
+}
+
+.gate-card {
+  width: min(100%, 420px);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  padding: 24px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.gate-kicker {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.gate-card h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #0f172a;
+}
+
+.gate-copy {
+  margin: 10px 0 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.gate-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.gate-card input {
+  min-height: 46px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 15px;
+  outline: none;
+}
+
+.gate-card input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, .12);
+}
+
+.gate-card button {
+  margin-top: 16px;
 }
 
 /* INVOICE */

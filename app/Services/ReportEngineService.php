@@ -611,7 +611,11 @@ class ReportEngineService
             ->where('pos_payments.status', 'success')
             ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
             ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
-            ->whereBetween('pos_payments.created_at', [$start, $end])
+            ->when(
+                Schema::hasColumn('pos_orders', 'business_date'),
+                fn ($q) => $q->whereBetween('pos_orders.business_date', [$start->toDateString(), $end->toDateString()]),
+                fn ($q) => $q->whereBetween('pos_payments.created_at', [$start, $end])
+            )
             ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
             ->when($userId !== null, fn ($q) => $q->whereRaw("{$actorExpression} = ?", [$userId]));
     }

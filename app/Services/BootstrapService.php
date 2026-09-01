@@ -31,6 +31,7 @@ class BootstrapService
                 'api_key' => $tenant->api_key,
                 'address' => $tenant->address,
                 'industry' => $tenant->industry,
+                'self_pos_enabled' => $tenant->selfPosEnabled(),
                 'industry_type' => $this->features->industryType($tenant->industry),
                 'branding' => $tenant->branding,
                 'tax_config' => $tenant->taxConfig,

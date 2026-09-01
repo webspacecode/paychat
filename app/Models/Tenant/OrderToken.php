@@ -14,6 +14,10 @@ class OrderToken extends Model
         'status'
     ];
 
+    protected $casts = [
+        'token_date' => 'date',
+    ];
+
     public function order()
     {
         return $this->belongsTo(Order::class);

@@ -23,6 +23,10 @@ class KitchenBatchService
     private const DISPATCH_CHANNELS = [self::CHANNEL_BOARD, self::CHANNEL_PRINT, self::CHANNEL_BOARD_AND_PRINT];
     private const CANCELLABLE_STATUSES = ['waiting', 'pending', 'sent', 'in_kitchen'];
 
+    public function __construct(private BusinessDayService $businessDays)
+    {
+    }
+
     public function sendFreshItems(Order $order, string $dispatchChannel = self::CHANNEL_BOARD): KitchenBatch
     {
         return DB::transaction(function () use ($order, $dispatchChannel) {
@@ -257,19 +261,11 @@ class KitchenBatchService
             return Carbon::parse($date)->toDateString();
         }
 
-        $businessDayStart = Setting::get('business_day_start_time')
-            ?? Setting::get('day_start_time');
-
-        if ($businessDayStart) {
-            $now = now();
-            $start = Carbon::parse($now->toDateString().' '.$businessDayStart);
-
-            return $now->lt($start)
-                ? $now->copy()->subDay()->toDateString()
-                : $now->toDateString();
+        if ($legacyDate = $this->businessDays->legacyStartBusinessDate()) {
+            return $legacyDate;
         }
 
-        return today()->toDateString();
+        return $this->businessDays->currentForLocation($order?->location_id ? (int) $order->location_id : null);
     }
 
     private function nextBatchNumber(string $businessDate): int

@@ -38,12 +38,20 @@ class AuthController extends Controller
             ]);
         }
 
+        $tenant = $user->tenant()->with(['taxConfig', 'branding'])->first();
+
+        if (! $user->isMaster() && $tenant && $tenant->is_active === false) {
+            throw ValidationException::withMessages([
+                'email' => ['This workspace is inactive. Please contact PayChat support.'],
+            ]);
+        }
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
             'token' => $token,
             'user' => $user,
-            'tenant' => $user->tenant()->with(['taxConfig', 'branding'])->first(),
+            'tenant' => $tenant,
             'bootstrap' => app(BootstrapService::class)->forUser($user),
         ]);
     }
@@ -104,10 +112,17 @@ class AuthController extends Controller
 
         
         $user = $request->user();
+        $tenant = $user->tenant()->with(['taxConfig', 'branding'])->first();
+
+        if (! $user->isMaster() && $tenant && $tenant->is_active === false) {
+            return response()->json([
+                'message' => 'This workspace is inactive. Please contact PayChat support.',
+            ], 403);
+        }
 
         return response()->json(array_merge($user->toArray(), [
             'user' => $user,
-            'tenant' => $user->tenant()->with(['taxConfig', 'branding'])->first(),
+            'tenant' => $tenant,
             'bootstrap' => app(BootstrapService::class)->forUser($user),
         ]));
     }

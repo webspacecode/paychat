@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\DemoLead;
+use App\Models\PaychatPricingPlan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantOperationalLogReader;
@@ -11,6 +12,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -45,14 +48,27 @@ class DashboardController extends Controller
             ->get();
 
         $demoLeadStatuses = self::DEMO_LEAD_STATUSES;
+        $pricingPlans = Schema::hasTable('paychat_pricing_plans')
+            ? PaychatPricingPlan::where('is_active', true)->orderBy('sort_order')->orderBy('name')->get()
+            : collect();
 
-        return view('dashboards.master', compact('tenants', 'demoLeads', 'demoLeadStatuses'));
+        return view('dashboards.master', compact('tenants', 'demoLeads', 'demoLeadStatuses', 'pricingPlans'));
     }
 
     public function tenant(Request $request): View|RedirectResponse
     {
         if ($request->user()->isMaster()) {
             return redirect()->route('master.dashboard');
+        }
+
+        if ($request->user()->tenant && $request->user()->tenant->is_active === false) {
+            Auth::logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')
+                ->withErrors(['email' => 'This workspace is inactive. Please contact PayChat support.']);
         }
 
         return view('dashboards.tenant', [
@@ -112,6 +128,38 @@ class DashboardController extends Controller
         ])->save();
 
         return back()->with('status', "Password reset for {$user->email}.");
+    }
+
+    public function updateTenantAccess(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $validated = $request->validate([
+            'plan' => ['nullable', 'string', 'max:80'],
+            'is_active' => ['nullable', 'boolean'],
+            'self_pos_enabled' => ['nullable', 'boolean'],
+        ]);
+
+        $plan = $validated['plan'] ?? null;
+
+        if ($plan && Schema::hasTable('paychat_pricing_plans')) {
+            $request->validate([
+                'plan' => ['nullable', 'string', 'max:80', Rule::exists('paychat_pricing_plans', 'key')->where('is_active', true)],
+            ]);
+        }
+
+        $updates = [
+            'plan' => $plan ?: 'trial',
+            'is_active' => $request->boolean('is_active'),
+        ];
+
+        if (Schema::hasColumn('tenants', 'settings')) {
+            $settings = is_array($tenant->settings) ? $tenant->settings : [];
+            $settings['self_pos_enabled'] = $request->boolean('self_pos_enabled');
+            $updates['settings'] = $settings;
+        }
+
+        $tenant->forceFill($updates)->save();
+
+        return back()->with('status', "Tenant access updated for {$tenant->name}.");
     }
 
     public function updateDemoLead(Request $request, DemoLead $demoLead): RedirectResponse

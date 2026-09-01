@@ -133,11 +133,14 @@ class TokenService
             $prefix = Setting::get('token_prefix', null, 'A');
             $start = (int) Setting::get('token_start_number', null, 100);
             $resetDaily = Setting::get('token_reset_daily', null, true);
+            $businessDate = $lockedOrder->business_date
+                ? $lockedOrder->business_date->toDateString()
+                : today()->toDateString();
 
             $query = OrderToken::query();
 
             if ($resetDaily) {
-                $query->whereDate('created_at', today());
+                $query->whereDate('token_date', $businessDate);
             }
 
             $last = $query->lockForUpdate()->latest('id')->first();
@@ -148,7 +151,7 @@ class TokenService
                 'order_id' => $lockedOrder->id,
                 'token_number' => $nextNumber,
                 'token_code' => $prefix . $nextNumber,
-                'token_date' => today(),
+                'token_date' => $businessDate,
                 'status' => TokenStatus::WAITING
             ]);
 

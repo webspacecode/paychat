@@ -19,6 +19,7 @@ use App\Http\Resources\Tenant\OrderResource;
 use App\Models\Tenant\Token;
 use App\Events\OrderStatusUpdated;
 use App\Services\LoyaltyService;
+use App\Services\BusinessDayService;
 use App\Support\Observability;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -48,7 +49,11 @@ class OrderService
     protected TaxService $taxService;
     protected StockAvailabilityService $stockAvailabilityService;
 
-    public function __construct(TaxService $taxService, StockAvailabilityService $stockAvailabilityService)
+    public function __construct(
+        TaxService $taxService,
+        StockAvailabilityService $stockAvailabilityService,
+        private BusinessDayService $businessDays
+    )
     {
         $this->taxService = $taxService;
         $this->stockAvailabilityService = $stockAvailabilityService;
@@ -124,15 +129,10 @@ class OrderService
             ?? Setting::get('day_start_time');
 
         if ($businessDayStart) {
-            $now = now();
-            $start = Carbon::parse($now->toDateString().' '.$businessDayStart);
-
-            return $now->lt($start)
-                ? $now->copy()->subDay()->toDateString()
-                : $now->toDateString();
+            return $this->businessDays->legacyStartBusinessDate();
         }
 
-        return today()->toDateString();
+        return $this->businessDays->currentForLocation($filters['location_id'] ?? null);
     }
 
     private function getOrderBusinessDateColumn(): ?string
@@ -171,12 +171,14 @@ class OrderService
 
             $orderData = array_merge($customerData, [
                 'order_no'=>'ORD-'.date('Ymd').'-'.Str::upper(Str::random(4)),
+                'location_id' => $data['location_id'] ?? null,
+                'order_type' => $data['order_type'] ?? null,
                 'status'=>'draft',
                 'payment_status'=>'unpaid',
             ]);
 
             if ($this->getOrderBusinessDateColumn()) {
-                $orderData['business_date'] = $this->resolveKitchenBusinessDate([]);
+                $orderData['business_date'] = $this->businessDays->currentForLocation($data['location_id'] ?? null);
             }
 
             $order = Order::create($orderData);
@@ -265,7 +267,7 @@ class OrderService
         );
 
         if ($this->getOrderBusinessDateColumn()) {
-            $orderData['business_date'] = $this->resolveKitchenBusinessDate([]);
+            $orderData['business_date'] = $this->businessDays->currentForLocation($locationId ? (int) $locationId : null);
         }
 
         return Order::create($orderData);

@@ -18,6 +18,8 @@
                 @auth
                     @if(auth()->user()->isMaster())
                         <a href="{{ route('master.dashboard') }}" class="font-medium text-slate-700 hover:text-slate-950">Master</a>
+                        <a href="{{ route('master.features.index') }}" class="font-medium text-slate-700 hover:text-slate-950">Features</a>
+                        <a href="{{ route('master.plans.index') }}" class="font-medium text-slate-700 hover:text-slate-950">Plans</a>
                     @else
                         <a href="{{ route('tenant.dashboard') }}" class="font-medium text-slate-700 hover:text-slate-950">Dashboard</a>
                     @endif

@@ -79,6 +79,7 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'business_date' => 'date',
         'meta' => 'array',
     ];
 

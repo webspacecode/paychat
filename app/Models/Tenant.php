@@ -48,4 +48,19 @@ class Tenant extends Model
     public function onboarding() {
         return $this->hasOne(TenantOnboarding::class);
     }
+
+    public function selfPosEnabled(): bool
+    {
+        $settings = is_array($this->settings) ? $this->settings : [];
+
+        if (array_key_exists('self_pos_enabled', $settings)) {
+            return (bool) $settings['self_pos_enabled'];
+        }
+
+        if (array_key_exists('self_pos', $settings) && is_array($settings['self_pos']) && array_key_exists('enabled', $settings['self_pos'])) {
+            return (bool) $settings['self_pos']['enabled'];
+        }
+
+        return true;
+    }
 }

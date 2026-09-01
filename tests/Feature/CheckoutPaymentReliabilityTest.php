@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\Tenant\OrderController;
+use App\Http\Controllers\Api\Tenant\DashboardController as TenantDashboardController;
 use App\Http\Controllers\Api\Tenant\PaymentController;
+use App\Http\Controllers\Api\Tenant\ReportController;
 use App\Models\Invoice;
 use App\Models\OfflineOrderSync;
 use App\Models\Tenant\Order;
@@ -23,9 +25,11 @@ use App\Services\OrderKitchenDispatchService;
 use App\Services\Orders\OrderService;
 use App\Services\PaymentMethodCorrectionService;
 use App\Services\Payments\PaymentService;
+use App\Services\ReportEngineService;
 use App\Services\SelfPosOrderService;
 use App\Services\TableSessionService;
 use App\Services\TokenService;
+use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
@@ -74,6 +78,227 @@ class CheckoutPaymentReliabilityTest extends TestCase
             'slug' => 'demo',
             'industry' => 'cafe',
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
+
+    public function test_business_day_defaults_to_calendar_date_without_outlet_timing(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-01 00:30:00'));
+
+        $order = app(OrderService::class)->createDraft(1, null, 'takeaway');
+
+        $this->assertSame('2026-09-01', $order->business_date->toDateString());
+    }
+
+    public function test_overnight_outlet_timing_assigns_expected_business_dates(): void
+    {
+        $this->enableOvernightBusinessDayTiming();
+
+        Carbon::setTestNow(Carbon::parse('2026-08-31 23:30:00', 'Asia/Kolkata'));
+        $lateNight = app(OrderService::class)->createDraft(1, null, 'takeaway');
+
+        Carbon::setTestNow(Carbon::parse('2026-09-01 00:30:00', 'Asia/Kolkata'));
+        $afterMidnight = app(OrderService::class)->createDraft(1, null, 'takeaway');
+
+        Carbon::setTestNow(Carbon::parse('2026-09-01 02:30:00', 'Asia/Kolkata'));
+        $afterClose = app(OrderService::class)->createDraft(1, null, 'takeaway');
+
+        $this->assertSame('2026-08-31', $lateNight->business_date->toDateString());
+        $this->assertSame('2026-08-31', $afterMidnight->business_date->toDateString());
+        $this->assertSame('2026-09-01', $afterClose->business_date->toDateString());
+    }
+
+    public function test_classic_pos_cash_checkout_at_1am_uses_previous_business_date(): void
+    {
+        $this->enableOvernightBusinessDayTiming();
+        Carbon::setTestNow(Carbon::parse('2026-09-01 01:00:00', 'Asia/Kolkata'));
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $product = Product::create([
+            'name' => 'Midnight Coffee',
+            'sku' => 'MID-COF',
+            'type' => 'simple',
+            'price' => 125,
+            'track_inventory' => false,
+        ]);
+
+        $order = app(OrderService::class)->createDraft(1, null, 'takeaway');
+        app(OrderService::class)->replaceItems($order, [
+            ['product_id' => $product->id, 'quantity' => 1],
+        ]);
+        app(OrderService::class)->moveToPendingPayment($order->fresh());
+
+        $payment = app(PaymentService::class)->createPayment($order->fresh(), 'cash', 125);
+        $fresh = $order->fresh();
+
+        $this->assertSame('success', $payment->status);
+        $this->assertSame('pending_payment', $fresh->status);
+        $this->assertSame('paid', $fresh->payment_status);
+        $this->assertSame('2026-08-31', $fresh->business_date->toDateString());
+        $this->assertSame('2026-08-31', Payment::first()->order->business_date->toDateString());
+    }
+
+    public function test_dine_in_final_billing_at_1am_uses_previous_business_date(): void
+    {
+        $this->enableOvernightBusinessDayTiming();
+        Carbon::setTestNow(Carbon::parse('2026-09-01 01:00:00', 'Asia/Kolkata'));
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $this->tableResource(51, 'T51');
+        DB::connection('tenant')->table('table_sessions')->insert([
+            'id' => 51,
+            'location_id' => 1,
+            'primary_table_id' => 51,
+            'table_id' => 51,
+            'status' => 'active',
+            'guest_count' => 2,
+            'opened_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $product = Product::create([
+            'name' => 'Late Night Sandwich',
+            'sku' => 'LATE-SAND',
+            'type' => 'simple',
+            'price' => 220,
+            'track_inventory' => false,
+        ]);
+
+        $order = app(OrderService::class)->createDraft(1, null, 'dine_in', 51, 'table_service', 2, 51);
+        app(OrderService::class)->syncItems($order->fresh(), Request::create('/orders/'.$order->id.'/items', 'PUT', [
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ]));
+        app(KitchenBatchService::class)->sendFreshItems($order->fresh(), KitchenBatchService::CHANNEL_BOARD);
+        app(OrderService::class)->moveToPendingPayment($order->fresh());
+
+        $payment = app(PaymentService::class)->createPayment($order->fresh(), 'cash', 220);
+        app(PaymentService::class)->markPaymentSuccess($payment->fresh());
+        $fresh = $order->fresh(['kitchenBatches']);
+
+        $this->assertSame('success', $payment->status);
+        $this->assertSame('completed', $fresh->status);
+        $this->assertSame('paid', $fresh->payment_status);
+        $this->assertSame('dine_in', $fresh->order_type);
+        $this->assertSame('table_service', $fresh->dining_flow);
+        $this->assertSame('2026-08-31', $fresh->business_date->toDateString());
+        $this->assertSame('2026-08-31', $fresh->kitchenBatches->first()->business_date->toDateString());
+    }
+
+    public function test_offline_sync_uses_offline_created_at_for_overnight_business_date(): void
+    {
+        $this->bindOfflineInvoiceService();
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+        $this->enableOvernightBusinessDayTiming();
+        $product = $this->offlineProduct();
+        $payload = $this->offlinePayload('overnight-offline-1', $product);
+        $payload['offline_created_at'] = '2026-09-01T00:30:00+05:30';
+
+        $first = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+        $second = app(OfflineOrderSyncService::class)->sync(app('currentTenant'), $payload);
+        $order = Order::findOrFail($first['backend_order_id']);
+
+        $this->assertSame($first['backend_order_id'], $second['backend_order_id']);
+        $this->assertSame('2026-08-31', $order->business_date->toDateString());
+    }
+
+    public function test_kds_batch_uses_overnight_business_date(): void
+    {
+        $this->enableOvernightBusinessDayTiming();
+        Carbon::setTestNow(Carbon::parse('2026-09-01 00:30:00', 'Asia/Kolkata'));
+        $order = $this->tableServiceOrder();
+
+        $batch = app(KitchenBatchService::class)->sendFreshItems($order, KitchenBatchService::CHANNEL_BOARD);
+
+        $this->assertSame('2026-08-31', $batch->business_date->toDateString());
+        $this->assertSame(1, $batch->batch_number);
+    }
+
+    public function test_token_numbers_reset_by_order_business_date(): void
+    {
+        DB::table('settings')->insert([
+            [
+                'setting_key' => 'token_system_enabled',
+                'value' => 'true',
+                'type' => 'boolean',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'setting_key' => 'token_reset_daily',
+                'value' => 'true',
+                'type' => 'boolean',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'setting_key' => 'token_start_number',
+                'value' => '100',
+                'type' => 'integer',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $first = $this->order(total: 50, status: 'completed', paymentStatus: 'paid');
+        $first->forceFill(['business_date' => '2026-08-31'])->save();
+        $second = $this->order(total: 60, status: 'completed', paymentStatus: 'paid');
+        $second->forceFill(['business_date' => '2026-08-31'])->save();
+        $third = $this->order(total: 70, status: 'completed', paymentStatus: 'paid');
+        $third->forceFill(['business_date' => '2026-09-01'])->save();
+
+        $firstToken = app(TokenService::class)->generate($first->fresh());
+        $secondToken = app(TokenService::class)->generate($second->fresh());
+        $thirdToken = app(TokenService::class)->generate($third->fresh());
+
+        $this->assertSame('2026-08-31', $firstToken->token_date->toDateString());
+        $this->assertSame(100, (int) $firstToken->token_number);
+        $this->assertSame(101, (int) $secondToken->token_number);
+        $this->assertSame('2026-09-01', $thirdToken->token_date->toDateString());
+        $this->assertSame(100, (int) $thirdToken->token_number);
+    }
+
+    public function test_reports_today_uses_selected_location_business_date(): void
+    {
+        $this->enableOvernightBusinessDayTiming();
+        Carbon::setTestNow(Carbon::parse('2026-09-01 00:30:00', 'Asia/Kolkata'));
+
+        $previousBusinessDayOrder = $this->order(total: 120, status: 'completed', paymentStatus: 'paid');
+        $previousBusinessDayOrder->forceFill(['business_date' => '2026-08-31'])->save();
+        Payment::create([
+            'order_id' => $previousBusinessDayOrder->id,
+            'payment_method' => 'cash',
+            'amount' => 120,
+            'status' => 'success',
+            'created_at' => '2026-09-01 00:30:00',
+            'updated_at' => now(),
+        ]);
+
+        $calendarDayOrder = $this->order(total: 90, status: 'completed', paymentStatus: 'paid');
+        $calendarDayOrder->forceFill(['business_date' => '2026-09-01'])->save();
+        Payment::create([
+            'order_id' => $calendarDayOrder->id,
+            'payment_method' => 'cash',
+            'amount' => 90,
+            'status' => 'success',
+            'created_at' => '2026-09-01 10:30:00',
+            'updated_at' => now(),
+        ]);
+
+        $payload = app(ReportController::class)->summary(
+            Request::create('/reports/summary', 'GET', ['period' => 'today', 'location_id' => 1]),
+            app(ReportEngineService::class)
+        )->getData(true);
+
+        $this->assertSame('2026-08-31', $payload['date_from']);
+        $this->assertSame('2026-08-31', $payload['date_to']);
+        $this->assertSame(1, $payload['total_orders']);
+        $this->assertEquals(120.0, $payload['total_sales']);
     }
 
     public function test_normal_cash_checkout_completes_order(): void
@@ -807,6 +1032,35 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame(Payment::first()->id, $second['payment']->id);
     }
 
+    public function test_dashboard_flags_unaddressed_self_pos_without_changing_summary_metrics(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-01 12:00:00', 'Asia/Kolkata'));
+        \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
+        PaymentMethod::create(['type' => 'cash', 'enabled' => true]);
+
+        $paidOrder = $this->order(total: 200, status: 'completed', paymentStatus: 'paid');
+        $paidOrder->forceFill(['business_date' => '2026-09-01'])->save();
+
+        $selfPosOrder = $this->order(total: 150, status: 'draft');
+        $selfPosOrder->forceFill(['business_date' => '2026-09-01'])->save();
+        app(SelfPosOrderService::class)->submit($selfPosOrder, [
+            'payment_method' => 'cash',
+            'amount' => 150,
+            'customer' => ['name' => 'QR Guest', 'phone' => '9999999999'],
+        ]);
+
+        $payload = app(TenantDashboardController::class)
+            ->index(Request::create('/dashboard', 'GET', ['location_id' => 1]))
+            ->getData(true);
+
+        $this->assertSame(1, $payload['summary']['today_orders']);
+        $this->assertEquals(200.0, $payload['summary']['sales']);
+        $this->assertSame(1, $payload['notifications']['total']);
+        $this->assertSame(1, $payload['notifications']['unaddressed_self_pos_orders']['count']);
+        $this->assertSame($selfPosOrder->id, $payload['notifications']['unaddressed_self_pos_orders']['items'][0]['id']);
+        $this->assertSame('QR Guest', $payload['notifications']['unaddressed_self_pos_orders']['items'][0]['customer_name']);
+    }
+
     public function test_self_pos_biller_confirmation_completes_order_and_generates_invoice(): void
     {
         \App\Models\Tenant\Setting::set('token_system_enabled', true, 'boolean');
@@ -1073,6 +1327,16 @@ class CheckoutPaymentReliabilityTest extends TestCase
         return $order;
     }
 
+    private function enableOvernightBusinessDayTiming(): void
+    {
+        DB::table('locations')->where('id', 1)->update([
+            'business_day_enabled' => true,
+            'business_day_start_time' => '09:00:00',
+            'business_day_end_time' => '02:00:00',
+            'timezone' => 'Asia/Kolkata',
+        ]);
+    }
+
     private function bindSelfPosInvoiceService(): void
     {
         app()->instance(InvoiceService::class, new class extends InvoiceService {
@@ -1323,6 +1587,12 @@ class CheckoutPaymentReliabilityTest extends TestCase
         Schema::connection('tenant')->create('locations', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable();
+            $table->string('address')->nullable();
+            $table->string('type')->nullable();
+            $table->boolean('business_day_enabled')->nullable()->default(false);
+            $table->time('business_day_start_time')->nullable();
+            $table->time('business_day_end_time')->nullable();
+            $table->string('timezone')->nullable();
             $table->timestamps();
         });
 

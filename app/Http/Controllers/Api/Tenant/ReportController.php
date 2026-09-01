@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Services\BusinessDayService;
 use App\Services\ReportEngineService;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
@@ -95,7 +96,7 @@ class ReportController extends Controller
 
         $tenantId = $this->tenantId();
         $locationId = $this->locationId($request);
-        [$start, $end] = $this->billingDateRange($validated);
+        [$start, $end] = $this->billingDateRange([...$validated, 'location_id' => $locationId]);
         $userId = isset($validated['user_id']) ? (int) $validated['user_id'] : null;
 
         $report = $reports->billingByUser($tenantId, $start, $end, $locationId, $userId);
@@ -217,23 +218,27 @@ class ReportController extends Controller
         $period = $this->normalizePeriod(
             $request->get('period', $request->get('filter', 'today'))
         );
+        $businessDays = app(BusinessDayService::class);
+        $today = $locationId && $businessDays->configuredForLocation($locationId)
+            ? $businessDays->currentForLocation($locationId)
+            : now()->toDateString();
 
         return match ($period) {
             'yesterday' => [
-                now()->subDay()->toDateString(),
-                now()->subDay()->toDateString(),
+                Carbon::parse($today)->subDay()->toDateString(),
+                Carbon::parse($today)->subDay()->toDateString(),
             ],
             'last_7_days', 'week' => [
-                now()->subDays(6)->toDateString(),
-                now()->toDateString(),
+                Carbon::parse($today)->subDays(6)->toDateString(),
+                $today,
             ],
             'month' => [
-                now()->startOfMonth()->toDateString(),
-                now()->toDateString(),
+                Carbon::parse($today)->startOfMonth()->toDateString(),
+                $today,
             ],
             'all' => [
                 $this->firstReportDate($tenantId, $locationId),
-                now()->toDateString(),
+                $today,
             ],
             'custom' => [
                 Carbon::parse($request->validate([
@@ -243,8 +248,8 @@ class ReportController extends Controller
                 Carbon::parse($request->end_date)->toDateString(),
             ],
             default => [
-                now()->toDateString(),
-                now()->toDateString(),
+                $today,
+                $today,
             ],
         };
     }
@@ -317,19 +322,24 @@ class ReportController extends Controller
     private function billingDateRange(array $filters): array
     {
         $period = $filters['period'] ?? 'today';
+        $businessDays = app(BusinessDayService::class);
+        $locationId = $filters['location_id'] ?? null;
+        $today = $locationId && $businessDays->configuredForLocation($locationId)
+            ? $businessDays->currentForLocation($locationId)
+            : now()->toDateString();
 
         return match ($period) {
             'month' => [
-                now()->startOfMonth()->startOfDay(),
-                now()->endOfDay(),
+                Carbon::parse($today)->startOfMonth()->startOfDay(),
+                Carbon::parse($today)->endOfDay(),
             ],
             'custom' => [
                 Carbon::parse($filters['start_date'])->startOfDay(),
                 Carbon::parse($filters['end_date'])->endOfDay(),
             ],
             default => [
-                now()->startOfDay(),
-                now()->endOfDay(),
+                Carbon::parse($today)->startOfDay(),
+                Carbon::parse($today)->endOfDay(),
             ],
         };
     }

@@ -1,0 +1,1 @@
+import{a as i}from"./registration-batches-CkNJdcQK.js";const n={list(t={}){return i.get("/locations",{params:t})},update(t,s){return i.put(`/locations/${t}`,s)},updateBusinessDayTiming(t){return i.put("/locations/business-day-timing",t)}};export{n as l};

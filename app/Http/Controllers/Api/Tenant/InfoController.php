@@ -39,6 +39,11 @@ class InfoController extends Controller
                     'api_key' => $tenant->api_key,
                     'address' => $tenant->address,
                     'industry' => $tenant->industry,
+                    'self_pos_enabled' => $tenant->selfPosEnabled(),
+                ],
+                'self_pos' => [
+                    'enabled' => $tenant->selfPosEnabled(),
+                    'support_message' => 'Self POS is not enabled for this business. Please contact PayChat support to enable Self POS.',
                 ],
 
                 'branding' => $tenant->branding,

@@ -6,6 +6,7 @@ use App\Http\Controllers\PublicBillingController;
 use App\Http\Controllers\PublicLoyaltyRewardController;
 use App\Http\Controllers\Web\AuthenticatedSessionController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\MasterCatalogController;
 use App\Http\Controllers\Web\RegisteredTenantController;
 use App\Http\Middleware\NoIndex;
 
@@ -72,6 +73,12 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware(['auth', 'master', NoIndex::class])->prefix('master')->name('master.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'master'])->name('dashboard');
+    Route::get('/features', [MasterCatalogController::class, 'features'])->name('features.index');
+    Route::post('/features', [MasterCatalogController::class, 'storeFeature'])->name('features.store');
+    Route::patch('/features/{feature}', [MasterCatalogController::class, 'updateFeature'])->name('features.update');
+    Route::get('/plans', [MasterCatalogController::class, 'plans'])->name('plans.index');
+    Route::post('/plans', [MasterCatalogController::class, 'storePlan'])->name('plans.store');
+    Route::patch('/plans/{plan}', [MasterCatalogController::class, 'updatePlan'])->name('plans.update');
     Route::get('/logs/system', [DashboardController::class, 'systemLogs'])
         ->name('logs.system');
     Route::get('/logs/system/available-dates', [DashboardController::class, 'systemLogDates'])
@@ -84,6 +91,8 @@ Route::middleware(['auth', 'master', NoIndex::class])->prefix('master')->name('m
         ->name('demo-leads.update');
     Route::post('/tenants/{tenant}/users', [DashboardController::class, 'storeTenantUser'])
         ->name('tenants.users.store');
+    Route::patch('/tenants/{tenant}/access', [DashboardController::class, 'updateTenantAccess'])
+        ->name('tenants.access');
     Route::patch('/tenants/{tenant}/password', [DashboardController::class, 'resetTenantPassword'])
         ->name('tenants.password');
 });

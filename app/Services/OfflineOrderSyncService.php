@@ -27,7 +27,8 @@ class OfflineOrderSyncService
         private PaymentService $paymentService,
         private OrderKitchenDispatchService $kitchenDispatch,
         private InvoiceService $invoiceService,
-        private TableSessionService $tableSessionService
+        private TableSessionService $tableSessionService,
+        private BusinessDayService $businessDays
     ) {
     }
 
@@ -374,7 +375,10 @@ class OfflineOrderSyncService
         ];
 
         if (Schema::hasColumn('pos_orders', 'business_date') && ! empty($payload['offline_created_at'])) {
-            $updates['business_date'] = Carbon::parse($payload['offline_created_at'])->toDateString();
+            $updates['business_date'] = $this->businessDays->forLocation(
+                isset($payload['location_id']) ? (int) $payload['location_id'] : null,
+                $payload['offline_created_at']
+            );
         }
 
         $order->forceFill($updates)->save();

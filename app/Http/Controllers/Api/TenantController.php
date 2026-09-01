@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\PaychatPricingPlan;
 use App\Models\TenantOnboarding;
 use App\Models\TenantPolicyAcceptance;
 use App\Http\Controllers\Controller;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use App\Jobs\SetupTenantJob;
@@ -46,6 +48,7 @@ class TenantController extends Controller
             'terms_version' => 'nullable|string|max:100',
             'privacy_accepted' => 'required|accepted',
             'privacy_version' => 'nullable|string|max:100',
+            'plan' => 'nullable|string|max:80',
         ]);
 
         $sanitizedSlug = $this->normalizeSlugForDatabase($validated['slug']);
@@ -84,12 +87,20 @@ class TenantController extends Controller
 
         DB::statement("CREATE DATABASE IF NOT EXISTS `$dbName`");
 
-        [$tenant, $adminUser, $onboarding, $setupData] = DB::connection('mysql')->transaction(function () use ($request, $validated, $dbName, $logoContent) {
+        $selectedPlan = $validated['plan'] ?? null;
+        $selectedPlan = $selectedPlan
+            && Schema::hasTable('paychat_pricing_plans')
+            && PaychatPricingPlan::where('key', $selectedPlan)->where('is_active', true)->exists()
+            ? $selectedPlan
+            : 'trial';
+
+        [$tenant, $adminUser, $onboarding, $setupData] = DB::connection('mysql')->transaction(function () use ($request, $validated, $dbName, $logoContent, $selectedPlan) {
             $tenant = Tenant::create([
                 'name' => $validated['name'],
                 'slug' => $validated['slug'],
                 'database' => $dbName,
                 'industry' => $validated['industry'],
+                'plan' => $selectedPlan,
                 'api_key' => $this->generateUniqueApiKey(),
             ]);
 
@@ -136,6 +147,7 @@ class TenantController extends Controller
                 'name' => $tenant->name,
                 'slug' => $tenant->slug,
                 'industry' => $tenant->industry,
+                'plan' => $tenant->plan,
                 'setup_status' => $onboarding->status,
             ],
             'user' => [
