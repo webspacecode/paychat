@@ -151,6 +151,8 @@ class PaymentController extends Controller
 
             if ($result['idempotent']) {
                 $order = $order->fresh(['tableSession', 'token']);
+                $sideEffects['table_session'] = $this->closeTableSessionAfterPayment($tenantSlug, $order, $payment);
+                $order = $order->fresh(['tableSession', 'token']);
 
                 Observability::logInfo('payment.success.idempotent', [
                     'tenant_slug' => $tenantSlug,
@@ -163,6 +165,7 @@ class PaymentController extends Controller
                     'already_paid' => true,
                     'already_successful' => $result['already_successful'],
                     'post_processing_required' => false,
+                    'table_session_side_effect' => $sideEffects['table_session'],
                     'duration_ms' => Observability::durationMs($startedAt),
                 ]);
 

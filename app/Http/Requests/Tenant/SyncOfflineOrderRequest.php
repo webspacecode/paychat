@@ -85,6 +85,8 @@ class SyncOfflineOrderRequest extends FormRequest
             'totals.subtotal' => ['required', 'numeric', 'min:0'],
             'totals.discount_total' => ['nullable', 'numeric', 'min:0'],
             'totals.tax_total' => ['nullable', 'numeric', 'min:0'],
+            'totals.service_charge_total' => ['nullable', 'numeric', 'min:0'],
+            'totals.service_charge_applied' => ['nullable', 'boolean'],
             'totals.grand_total' => ['required', 'numeric', 'min:0'],
             'totals.paid_amount' => ['required', 'numeric', 'min:0'],
             'totals.balance_amount' => ['nullable', 'numeric'],

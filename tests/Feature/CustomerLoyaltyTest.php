@@ -696,6 +696,7 @@ class CustomerLoyaltyTest extends TestCase
             $table->string('type')->nullable();
             $table->decimal('price', 10, 2)->nullable();
             $table->boolean('track_inventory')->default(false);
+            $table->softDeletes();
             $table->timestamps();
         });
 

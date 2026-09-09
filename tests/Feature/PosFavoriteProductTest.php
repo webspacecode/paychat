@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\Tenant\ProductController;
 use App\Http\Controllers\Api\Tenant\PosFavoriteProductController;
 use App\Models\Tenant\Category;
 use App\Models\Tenant\PosFavoriteProduct;
@@ -68,7 +69,7 @@ class PosFavoriteProductTest extends TestCase
         $this->assertSame(0, Category::count());
     }
 
-    public function test_delete_is_idempotent_and_product_delete_cascades(): void
+    public function test_delete_is_idempotent_and_product_soft_delete_keeps_favorite_row_hidden(): void
     {
         $product = Product::create([
             'name' => 'Cold Coffee',
@@ -101,7 +102,52 @@ class PosFavoriteProductTest extends TestCase
 
         $product->delete();
 
-        $this->assertSame(0, PosFavoriteProduct::count());
+        $this->assertSame(0, Product::count());
+        $this->assertSame(1, Product::withTrashed()->count());
+        $this->assertSame(1, PosFavoriteProduct::count());
+        $this->assertTrue(Product::withTrashed()->findOrFail($product->id)->trashed());
+
+        $response = $controller->index();
+        $payload = $response->getData(true);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame([], $payload['data']);
+    }
+
+    public function test_product_destroy_soft_deletes_and_restore_reactivates_product(): void
+    {
+        $product = Product::create([
+            'name' => 'Iced Latte',
+            'sku' => 'LATTE-1',
+            'type' => 'basic',
+            'price' => 160,
+            'unit' => 'glass',
+            'track_inventory' => false,
+            'is_active' => true,
+        ]);
+
+        $controller = app(ProductController::class);
+
+        $delete = $controller->destroy(Request::create('/products/'.$product->id, 'DELETE', [
+            'industry' => 'restaurant',
+        ]), 'favorite-demo', $product);
+
+        $this->assertSame(200, $delete->getStatusCode());
+        $this->assertSame(0, Product::count());
+
+        $archived = Product::withTrashed()->findOrFail($product->id);
+        $this->assertTrue($archived->trashed());
+        $this->assertFalse((bool) $archived->is_active);
+
+        $restore = $controller->restore(Request::create('/products/'.$product->id.'/restore', 'POST', [
+            'industry' => 'restaurant',
+        ]), 'favorite-demo', $product->id);
+
+        $this->assertSame(200, $restore->getStatusCode());
+
+        $restored = Product::findOrFail($product->id);
+        $this->assertFalse($restored->trashed());
+        $this->assertTrue((bool) $restored->is_active);
     }
 
     private function createSchema(): void
@@ -117,6 +163,7 @@ class PosFavoriteProductTest extends TestCase
             $table->boolean('track_inventory')->default(true);
             $table->integer('low_stock_threshold')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
 
@@ -146,6 +193,21 @@ class PosFavoriteProductTest extends TestCase
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
             $table->unsignedBigInteger('location_id')->nullable();
             $table->integer('quantity')->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('recipes', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('product_id');
+            $table->timestamps();
+        });
+
+        Schema::create('recipe_items', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('recipe_id');
+            $table->unsignedBigInteger('raw_product_id');
+            $table->integer('quantity');
+            $table->string('unit')->nullable();
             $table->timestamps();
         });
 

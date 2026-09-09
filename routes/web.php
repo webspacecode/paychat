@@ -6,6 +6,7 @@ use App\Http\Controllers\PublicBillingController;
 use App\Http\Controllers\PublicLoyaltyRewardController;
 use App\Http\Controllers\Web\AuthenticatedSessionController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\FeatureAnnouncementController;
 use App\Http\Controllers\Web\MasterCatalogController;
 use App\Http\Controllers\Web\RegisteredTenantController;
 use App\Http\Middleware\NoIndex;
@@ -76,6 +77,10 @@ Route::middleware(['auth', 'master', NoIndex::class])->prefix('master')->name('m
     Route::get('/features', [MasterCatalogController::class, 'features'])->name('features.index');
     Route::post('/features', [MasterCatalogController::class, 'storeFeature'])->name('features.store');
     Route::patch('/features/{feature}', [MasterCatalogController::class, 'updateFeature'])->name('features.update');
+    Route::get('/feature-announcements', [FeatureAnnouncementController::class, 'index'])->name('feature-announcements.index');
+    Route::post('/feature-announcements', [FeatureAnnouncementController::class, 'store'])->name('feature-announcements.store');
+    Route::patch('/feature-announcements/{announcement}', [FeatureAnnouncementController::class, 'update'])->name('feature-announcements.update');
+    Route::patch('/feature-announcements/{announcement}/toggle', [FeatureAnnouncementController::class, 'toggle'])->name('feature-announcements.toggle');
     Route::get('/plans', [MasterCatalogController::class, 'plans'])->name('plans.index');
     Route::post('/plans', [MasterCatalogController::class, 'storePlan'])->name('plans.store');
     Route::patch('/plans/{plan}', [MasterCatalogController::class, 'updatePlan'])->name('plans.update');

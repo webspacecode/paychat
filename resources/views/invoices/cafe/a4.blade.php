@@ -46,6 +46,9 @@
 <p>Subtotal: ₹ {{ $totals['subtotal'] }}</p>
 <p>CGST: ₹ {{ $totals['cgst'] }}</p>
 <p>SGST: ₹ {{ $totals['sgst'] }}</p>
+@if(($totals['service_charge'] ?? 0) > 0)
+<p>Service Charge: ₹ {{ $totals['service_charge'] }}</p>
+@endif
 
 <h2>Total: ₹ {{ $totals['total'] }}</h2>
 

@@ -813,6 +813,7 @@ class InvoiceService
         // dd($order);
         $subtotal = collect($order['items'] ?? [])
             ->sum(fn($i)=>$i['quantity']*$i['price']);
+        $serviceCharge = round((float) ($order['service_charge'] ?? data_get($order, 'meta.service_charge.amount', 0)), 2);
 
         if(!$tax || !$tax->is_gst_enabled){
             return [
@@ -820,7 +821,8 @@ class InvoiceService
                 'gst'=>0,
                 'cgst'=>0,
                 'sgst'=>0,
-                'total'=>$subtotal
+                'service_charge'=>$serviceCharge,
+                'total'=>$subtotal + $serviceCharge
             ];
         }
 
@@ -835,7 +837,8 @@ class InvoiceService
             'gst'=>$gst,
             'cgst'=>$cgst,
             'sgst'=>$sgst,
-            'total'=>$subtotal + $gst
+            'service_charge'=>$serviceCharge,
+            'total'=>$subtotal + $gst + $serviceCharge
         ];
     }
 

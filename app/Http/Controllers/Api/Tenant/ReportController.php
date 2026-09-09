@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Services\BusinessDayService;
+use App\Services\BusinessDayReportingService;
 use App\Services\ReportEngineService;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
@@ -18,12 +18,13 @@ class ReportController extends Controller
     {
         $tenantId = $this->tenantId();
         $locationId = $this->locationId($request);
-        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $range = $this->dateRange($request, $tenantId, $locationId);
+        [$start, $end] = [$range['start_date'], $range['end_date']];
         $this->logAggregationRange('summary', $tenantId, $start, $end, $locationId);
         $this->refreshAggregates($reports, $tenantId, $start, $end, ['sales', 'payments', 'hourly']);
 
-        $totals = $reports->rangeSummary($tenantId, $start, $end, $locationId);
-        $peakHour = $this->peakHourPayload($reports->rangeHourly($tenantId, $start, $end, $locationId));
+        $totals = $reports->rangeSummary($tenantId, $start, $end, $locationId, $range['location_date_ranges']);
+        $peakHour = $this->peakHourPayload($reports->rangeHourly($tenantId, $start, $end, $locationId, $range['location_date_ranges']));
 
         return response()->json([
             'date_from' => $start,
@@ -49,18 +50,20 @@ class ReportController extends Controller
     {
         $tenantId = $this->tenantId();
         $locationId = $this->locationId($request);
-        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $range = $this->dateRange($request, $tenantId, $locationId);
+        [$start, $end] = [$range['start_date'], $range['end_date']];
         $this->logAggregationRange('payments', $tenantId, $start, $end, $locationId);
         $this->refreshAggregates($reports, $tenantId, $start, $end, ['payments']);
 
-        return $reports->rangePayments($tenantId, $start, $end, $locationId);
+        return $reports->rangePayments($tenantId, $start, $end, $locationId, $range['location_date_ranges']);
     }
 
     public function topProducts(Request $request, ReportEngineService $reports)
     {
         $tenantId = $this->tenantId();
         $locationId = $this->locationId($request);
-        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $range = $this->dateRange($request, $tenantId, $locationId);
+        [$start, $end] = [$range['start_date'], $range['end_date']];
         $this->logAggregationRange('top_products', $tenantId, $start, $end, $locationId);
         $this->refreshAggregates($reports, $tenantId, $start, $end, ['top_products']);
 
@@ -69,7 +72,8 @@ class ReportController extends Controller
             $start,
             $end,
             $locationId,
-            (int) $request->get('limit', 10)
+            (int) $request->get('limit', 10),
+            $range['location_date_ranges']
         );
     }
 
@@ -77,11 +81,12 @@ class ReportController extends Controller
     {
         $tenantId = $this->tenantId();
         $locationId = $this->locationId($request);
-        [$start, $end] = $this->dateRange($request, $tenantId, $locationId);
+        $range = $this->dateRange($request, $tenantId, $locationId);
+        [$start, $end] = [$range['start_date'], $range['end_date']];
         $this->logAggregationRange('hourly', $tenantId, $start, $end, $locationId);
         $this->refreshAggregates($reports, $tenantId, $start, $end, ['hourly']);
 
-        return $reports->rangeHourly($tenantId, $start, $end, $locationId);
+        return $reports->rangeHourly($tenantId, $start, $end, $locationId, $range['location_date_ranges']);
     }
 
     public function billingByUser(Request $request, ReportEngineService $reports)
@@ -96,10 +101,11 @@ class ReportController extends Controller
 
         $tenantId = $this->tenantId();
         $locationId = $this->locationId($request);
-        [$start, $end] = $this->billingDateRange([...$validated, 'location_id' => $locationId]);
+        $range = $this->dateRangeFromValues($tenantId, $validated['period'] ?? 'today', $validated['start_date'] ?? null, $validated['end_date'] ?? null, $locationId);
+        [$start, $end] = [$range['start'], $range['end']];
         $userId = isset($validated['user_id']) ? (int) $validated['user_id'] : null;
 
-        $report = $reports->billingByUser($tenantId, $start, $end, $locationId, $userId);
+        $report = $reports->billingByUser($tenantId, $start, $end, $locationId, $userId, $range['location_date_ranges']);
 
         return response()->json([
             'date_from' => $start->toDateString(),
@@ -118,7 +124,7 @@ class ReportController extends Controller
         return response()->json($this->reportPayload(
             'daily-sales',
             $filters,
-            $reports->dailySalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'])
+            $reports->dailySalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['location_date_ranges'])
         ));
     }
 
@@ -129,7 +135,7 @@ class ReportController extends Controller
         return response()->json($this->reportPayload(
             'item-wise-sales',
             $filters,
-            $reports->itemWiseSalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'])
+            $reports->itemWiseSalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'], $filters['location_date_ranges'])
         ));
     }
 
@@ -140,7 +146,7 @@ class ReportController extends Controller
         return response()->json($this->reportPayload(
             'best-selling-products',
             $filters,
-            $reports->bestSellingProductsReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'] ?: 20)
+            $reports->bestSellingProductsReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'] ?: 20, $filters['location_date_ranges'])
         ));
     }
 
@@ -151,7 +157,7 @@ class ReportController extends Controller
         return response()->json($this->reportPayload(
             'cashiers',
             $filters,
-            $reports->cashierReport($this->tenantId(), $filters['start'], $filters['end'], $filters['location_id'], $filters['user_id'])
+            $reports->cashierReport($this->tenantId(), $filters['start'], $filters['end'], $filters['location_id'], $filters['user_id'], $filters['location_date_ranges'])
         ));
     }
 
@@ -162,7 +168,7 @@ class ReportController extends Controller
         return response()->json($this->reportPayload(
             'outlets',
             $filters,
-            $reports->outletReport($this->tenantId(), $filters['start_date'], $filters['end_date'])
+            $reports->outletReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_date_ranges'])
         ));
     }
 
@@ -187,7 +193,8 @@ class ReportController extends Controller
                 $filters['period'],
                 $validated['customer_type'] ?? 'all',
                 $validated['search'] ?? null,
-                (int) ($validated['per_page'] ?? 50)
+                (int) ($validated['per_page'] ?? 50),
+                $filters['location_date_ranges']
             )
         ));
     }
@@ -218,40 +225,21 @@ class ReportController extends Controller
         $period = $this->normalizePeriod(
             $request->get('period', $request->get('filter', 'today'))
         );
-        $businessDays = app(BusinessDayService::class);
-        $today = $locationId && $businessDays->configuredForLocation($locationId)
-            ? $businessDays->currentForLocation($locationId)
-            : now()->toDateString();
 
-        return match ($period) {
-            'yesterday' => [
-                Carbon::parse($today)->subDay()->toDateString(),
-                Carbon::parse($today)->subDay()->toDateString(),
-            ],
-            'last_7_days', 'week' => [
-                Carbon::parse($today)->subDays(6)->toDateString(),
-                $today,
-            ],
-            'month' => [
-                Carbon::parse($today)->startOfMonth()->toDateString(),
-                $today,
-            ],
-            'all' => [
-                $this->firstReportDate($tenantId, $locationId),
-                $today,
-            ],
-            'custom' => [
-                Carbon::parse($request->validate([
-                    'start_date' => ['required', 'date'],
-                    'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-                ])['start_date'])->toDateString(),
-                Carbon::parse($request->end_date)->toDateString(),
-            ],
-            default => [
-                $today,
-                $today,
-            ],
-        };
+        if ($period === 'custom') {
+            $request->validate([
+                'start_date' => ['required', 'date'],
+                'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            ]);
+        }
+
+        return $this->dateRangeFromValues(
+            $tenantId,
+            $period,
+            $request->get('start_date'),
+            $request->get('end_date'),
+            $locationId
+        );
     }
 
     private function normalizePeriod($period): string
@@ -273,16 +261,18 @@ class ReportController extends Controller
             $request->get('period', $request->get('filter', 'today'))
         );
 
-        [$startDate, $endDate] = $this->dateRange($request, $this->tenantId(), $this->locationId($request));
+        $range = $this->dateRange($request, $this->tenantId(), $this->locationId($request));
+        [$startDate, $endDate] = [$range['start_date'], $range['end_date']];
         $userId = $request->get('user_id', $request->get('cashier_id'));
 
         return [
             'period' => $period,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'start' => Carbon::parse($startDate)->startOfDay(),
-            'end' => Carbon::parse($endDate)->endOfDay(),
+            'start' => $range['start'],
+            'end' => $range['end'],
             'location_id' => $this->locationId($request),
+            'location_date_ranges' => $range['location_date_ranges'],
             'user_id' => $userId !== null && $userId !== '' ? (int) $userId : null,
             'limit' => $request->filled('limit') ? max(1, min(500, (int) $request->get('limit'))) : null,
             'customer_type' => $request->get('customer_type', 'all'),
@@ -319,29 +309,10 @@ class ReportController extends Controller
         ];
     }
 
-    private function billingDateRange(array $filters): array
+    private function dateRangeFromValues($tenantId, string $period, ?string $startDate, ?string $endDate, ?int $locationId): array
     {
-        $period = $filters['period'] ?? 'today';
-        $businessDays = app(BusinessDayService::class);
-        $locationId = $filters['location_id'] ?? null;
-        $today = $locationId && $businessDays->configuredForLocation($locationId)
-            ? $businessDays->currentForLocation($locationId)
-            : now()->toDateString();
-
-        return match ($period) {
-            'month' => [
-                Carbon::parse($today)->startOfMonth()->startOfDay(),
-                Carbon::parse($today)->endOfDay(),
-            ],
-            'custom' => [
-                Carbon::parse($filters['start_date'])->startOfDay(),
-                Carbon::parse($filters['end_date'])->endOfDay(),
-            ],
-            default => [
-                Carbon::parse($today)->startOfDay(),
-                Carbon::parse($today)->endOfDay(),
-            ],
-        };
+        return app(BusinessDayReportingService::class)
+            ->resolvePeriod($tenantId, $period, $startDate, $endDate, $locationId);
     }
 
     private function locationId(Request $request): ?int
@@ -359,26 +330,6 @@ class ReportController extends Controller
     private function tenantId()
     {
         return app('currentTenant')->id;
-    }
-
-    private function firstReportDate($tenantId, ?int $locationId): string
-    {
-        $query = DB::table('report_daily_sales')
-            ->where('tenant_id', $tenantId);
-
-        if ($locationId === null) {
-            $query->where(function ($scope) {
-                $scope->whereNull('location_id')->orWhere('location_id', 0);
-            });
-        } else {
-            $query->where('location_id', $locationId);
-        }
-
-        $firstDate = $query->min('date');
-
-        return $firstDate
-            ? Carbon::parse($firstDate)->toDateString()
-            : now()->toDateString();
     }
 
     private function logAggregationRange(string $report, $tenantId, string $startDate, string $endDate, ?int $locationId): void
@@ -438,19 +389,19 @@ class ReportController extends Controller
         }
 
         return match ($report) {
-            'daily-sales' => $this->reportPayload($report, $filters, $reports->dailySalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'])),
-            'item-wise-sales' => $this->reportPayload($report, $filters, $reports->itemWiseSalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'])),
-            'best-selling-products' => $this->reportPayload($report, $filters, $reports->bestSellingProductsReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'] ?: 20)),
-            'cashiers' => $this->reportPayload($report, $filters, $reports->cashierReport($this->tenantId(), $filters['start'], $filters['end'], $filters['location_id'], $filters['user_id'])),
-            'outlets' => $this->reportPayload($report, $filters, $reports->outletReport($this->tenantId(), $filters['start_date'], $filters['end_date'])),
-            'customers' => $this->reportPayload($report, $filters, $reports->customerReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['period'], $filters['customer_type'] ?? 'all', $filters['search'] ?? null, 500)),
+            'daily-sales' => $this->reportPayload($report, $filters, $reports->dailySalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['location_date_ranges'])),
+            'item-wise-sales' => $this->reportPayload($report, $filters, $reports->itemWiseSalesReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'], $filters['location_date_ranges'])),
+            'best-selling-products' => $this->reportPayload($report, $filters, $reports->bestSellingProductsReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['limit'] ?: 20, $filters['location_date_ranges'])),
+            'cashiers' => $this->reportPayload($report, $filters, $reports->cashierReport($this->tenantId(), $filters['start'], $filters['end'], $filters['location_id'], $filters['user_id'], $filters['location_date_ranges'])),
+            'outlets' => $this->reportPayload($report, $filters, $reports->outletReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_date_ranges'])),
+            'customers' => $this->reportPayload($report, $filters, $reports->customerReport($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['period'], $filters['customer_type'] ?? 'all', $filters['search'] ?? null, 500, $filters['location_date_ranges'])),
             'full-summary' => $this->fullSummaryPayload($filters, $reports),
         };
     }
 
     private function fullSummaryPayload(array $filters, ReportEngineService $reports): array
     {
-        $summary = $reports->rangeSummary($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id']);
+        $summary = $reports->rangeSummary($this->tenantId(), $filters['start_date'], $filters['end_date'], $filters['location_id'], $filters['location_date_ranges']);
 
         return $this->reportPayload('full-summary', $filters, [
             'summary' => $summary,

@@ -401,6 +401,11 @@
                 </div>
             </div>
         </div>
+        <div class="border-t border-white/10 px-6 pb-6 lg:px-8">
+            <a href="{{ route('master.feature-announcements.index') }}" class="master-action master-action-dark px-4 py-2 text-sm">
+                Feature Announcements
+            </a>
+        </div>
     </div>
 
     @if(session('status'))

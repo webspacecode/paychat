@@ -4,11 +4,11 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use App\Services\BusinessDayReportingService;
 use App\Services\ReportEngineService;
 use Illuminate\Support\Facades\Config;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 
 class GenerateReports extends Command
@@ -53,8 +53,10 @@ class GenerateReports extends Command
             DB::setDefaultConnection('tenant');
             DB::reconnect('tenant');
 
-            [$start, $end] = $this->dateRange();
-            $dateCount = Carbon::parse($start)->diffInDays(Carbon::parse($end)) + 1;
+            $dates = $this->datesToGenerate($tenant->id);
+            $start = min($dates);
+            $end = max($dates);
+            $dateCount = count($dates);
 
             $message = "Generating reports for tenant database {$tenant->database} from {$start} to {$end} ({$dateCount} dates)";
             $this->info($message);
@@ -66,52 +68,31 @@ class GenerateReports extends Command
                 'date_count' => $dateCount,
             ]);
 
-            app(ReportEngineService::class)
-                ->generateReportsForRange($tenant->id, $start, $end);
+            $reports = app(ReportEngineService::class);
+
+            foreach ($dates as $date) {
+                $reports->generateDailyReports($tenant->id, $date);
+            }
         }
 
         DB::setDefaultConnection('mysql'); // reset
     }
 
-    private function dateRange(): array
+    private function datesToGenerate($tenantId): array
     {
         if ($this->option('date')) {
             $date = Carbon::parse($this->option('date'))->toDateString();
-            return [$date, $date];
+            return [$date];
         }
 
         $period = strtolower(trim((string) $this->option('period')));
 
-        return match ($period) {
-            'yesterday' => [
-                now()->subDay()->toDateString(),
-                now()->subDay()->toDateString(),
-            ],
-            'last_7_days' => [
-                now()->subDays(6)->toDateString(),
-                now()->toDateString(),
-            ],
-            'week' => [
-                now()->startOfWeek()->toDateString(),
-                now()->toDateString(),
-            ],
-            'month' => [
-                now()->startOfMonth()->toDateString(),
-                now()->toDateString(),
-            ],
-            'custom' => [
-                $this->customStartDate(),
-                $this->customEndDate(),
-            ],
-            'all' => [
-                $this->firstOrderDate(),
-                now()->toDateString(),
-            ],
-            default => [
-                now()->toDateString(),
-                now()->toDateString(),
-            ],
-        };
+        if ($period === 'custom') {
+            return $this->datesBetween($this->customStartDate(), $this->customEndDate());
+        }
+
+        return app(BusinessDayReportingService::class)
+            ->businessDatesForPeriod($tenantId, $period);
     }
 
     private function requiredDateOption(string $option): string
@@ -140,24 +121,16 @@ class GenerateReports extends Command
         return $end->toDateString();
     }
 
-    private function firstOrderDate(): string
+    private function datesBetween(string $startDate, string $endDate): array
     {
-        $dateColumn = Schema::hasColumn('pos_orders', 'business_date')
-            ? 'business_date'
-            : 'created_at';
+        $dates = [];
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
 
-        $query = DB::table('pos_orders')
-            ->where('payment_status', self::PAID_PAYMENT_STATUS)
-            ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES);
-
-        if ($dateColumn === 'business_date') {
-            $query->whereNotNull('business_date');
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $dates[] = $date->toDateString();
         }
 
-        $firstDate = $query->min(DB::raw("DATE({$dateColumn})"));
-
-        return $firstDate
-            ? Carbon::parse($firstDate)->toDateString()
-            : now()->toDateString();
+        return $dates;
     }
 }

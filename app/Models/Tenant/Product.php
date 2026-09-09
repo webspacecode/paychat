@@ -3,10 +3,13 @@
 namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
 {
+    use SoftDeletes;
+
     protected $appends = [
         'resolved_image_url',
         'resolved_image_source',
@@ -29,6 +32,7 @@ class Product extends Model
         'track_inventory' => 'boolean',
         'low_stock_threshold' => 'integer',
         'is_active' => 'boolean',
+        'deleted_at' => 'datetime',
     ];
 
     public function images()      { return $this->hasMany(ProductImage::class); }

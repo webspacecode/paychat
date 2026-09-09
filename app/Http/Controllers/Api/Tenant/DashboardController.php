@@ -8,6 +8,7 @@ use App\Services\ProductManagement\Strategies\CategoryStrategyResolver;
 use Illuminate\Http\Request;
 use App\Models\Tenant\Order;
 use App\Services\BusinessDayService;
+use App\Services\BusinessDayReportingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -97,11 +98,42 @@ class DashboardController extends Controller
     private function applyTodayBusinessDateFilter($query, ?int $locationId = null): void
     {
         if (Schema::hasColumn('pos_orders', 'business_date')) {
-            $query->whereDate('pos_orders.business_date', app(BusinessDayService::class)->currentForLocation($locationId));
+            if ($locationId !== null) {
+                $this->applyOrderBusinessDateFilter($query, app(BusinessDayService::class)->currentForLocation($locationId));
+                return;
+            }
+
+            $range = app(BusinessDayReportingService::class)
+                ->resolvePeriod(app('currentTenant')->id, 'today', null, null, null);
+
+            if (! empty($range['location_date_ranges'])) {
+                $query->where(function ($outer) use ($range) {
+                    foreach ($range['location_date_ranges'] as $locationRange) {
+                        $outer->orWhere(function ($scope) use ($locationRange) {
+                            $scope->where('pos_orders.location_id', $locationRange['location_id']);
+                            $this->applyOrderBusinessDateFilter($scope, $locationRange['start_date']);
+                        });
+                    }
+                });
+                return;
+            }
+
+            $this->applyOrderBusinessDateFilter($query, app(BusinessDayService::class)->currentForLocation(null));
             return;
         }
 
         $query->whereDate('created_at', now());
+    }
+
+    private function applyOrderBusinessDateFilter($query, string $date): void
+    {
+        $query->where(function ($scope) use ($date) {
+            $scope->whereDate('pos_orders.business_date', $date)
+                ->orWhere(function ($legacy) use ($date) {
+                    $legacy->whereNull('pos_orders.business_date')
+                        ->whereDate('pos_orders.created_at', $date);
+                });
+        });
     }
 
     private function selfPosAttention($baseQuery): array

@@ -218,16 +218,22 @@ class DefaultProductStrategy implements ProductStrategyInterface
 
     public function delete(Product $product): bool
     {
-        return (bool) $product->update(['is_active' => false]);
+        $product->update(['is_active' => false]);
+
+        return (bool) $product->delete();
     }
 
-    public function search(string $keyword = null, ?string $type = null, ?int $locationId = null, bool $includeInactive = false): Collection
+    public function search(string $keyword = null, ?string $type = null, ?int $locationId = null, bool $includeInactive = false, bool $onlyArchived = false): Collection
     {
 
         $q = Product::query()
             ->with(['images', 'categories:id,name,description', 'inventories']);
 
-        if (! $includeInactive) {
+        if ($onlyArchived) {
+            $q->onlyTrashed();
+        }
+
+        if (! $includeInactive && ! $onlyArchived) {
             $q->where('is_active', true);
         }
 
@@ -241,7 +247,7 @@ class DefaultProductStrategy implements ProductStrategyInterface
         }
 
         // 🎯 MAIN BUSINESS LOGIC
-        if (! $includeInactive) {
+        if (! $includeInactive && ! $onlyArchived) {
             $q->where(function ($w) use ($locationId) {
 
                 // ✅ 1. Recipe products (ALWAYS show)

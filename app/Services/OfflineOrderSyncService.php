@@ -255,6 +255,8 @@ class OfflineOrderSyncService
             'tax' => $payload['totals']['tax_total'] ?? ($payload['tax_summary']['total_tax'] ?? 0),
             'discount' => $payload['totals']['discount_total'] ?? ($payload['discount']['amount'] ?? 0),
             'total' => $payload['totals']['grand_total'],
+            'service_charge_applied' => $payload['totals']['service_charge_applied']
+                ?? (($payload['totals']['service_charge_total'] ?? 0) > 0),
         ]));
     }
 

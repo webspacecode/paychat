@@ -4,6 +4,10 @@ namespace App\Services\Orders;
 
 use App\Models\Tenant\Order;
 use App\Models\Tenant\Setting;
+use App\Models\Tenant\Location;
+use App\Models\Tenant\Resource;
+use App\Models\Tenant\TableSession;
+use App\Models\Tenant\TableSessionTable;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\Tenant\Product;
@@ -199,11 +203,11 @@ class OrderService
                 $subtotal += $lineTotal;
             }
 
-            $tax = $this->taxService->calculateOrderTax($data['items']);
-            $discount = $data['discount'] ?? 0;
-            $total = $this->taxService->calculateTotal($subtotal,$discount,$tax);
-
-            $order->update(['subtotal'=>$subtotal,'tax'=>$tax,'discount'=>$discount,'total'=>$total]);
+            $this->recalculate($order->fresh('items'), [
+                'discount' => $data['discount'] ?? 0,
+                'service_charge_applied' => (bool) ($data['service_charge_applied'] ?? false),
+                'has_service_charge_applied' => array_key_exists('service_charge_applied', $data),
+            ]);
 
             return $order->load('items');
         });
@@ -229,10 +233,11 @@ class OrderService
                     ]);
                     $subtotal += $lineTotal;
                 }
-                $tax = $this->taxService->calculateOrderTax($data['items']);
-                $discount = $data['discount'] ?? 0;
-                $total = $this->taxService->calculateTotal($subtotal,$discount,$tax);
-                $order->update(['subtotal'=>$subtotal,'tax'=>$tax,'discount'=>$discount,'total'=>$total]);
+                $this->recalculate($order->fresh('items'), [
+                    'discount' => $data['discount'] ?? 0,
+                    'service_charge_applied' => (bool) ($data['service_charge_applied'] ?? false),
+                    'has_service_charge_applied' => array_key_exists('service_charge_applied', $data),
+                ]);
             }
             return $order->load('items');
         });
@@ -240,37 +245,145 @@ class OrderService
 
     public function createDraft($locationId, $customerId = null, $orderType = null, $tableId = null, $diningFlow = null, $guestCount = null, $tableSessionId = null, array $deliverySource = [], ?int $createdBy = null)
     {
-        [$orderType, $meta] = $this->normalizeDraftOrderType($orderType);
-        $createdBy = $createdBy ?? auth()->id();
+        return DB::transaction(function () use ($locationId, $customerId, $orderType, $tableId, $diningFlow, $guestCount, $tableSessionId, $deliverySource, $createdBy) {
+            [$orderType, $meta] = $this->normalizeDraftOrderType($orderType);
+            $createdBy = $createdBy ?? auth()->id();
 
-        $orderData = [
-            'order_no' => strtoupper('ORD-' . Str::uuid()),
-            'location_id' => $locationId,
-            'customer_id' => $customerId,
-            'order_type' => $orderType,
+            if ($diningFlow === 'table_service' && $tableId) {
+                $existingOrder = $this->reconcileTableServiceDraftTarget((int) $locationId, (int) $tableId, $tableSessionId ? (int) $tableSessionId : null);
+
+                if ($existingOrder) {
+                    return $existingOrder;
+                }
+            }
+
+            $orderData = [
+                'order_no' => strtoupper('ORD-' . Str::uuid()),
+                'location_id' => $locationId,
+                'customer_id' => $customerId,
+                'order_type' => $orderType,
+                'table_id' => $tableId,
+                'table_session_id' => $tableSessionId,
+                'guest_count' => $guestCount,
+                'dining_flow' => $diningFlow,
+                'status' => 'draft',
+                'payment_status' => 'unpaid',
+                'meta' => $meta,
+            ];
+
+            if ($createdBy && Schema::hasColumn('pos_orders', 'created_by')) {
+                $orderData['created_by'] = $createdBy;
+            }
+
+            $orderData = array_merge(
+                $orderData,
+                $this->deliverySourceAttributes($orderType, $deliverySource)
+            );
+
+            if ($this->getOrderBusinessDateColumn()) {
+                $orderData['business_date'] = $this->businessDays->currentForLocation($locationId ? (int) $locationId : null);
+            }
+
+            return Order::create($orderData);
+        });
+    }
+
+    private function reconcileTableServiceDraftTarget(int $locationId, int $tableId, ?int $requestedSessionId = null): ?Order
+    {
+        $table = Resource::query()
+            ->whereKey($tableId)
+            ->where('type', 'table')
+            ->lockForUpdate()
+            ->first();
+
+        if (! $table || (int) $table->location_id !== $locationId) {
+            throw ValidationException::withMessages([
+                'table_id' => 'Table does not belong to the selected location.',
+            ]);
+        }
+
+        $session = $this->activeTableSessionForDraft($tableId, $requestedSessionId);
+
+        if (! $session) {
+            return null;
+        }
+
+        $order = $session->order()->lockForUpdate()->first();
+
+        if (! $order) {
+            if ($requestedSessionId && (int) $session->id === $requestedSessionId) {
+                return null;
+            }
+
+            throw new ConflictHttpException('Table has an active session without a linked order. Please refresh tables or release the table.');
+        }
+
+        if ($order->payment_status === 'paid') {
+            app(\App\Services\TableSessionService::class)->closeForOrder($order->fresh(['tableSession']));
+
+            return null;
+        }
+
+        if ($order->status === 'cancelled') {
+            app(\App\Services\TableSessionService::class)->release($table, true);
+
+            return null;
+        }
+
+        if ($order->status === 'completed') {
+            throw new ConflictHttpException('Table has a completed order that is not fully paid. Please refresh tables or release the table.');
+        }
+
+        Observability::logInfo('order.table_service_draft_reused', [
+            'order_id' => $order->id,
+            'location_id' => $order->location_id,
             'table_id' => $tableId,
-            'table_session_id' => $tableSessionId,
-            'guest_count' => $guestCount,
-            'dining_flow' => $diningFlow,
-            'status' => 'draft',
-            'payment_status' => 'unpaid',
-            'meta' => $meta,
-        ];
+            'table_session_id' => $session->id,
+            'order_status' => $order->status,
+            'payment_status' => $order->payment_status,
+        ]);
 
-        if ($createdBy && Schema::hasColumn('pos_orders', 'created_by')) {
-            $orderData['created_by'] = $createdBy;
+        return $order->fresh(['items.product', 'customer', 'location', 'payments', 'table', 'tableSession']);
+    }
+
+    private function activeTableSessionForDraft(int $tableId, ?int $requestedSessionId = null): ?TableSession
+    {
+        if ($requestedSessionId) {
+            $requestedSession = TableSession::query()
+                ->whereKey($requestedSessionId)
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
+
+            if ($requestedSession && (int) $requestedSession->table_id === $tableId) {
+                return $requestedSession;
+            }
         }
 
-        $orderData = array_merge(
-            $orderData,
-            $this->deliverySourceAttributes($orderType, $deliverySource)
-        );
+        if (Schema::connection('tenant')->hasTable('table_session_tables')) {
+            $sessionId = TableSessionTable::query()
+                ->where('table_id', $tableId)
+                ->whereNull('released_at')
+                ->whereHas('tableSession', fn ($query) => $query->where('status', 'active'))
+                ->orderByRaw("case when role = 'primary' then 0 else 1 end")
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->value('table_session_id');
 
-        if ($this->getOrderBusinessDateColumn()) {
-            $orderData['business_date'] = $this->businessDays->currentForLocation($locationId ? (int) $locationId : null);
+            if ($sessionId) {
+                return TableSession::query()
+                    ->whereKey($sessionId)
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->first();
+            }
         }
 
-        return Order::create($orderData);
+        return TableSession::query()
+            ->where('table_id', $tableId)
+            ->where('status', 'active')
+            ->lockForUpdate()
+            ->first();
     }
 
     private function normalizeDraftOrderType(?string $orderType): array
@@ -360,6 +473,8 @@ class OrderService
         try {
             $this->replaceItems($order, (array) $request->items, [
                 'discount' => $request->discount,
+                'service_charge_applied' => $request->boolean('service_charge_applied'),
+                'has_service_charge_applied' => $request->exists('service_charge_applied'),
             ]);
         } catch (ValidationException $e) {
             $this->logStockUnavailable($e, $order, $request);
@@ -407,6 +522,8 @@ class OrderService
             // ✅ 3️⃣ CALL RECALCULATE
             $this->recalculate($order, [
                 'discount' => $context['discount'] ?? 0,
+                'service_charge_applied' => (bool) ($context['service_charge_applied'] ?? false),
+                'has_service_charge_applied' => (bool) ($context['has_service_charge_applied'] ?? false),
             ]);
 
             $this->syncPaymentStateAfterOrderChange($order->fresh());
@@ -493,6 +610,8 @@ class OrderService
 
             $this->recalculate($lockedOrder->fresh('items'), [
                 'discount' => $request->discount,
+                'service_charge_applied' => $request->boolean('service_charge_applied'),
+                'has_service_charge_applied' => $request->exists('service_charge_applied'),
             ]);
 
             $this->syncPaymentStateAfterOrderChange($lockedOrder->fresh());
@@ -613,15 +732,94 @@ class OrderService
             ? min($payload['discount'], $subtotal)
             : 0;
 
-        // ✅ Final total
-        $finalTotal = $subtotal + $tax - $discount;
+        $serviceCharge = $this->serviceChargeForOrder($order, $subtotal, $payload);
 
-        $order->update([
+        // ✅ Final total
+        $finalTotal = $subtotal + $tax + $serviceCharge['amount'] - $discount;
+
+        $updates = [
             'subtotal' => $subtotal,
             'tax'      => $tax,
             'discount' => $discount,
             'total'    => $finalTotal,
-        ]);
+            'meta' => array_merge($order->meta ?? [], [
+                'service_charge' => [
+                    'applied' => $serviceCharge['applied'],
+                    'type' => $serviceCharge['type'],
+                    'rate' => $serviceCharge['rate'],
+                    'value' => $serviceCharge['value'],
+                    'amount' => $serviceCharge['amount'],
+                ],
+            ]),
+        ];
+
+        if (Schema::hasColumn('pos_orders', 'service_charge')) {
+            $updates['service_charge'] = $serviceCharge['amount'];
+        }
+
+        $order->update($updates);
+    }
+
+    private function serviceChargeForOrder(Order $order, float $subtotal, array $payload = []): array
+    {
+        $config = $this->locationServiceChargeConfig($order->location_id);
+        $existing = (array) data_get($order->meta ?? [], 'service_charge', []);
+        $applied = array_key_exists('has_service_charge_applied', $payload) && $payload['has_service_charge_applied']
+            ? (bool) $payload['service_charge_applied']
+            : (bool) ($existing['applied'] ?? $config['default_apply']);
+
+        if (! $config['enabled'] || $config['value'] <= 0 || ! $applied) {
+            return [
+                'applied' => false,
+                'type' => null,
+                'rate' => null,
+                'value' => null,
+                'amount' => 0.0,
+            ];
+        }
+
+        $amount = $config['type'] === 'fixed'
+            ? $config['value']
+            : round($subtotal * $config['value'] / 100, 2);
+
+        return [
+            'applied' => true,
+            'type' => $config['type'],
+            'rate' => $config['type'] === 'percentage' ? $config['value'] : null,
+            'value' => $config['value'],
+            'amount' => round(max(0, $amount), 2),
+        ];
+    }
+
+    private function locationServiceChargeConfig($locationId): array
+    {
+        $defaults = [
+            'enabled' => false,
+            'type' => null,
+            'value' => 0.0,
+            'default_apply' => true,
+        ];
+
+        if (! $locationId || ! Schema::hasColumn('locations', 'service_charge_enabled')) {
+            return $defaults;
+        }
+
+        $location = Location::query()->find($locationId);
+
+        if (! $location) {
+            return $defaults;
+        }
+
+        $type = $location->service_charge_type === 'fixed' ? 'fixed' : 'percentage';
+
+        return [
+            'enabled' => (bool) $location->service_charge_enabled,
+            'type' => $type,
+            'value' => round(max(0, (float) $location->service_charge_value), 2),
+            'default_apply' => Schema::hasColumn('locations', 'service_charge_default_apply')
+                ? (bool) $location->service_charge_default_apply
+                : true,
+        ];
     }
 
     

@@ -111,6 +111,11 @@ class OrderResource extends JsonResource
             'tax' => $this->tax,
             'shipping' => $this->shipping,
             'service_charge' => $this->service_charge,
+            'service_charge_applied' => (bool) data_get($this->meta, 'service_charge.applied', (float) ($this->service_charge ?? 0) > 0),
+            'service_charge_type' => data_get($this->meta, 'service_charge.type'),
+            'service_charge_rate' => data_get($this->meta, 'service_charge.rate'),
+            'service_charge_value' => data_get($this->meta, 'service_charge.value'),
+            'service_charge_amount' => (float) ($this->service_charge ?? data_get($this->meta, 'service_charge.amount', 0)),
             'rounding' => $this->rounding,
             'total' => $this->total,
 

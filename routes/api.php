@@ -37,6 +37,8 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\Tenant\ReportController;
 use App\Http\Controllers\Api\Tenant\OfflineOrderSyncController;
 use App\Http\Controllers\Api\Tenant\BootstrapController;
+use App\Http\Controllers\Api\Tenant\BusinessProfileController;
+use App\Http\Controllers\Api\Tenant\FeatureAnnouncementController;
 use App\Http\Controllers\Api\Tenant\LoyaltySettingsController;
 use App\Http\Controllers\Api\Tenant\BakeryOrderController;
 use App\Http\Controllers\Api\Tenant\BakeryOrderPaymentController;
@@ -87,6 +89,11 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/bootstrap', [BootstrapController::class, 'show']);
+    Route::get('/business-profile', [BusinessProfileController::class, 'show']);
+    Route::post('/business-profile', [BusinessProfileController::class, 'update'])->middleware('permission:settings.manage');
+    Route::get('/feature-announcements/unseen', [FeatureAnnouncementController::class, 'unseen']);
+    Route::post('/feature-announcements/{announcement}/seen', [FeatureAnnouncementController::class, 'seen'])->whereNumber('announcement');
+    Route::post('/feature-announcements/{announcement}/action-clicked', [FeatureAnnouncementController::class, 'actionClicked'])->whereNumber('announcement');
     Route::put('/settings/modules/{module}', [ModuleSettingsController::class, 'updateEnabled'])
         ->middleware('permission:tenant.modules.manage');
     Route::match(['get', 'post'], '/self-pos/qr', [SelfPosQrController::class, 'tenant'])
@@ -188,6 +195,7 @@ Route::middleware(['api-protected'])->prefix('{tenant_slug}')->group(function ()
         Route::post('/{product}/image-suggestions/{suggestion}/accept', [ProductImageSuggestionController::class, 'accept'])->middleware('permission:product.manage')->whereNumber('product')->whereNumber('suggestion');
         Route::post('/{product}/image-suggestions/{suggestion}/reject', [ProductImageSuggestionController::class, 'reject'])->middleware('permission:product.manage')->whereNumber('product')->whereNumber('suggestion');
         Route::get('/{product}/stock-movements', [ProductController::class, 'stockMovements'])->middleware(['feature:inventory', 'permission:product.manage']);
+        Route::post('/{product}/restore', [ProductController::class, 'restore'])->middleware('permission:product.manage')->whereNumber('product');
         Route::get('/{id}',    [ProductController::class, 'show']);    // read one
         Route::put('/{product}',   [ProductController::class, 'update'])->middleware('permission:product.manage');  // update
         Route::delete('/{product}',[ProductController::class, 'destroy'])->middleware('permission:product.manage'); // delete

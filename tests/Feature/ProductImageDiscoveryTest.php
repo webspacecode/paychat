@@ -305,6 +305,7 @@ class ProductImageDiscoveryTest extends TestCase
             $table->boolean('track_inventory')->default(true);
             $table->integer('low_stock_threshold')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
 

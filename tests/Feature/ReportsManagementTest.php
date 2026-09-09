@@ -297,6 +297,7 @@ class ReportsManagementTest extends TestCase
             $table->id();
             $table->string('name');
             $table->string('sku')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
 

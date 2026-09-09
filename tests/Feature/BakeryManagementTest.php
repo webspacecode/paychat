@@ -466,6 +466,7 @@ class BakeryManagementTest extends TestCase
             $table->decimal('price', 10, 2)->nullable();
             $table->string('unit')->nullable();
             $table->boolean('track_inventory')->default(true);
+            $table->softDeletes();
             $table->timestamps();
         });
 

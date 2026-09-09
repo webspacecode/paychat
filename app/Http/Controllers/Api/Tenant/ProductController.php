@@ -15,6 +15,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Facades\Storage;
 use App\Support\IndustryNormalizer;
+use App\Support\Observability;
 use App\Services\ProductManagement\Strategies\ProductStrategyResolver;
 use App\Services\ProductManagement\ProductApplicationService;
 
@@ -74,6 +75,7 @@ class ProductController extends Controller
             'location_id'  => ['nullable','int'],
             'type'     => ['nullable', Rule::in(['basic','raw','semi_finished','finished','recipe','other'])],
             'include_inactive' => ['nullable','boolean'],
+            'archived' => ['nullable','boolean'],
         ]);
         
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
@@ -81,7 +83,8 @@ class ProductController extends Controller
             $validated['keyword'] ?? null, 
             $validated['type'] ?? null, 
             $validated['location_id'] ?? null,
-            (bool) ($validated['include_inactive'] ?? false)
+            (bool) ($validated['include_inactive'] ?? false),
+            (bool) ($validated['archived'] ?? false)
         );
 
         return response()->json($items);
@@ -156,8 +159,44 @@ class ProductController extends Controller
         $industryStrategy = $this->resolver::resolve($validated['industry']); // 👈 resolve by industry
         $product = $this->resolveRouteProduct($product);
         $industryStrategy->delete($product);
+        Observability::logInfo('product.deleted', [
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'sku' => $product->sku,
+        ], $request);
 
-        return response()->json(['message' => 'Product disabled successfully']);
+        return response()->json(['message' => 'Product deleted successfully']);
+    }
+
+    public function restore(Request $request, $tenantSlug, $product)
+    {
+        $this->normalizeIndustryInput($request);
+
+        $request->validate([
+            'industry' => ['required', Rule::in(IndustryNormalizer::productIndustries())],
+        ]);
+
+        $product = Product::withTrashed()->whereKey($this->routeProductId($product))->first();
+        abort_unless($product, 404, 'Product not found');
+
+        if ($product->trashed()) {
+            $product->restore();
+        }
+
+        $product->update(['is_active' => true]);
+
+        Observability::logInfo('product.restored', [
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'sku' => $product->sku,
+        ], $request);
+
+        $industryStrategy = $this->resolver::resolve($request->input('industry'));
+
+        return response()->json([
+            'message' => 'Product restored successfully',
+            'data' => $industryStrategy->getById((int) $product->id),
+        ]);
     }
 
     // INVENTORY: adjust (+/-)

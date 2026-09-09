@@ -31,6 +31,10 @@ class LocationController extends Controller
             'business_day_start_time' => ['nullable', 'date_format:H:i'],
             'business_day_end_time' => ['nullable', 'date_format:H:i'],
             'timezone' => ['nullable', 'string', 'max:80', Rule::in($this->allowedTimezones())],
+            'service_charge_enabled' => ['nullable', 'boolean'],
+            'service_charge_type' => ['nullable', Rule::in(['percentage', 'fixed'])],
+            'service_charge_value' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'service_charge_default_apply' => ['nullable', 'boolean'],
         ]);
 
         $location = Location::create($this->locationPayload($validated));
@@ -66,6 +70,10 @@ class LocationController extends Controller
             'business_day_start_time' => ['nullable', 'date_format:H:i'],
             'business_day_end_time' => ['nullable', 'date_format:H:i'],
             'timezone' => ['nullable', 'string', 'max:80', Rule::in($this->allowedTimezones())],
+            'service_charge_enabled' => ['nullable', 'boolean'],
+            'service_charge_type' => ['nullable', Rule::in(['percentage', 'fixed'])],
+            'service_charge_value' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'service_charge_default_apply' => ['nullable', 'boolean'],
         ]);
 
         $location->update($this->locationPayload($validated));
@@ -127,12 +135,39 @@ class LocationController extends Controller
             ->only(['name', 'address', 'type'])
             ->all();
 
-        foreach (['business_day_enabled', 'business_day_start_time', 'business_day_end_time', 'timezone'] as $column) {
+        foreach ([
+            'business_day_enabled',
+            'business_day_start_time',
+            'business_day_end_time',
+            'timezone',
+            'service_charge_enabled',
+            'service_charge_type',
+            'service_charge_value',
+            'service_charge_default_apply',
+        ] as $column) {
             if (array_key_exists($column, $validated) && Schema::hasColumn('locations', $column)) {
                 $payload[$column] = $column === 'timezone'
                     ? $this->normalizeTimezone($validated[$column])
                     : $validated[$column];
             }
+        }
+
+        if (array_key_exists('service_charge_enabled', $payload) && ! $payload['service_charge_enabled']) {
+            if (Schema::hasColumn('locations', 'service_charge_type')) {
+                $payload['service_charge_type'] = null;
+            }
+
+            if (Schema::hasColumn('locations', 'service_charge_value')) {
+                $payload['service_charge_value'] = null;
+            }
+        }
+
+        if (
+            (array_key_exists('service_charge_enabled', $payload) && $payload['service_charge_enabled'])
+            && empty($payload['service_charge_type'])
+            && Schema::hasColumn('locations', 'service_charge_type')
+        ) {
+            $payload['service_charge_type'] = 'percentage';
         }
 
         if (array_key_exists('business_day_enabled', $payload) && ! $payload['business_day_enabled']) {

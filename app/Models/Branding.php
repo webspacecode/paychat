@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Branding extends Model
 {
+    protected $connection = 'mysql';
+
     protected $fillable = [
         'tenant_id','company_name','logo','primary_color','phone','address'
     ];

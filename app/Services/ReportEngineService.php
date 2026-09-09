@@ -62,12 +62,11 @@ class ReportEngineService
         }
     }
 
-    public function rangeSummary($tenantId, string $startDate, string $endDate, ?int $locationId = null): array
+    public function rangeSummary($tenantId, string $startDate, string $endDate, ?int $locationId = null, array $locationDateRanges = []): array
     {
         $totals = DB::table('report_daily_sales')
             ->where('tenant_id', $tenantId)
-            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
-            ->whereBetween('date', [$startDate, $endDate])
+            ->tap(fn ($q) => $this->applyReportDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->selectRaw('
                 COALESCE(SUM(total_orders), 0) as total_orders,
                 COALESCE(SUM(total_sales), 0) as total_sales,
@@ -77,7 +76,7 @@ class ReportEngineService
             ')
             ->first();
 
-        $payments = $this->rangePayments($tenantId, $startDate, $endDate, $locationId);
+        $payments = $this->rangePayments($tenantId, $startDate, $endDate, $locationId, $locationDateRanges);
 
         return [
             'total_orders' => (int) ($totals->total_orders ?? 0),
@@ -94,12 +93,11 @@ class ReportEngineService
         ];
     }
 
-    public function rangePayments($tenantId, string $startDate, string $endDate, ?int $locationId = null)
+    public function rangePayments($tenantId, string $startDate, string $endDate, ?int $locationId = null, array $locationDateRanges = [])
     {
         $rows = DB::table('report_payment_breakdowns')
             ->where('tenant_id', $tenantId)
-            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
-            ->whereBetween('date', [$startDate, $endDate])
+            ->tap(fn ($q) => $this->applyReportDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->select(
                 'payment_method',
                 DB::raw('COALESCE(SUM(total_amount), 0) as total_amount'),
@@ -118,12 +116,11 @@ class ReportEngineService
         ]);
     }
 
-    public function rangeTopProducts($tenantId, string $startDate, string $endDate, ?int $locationId = null, int $limit = 10)
+    public function rangeTopProducts($tenantId, string $startDate, string $endDate, ?int $locationId = null, int $limit = 10, array $locationDateRanges = [])
     {
         $rows = DB::table('report_top_products_daily')
             ->where('tenant_id', $tenantId)
-            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
-            ->whereBetween('date', [$startDate, $endDate])
+            ->tap(fn ($q) => $this->applyReportDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->select(
                 'product_id',
                 'product_name',
@@ -146,12 +143,11 @@ class ReportEngineService
         });
     }
 
-    public function rangeHourly($tenantId, string $startDate, string $endDate, ?int $locationId = null)
+    public function rangeHourly($tenantId, string $startDate, string $endDate, ?int $locationId = null, array $locationDateRanges = [])
     {
         return DB::table('report_hourly_sales')
             ->where('tenant_id', $tenantId)
-            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
-            ->whereBetween('date', [$startDate, $endDate])
+            ->tap(fn ($q) => $this->applyReportDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->select(
                 'hour',
                 DB::raw('COALESCE(SUM(orders_count), 0) as orders_count'),
@@ -167,11 +163,11 @@ class ReportEngineService
             ]);
     }
 
-    public function billingByUser($tenantId, Carbon $start, Carbon $end, ?int $locationId = null, ?int $userId = null): array
+    public function billingByUser($tenantId, Carbon $start, Carbon $end, ?int $locationId = null, ?int $userId = null, array $locationDateRanges = []): array
     {
         $actorExpression = $this->billingActorExpression();
 
-        $paymentRows = $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression)
+        $paymentRows = $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression, $locationDateRanges)
             ->selectRaw("{$actorExpression} as user_id")
             ->selectRaw('COUNT(DISTINCT pos_orders.id) as order_count')
             ->selectRaw('COALESCE(SUM(pos_payments.amount), 0) as total_paid')
@@ -185,7 +181,7 @@ class ReportEngineService
             ->orderByDesc('total_paid')
             ->get();
 
-        $userOrderTotals = $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression)
+        $userOrderTotals = $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression, $locationDateRanges)
             ->selectRaw("{$actorExpression} as user_id")
             ->selectRaw('pos_orders.id as order_id')
             ->selectRaw('MAX(pos_orders.total) as order_total')
@@ -201,7 +197,7 @@ class ReportEngineService
 
         $summaryGross = DB::query()
             ->fromSub(
-                $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression)
+                $this->billingBaseQuery($start, $end, $locationId, $userId, $actorExpression, $locationDateRanges)
                     ->selectRaw('pos_orders.id as order_id')
                     ->selectRaw('MAX(pos_orders.total) as order_total')
                     ->groupBy('pos_orders.id'),
@@ -259,20 +255,25 @@ class ReportEngineService
         ];
     }
 
-    public function dailySalesReport($tenantId, string $startDate, string $endDate, ?int $locationId = null): array
+    public function dailySalesReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, array $locationDateRanges = []): array
     {
         $sales = DB::table('report_daily_sales')
             ->where('tenant_id', $tenantId)
-            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
-            ->whereBetween('date', [$startDate, $endDate])
+            ->tap(fn ($q) => $this->applyReportDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
+            ->select('date')
+            ->selectRaw('COALESCE(SUM(total_orders), 0) as total_orders')
+            ->selectRaw('COALESCE(SUM(total_sales), 0) as total_sales')
+            ->selectRaw('COALESCE(SUM(total_discount), 0) as total_discount')
+            ->selectRaw('COALESCE(SUM(total_tax), 0) as total_tax')
+            ->selectRaw('COALESCE(SUM(net_sales), 0) as net_sales')
+            ->groupBy('date')
             ->orderBy('date')
             ->get()
             ->keyBy('date');
 
         $paymentRows = DB::table('report_payment_breakdowns')
             ->where('tenant_id', $tenantId)
-            ->tap(fn ($q) => $this->applyReportLocationFilter($q, $locationId))
-            ->whereBetween('date', [$startDate, $endDate])
+            ->tap(fn ($q) => $this->applyReportDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->select('date', 'payment_method', DB::raw('COALESCE(SUM(total_amount), 0) as amount'))
             ->groupBy('date', 'payment_method')
             ->get()
@@ -310,7 +311,7 @@ class ReportEngineService
         ];
     }
 
-    public function itemWiseSalesReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, ?int $limit = null): array
+    public function itemWiseSalesReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, ?int $limit = null, array $locationDateRanges = []): array
     {
         $rows = DB::table('pos_order_items')
             ->join('pos_orders', 'pos_orders.id', '=', 'pos_order_items.order_id')
@@ -318,7 +319,7 @@ class ReportEngineService
             ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
             ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
             ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
-            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->select(
                 'products.id as product_id',
                 'products.name as product_name',
@@ -362,9 +363,9 @@ class ReportEngineService
         ];
     }
 
-    public function bestSellingProductsReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, int $limit = 20): array
+    public function bestSellingProductsReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, int $limit = 20, array $locationDateRanges = []): array
     {
-        $report = $this->itemWiseSalesReport($tenantId, $startDate, $endDate, $locationId, $limit);
+        $report = $this->itemWiseSalesReport($tenantId, $startDate, $endDate, $locationId, $limit, $locationDateRanges);
         $totalRevenue = max(0.0, (float) ($report['summary']['net_revenue'] ?? 0));
 
         $report['rows'] = collect($report['rows'])->values()->map(function ($row, $index) use ($totalRevenue) {
@@ -380,19 +381,19 @@ class ReportEngineService
         return $report;
     }
 
-    public function cashierReport($tenantId, Carbon $start, Carbon $end, ?int $locationId = null, ?int $userId = null): array
+    public function cashierReport($tenantId, Carbon $start, Carbon $end, ?int $locationId = null, ?int $userId = null, array $locationDateRanges = []): array
     {
-        return $this->billingByUser($tenantId, $start, $end, $locationId, $userId);
+        return $this->billingByUser($tenantId, $start, $end, $locationId, $userId, $locationDateRanges);
     }
 
-    public function outletReport($tenantId, string $startDate, string $endDate): array
+    public function outletReport($tenantId, string $startDate, string $endDate, array $locationDateRanges = []): array
     {
         $locations = DB::table('locations')->pluck('name', 'id');
 
         $orderTotals = DB::table('pos_orders')
             ->where('payment_status', self::PAID_PAYMENT_STATUS)
             ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES)
-            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate, null, $locationDateRanges))
             ->select('location_id')
             ->selectRaw('COUNT(*) as orders')
             ->selectRaw('COALESCE(SUM(total), 0) as gross_sales')
@@ -405,7 +406,7 @@ class ReportEngineService
             ->where('pos_payments.status', 'success')
             ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
             ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
-            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate, null, $locationDateRanges))
             ->select('pos_orders.location_id')
             ->selectRaw('COALESCE(SUM(pos_payments.amount), 0) as paid_total')
             ->selectRaw("COALESCE(SUM(CASE WHEN pos_payments.payment_method = 'cash' THEN pos_payments.amount ELSE 0 END), 0) as cash_total")
@@ -458,7 +459,7 @@ class ReportEngineService
         ];
     }
 
-    public function customerReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, string $period = 'today', string $customerType = 'all', ?string $search = null, int $perPage = 50): array
+    public function customerReport($tenantId, string $startDate, string $endDate, ?int $locationId = null, string $period = 'today', string $customerType = 'all', ?string $search = null, int $perPage = 50, array $locationDateRanges = []): array
     {
         if (! Schema::hasTable('pos_customers') || ! Schema::hasColumn('pos_orders', 'customer_id')) {
             return [
@@ -482,7 +483,7 @@ class ReportEngineService
             ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES)
             ->whereNotNull('customer_id')
             ->when($locationId !== null, fn ($q) => $q->where('location_id', $locationId))
-            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->select('customer_id')
             ->selectRaw('COUNT(*) as orders_in_range')
             ->selectRaw('COALESCE(SUM(total), 0) as spend_in_range')
@@ -553,7 +554,7 @@ class ReportEngineService
             ->whereNotIn('status', self::EXCLUDED_ORDER_STATUSES)
             ->whereNull('customer_id')
             ->when($locationId !== null, fn ($q) => $q->where('location_id', $locationId))
-            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $startDate, $endDate, $locationId, $locationDateRanges))
             ->count();
 
         $paginator = $base
@@ -604,19 +605,15 @@ class ReportEngineService
         ];
     }
 
-    private function billingBaseQuery(Carbon $start, Carbon $end, ?int $locationId, ?int $userId, string $actorExpression)
+    private function billingBaseQuery(Carbon $start, Carbon $end, ?int $locationId, ?int $userId, string $actorExpression, array $locationDateRanges = [])
     {
         return DB::table('pos_payments')
             ->join('pos_orders', 'pos_orders.id', '=', 'pos_payments.order_id')
             ->where('pos_payments.status', 'success')
             ->where('pos_orders.payment_status', self::PAID_PAYMENT_STATUS)
             ->whereNotIn('pos_orders.status', self::EXCLUDED_ORDER_STATUSES)
-            ->when(
-                Schema::hasColumn('pos_orders', 'business_date'),
-                fn ($q) => $q->whereBetween('pos_orders.business_date', [$start->toDateString(), $end->toDateString()]),
-                fn ($q) => $q->whereBetween('pos_payments.created_at', [$start, $end])
-            )
             ->when($locationId !== null, fn ($q) => $q->where('pos_orders.location_id', $locationId))
+            ->tap(fn ($q) => $this->applyOrderDateRangeFilter($q, $start->toDateString(), $end->toDateString(), $locationId, $locationDateRanges))
             ->when($userId !== null, fn ($q) => $q->whereRaw("{$actorExpression} = ?", [$userId]));
     }
 
@@ -863,17 +860,51 @@ class ReportEngineService
     private function applyOrderDateFilter($query, string $date): void
     {
         if (Schema::hasColumn('pos_orders', 'business_date')) {
-            $query->whereDate('pos_orders.business_date', $date);
+            $query->where(function ($scope) use ($date) {
+                $scope->whereDate('pos_orders.business_date', $date)
+                    ->orWhere(function ($legacy) use ($date) {
+                        $legacy->whereNull('pos_orders.business_date')
+                            ->whereDate('pos_orders.created_at', $date);
+                    });
+            });
             return;
         }
 
         $query->whereDate('pos_orders.created_at', $date);
     }
 
-    private function applyOrderDateRangeFilter($query, string $startDate, string $endDate): void
+    private function applyOrderDateRangeFilter($query, string $startDate, string $endDate, ?int $locationId = null, array $locationDateRanges = []): void
+    {
+        $ranges = $this->scopedLocationDateRanges($locationId, $locationDateRanges);
+
+        if (! $ranges) {
+            $this->applyOrderBusinessDateRange($query, $startDate, $endDate);
+            return;
+        }
+
+        $query->where(function ($outer) use ($ranges) {
+            foreach ($ranges as $range) {
+                $outer->orWhere(function ($scope) use ($range) {
+                    $scope->where('pos_orders.location_id', $range['location_id']);
+                    $this->applyOrderBusinessDateRange($scope, $range['start_date'], $range['end_date']);
+                });
+            }
+        });
+    }
+
+    private function applyOrderBusinessDateRange($query, string $startDate, string $endDate): void
     {
         if (Schema::hasColumn('pos_orders', 'business_date')) {
-            $query->whereBetween('pos_orders.business_date', [$startDate, $endDate]);
+            $query->where(function ($scope) use ($startDate, $endDate) {
+                $scope->whereBetween('pos_orders.business_date', [$startDate, $endDate])
+                    ->orWhere(function ($legacy) use ($startDate, $endDate) {
+                        $legacy->whereNull('pos_orders.business_date')
+                            ->whereBetween('pos_orders.created_at', [
+                                Carbon::parse($startDate)->startOfDay(),
+                                Carbon::parse($endDate)->endOfDay(),
+                            ]);
+                    });
+            });
             return;
         }
 
@@ -921,6 +952,43 @@ class ReportEngineService
     private function applyReportLocationFilter($query, ?int $locationId): void
     {
         $query->where('location_id', $this->reportLocationId($locationId));
+    }
+
+    private function applyReportDateRangeFilter($query, string $startDate, string $endDate, ?int $locationId, array $locationDateRanges = []): void
+    {
+        $ranges = $this->scopedLocationDateRanges($locationId, $locationDateRanges);
+
+        if (! $ranges) {
+            $this->applyReportLocationFilter($query, $locationId);
+            $query->whereBetween('date', [$startDate, $endDate]);
+            return;
+        }
+
+        $query->where(function ($outer) use ($ranges) {
+            foreach ($ranges as $range) {
+                $outer->orWhere(function ($scope) use ($range) {
+                    $scope->where('location_id', $range['location_id'])
+                        ->whereBetween('date', [$range['start_date'], $range['end_date']]);
+                });
+            }
+        });
+    }
+
+    private function scopedLocationDateRanges(?int $locationId, array $locationDateRanges): array
+    {
+        if ($locationId !== null || ! $locationDateRanges) {
+            return [];
+        }
+
+        return collect($locationDateRanges)
+            ->filter(fn ($range) => isset($range['location_id'], $range['start_date'], $range['end_date']))
+            ->map(fn ($range) => [
+                'location_id' => (int) $range['location_id'],
+                'start_date' => Carbon::parse($range['start_date'])->toDateString(),
+                'end_date' => Carbon::parse($range['end_date'])->toDateString(),
+            ])
+            ->values()
+            ->all();
     }
 
     private function normalizeAggregateSections(?array $sections): array

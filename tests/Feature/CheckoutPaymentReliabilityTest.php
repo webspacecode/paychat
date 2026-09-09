@@ -190,6 +190,66 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame('2026-08-31', $fresh->kitchenBatches->first()->business_date->toDateString());
     }
 
+    public function test_order_recalculation_applies_outlet_percentage_service_charge(): void
+    {
+        DB::connection('tenant')->table('locations')->where('id', 1)->update([
+            'service_charge_enabled' => true,
+            'service_charge_type' => 'percentage',
+            'service_charge_value' => 10,
+            'service_charge_default_apply' => true,
+        ]);
+        $product = Product::create([
+            'name' => 'Service Pasta',
+            'sku' => 'SERVICE-PASTA',
+            'type' => 'simple',
+            'price' => 200,
+            'track_inventory' => false,
+        ]);
+        $order = app(OrderService::class)->createDraft(1, null, 'takeaway');
+
+        app(OrderService::class)->syncItems($order->fresh(), Request::create('/orders/'.$order->id.'/items', 'PUT', [
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ]));
+
+        $fresh = $order->fresh();
+        $this->assertEquals(20.0, (float) $fresh->service_charge);
+        $this->assertEquals(220.0, (float) $fresh->total);
+        $this->assertTrue(data_get($fresh->meta, 'service_charge.applied'));
+        $this->assertSame('percentage', data_get($fresh->meta, 'service_charge.type'));
+    }
+
+    public function test_order_recalculation_respects_service_charge_checkout_opt_out(): void
+    {
+        DB::connection('tenant')->table('locations')->where('id', 1)->update([
+            'service_charge_enabled' => true,
+            'service_charge_type' => 'percentage',
+            'service_charge_value' => 10,
+            'service_charge_default_apply' => true,
+        ]);
+        $product = Product::create([
+            'name' => 'No Charge Pasta',
+            'sku' => 'NO-CHARGE-PASTA',
+            'type' => 'simple',
+            'price' => 200,
+            'track_inventory' => false,
+        ]);
+        $order = app(OrderService::class)->createDraft(1, null, 'takeaway');
+
+        app(OrderService::class)->syncItems($order->fresh(), Request::create('/orders/'.$order->id.'/items', 'PUT', [
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+            'service_charge_applied' => false,
+        ]));
+
+        $fresh = $order->fresh();
+        $this->assertEquals(0.0, (float) $fresh->service_charge);
+        $this->assertEquals(200.0, (float) $fresh->total);
+        $this->assertFalse(data_get($fresh->meta, 'service_charge.applied'));
+    }
+
     public function test_offline_sync_uses_offline_created_at_for_overnight_business_date(): void
     {
         $this->bindOfflineInvoiceService();
@@ -391,6 +451,77 @@ class CheckoutPaymentReliabilityTest extends TestCase
         $this->assertSame('pending', $payload['side_effects']['invoice']);
         $this->assertSame('pending', $payload['side_effects']['token']);
         $this->assertFalse($payload['invoice_generated']);
+    }
+
+    public function test_idempotent_table_service_payment_success_still_releases_table(): void
+    {
+        $tableId = 61;
+        $this->tableResource($tableId, 'T61', 'occupied');
+        $order = $this->order(total: 240, status: 'completed', paymentStatus: 'paid', orderType: 'dine_in', diningFlow: 'table_service');
+        $session = DB::connection('tenant')->table('table_sessions')->insertGetId([
+            'location_id' => 1,
+            'primary_table_id' => $tableId,
+            'table_id' => $tableId,
+            'order_id' => $order->id,
+            'status' => 'active',
+            'guest_count' => 2,
+            'opened_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $order->update([
+            'dining_flow' => 'table_service',
+            'table_id' => $tableId,
+            'table_session_id' => $session,
+        ]);
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'payment_method' => 'cash',
+            'amount' => 240,
+            'status' => 'success',
+        ]);
+
+        $response = app(PaymentController::class)->markSuccess(
+            'demo',
+            (string) $payment->id,
+            app(PaymentService::class),
+            app(OrderKitchenDispatchService::class)
+        );
+        $payload = $response->getData(true);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertTrue($payload['already_paid']);
+        $this->assertSame('success', $payload['side_effects']['table_session']);
+        $this->assertSame('closed', DB::connection('tenant')->table('table_sessions')->where('id', $session)->value('status'));
+        $this->assertSame('available', DB::connection('tenant')->table('resources')->where('id', $tableId)->value('status'));
+    }
+
+    public function test_table_service_draft_reuses_existing_active_unpaid_table_order(): void
+    {
+        $tableId = 62;
+        $this->tableResource($tableId, 'T62', 'occupied');
+        $order = $this->order(total: 90, orderType: 'dine_in', diningFlow: 'table_service');
+        $session = DB::connection('tenant')->table('table_sessions')->insertGetId([
+            'location_id' => 1,
+            'primary_table_id' => $tableId,
+            'table_id' => $tableId,
+            'order_id' => $order->id,
+            'status' => 'active',
+            'guest_count' => 1,
+            'opened_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $order->update([
+            'dining_flow' => 'table_service',
+            'table_id' => $tableId,
+            'table_session_id' => $session,
+        ]);
+
+        $created = app(OrderService::class)->createDraft(1, null, 'dine_in', $tableId, 'table_service');
+
+        $this->assertSame($order->id, $created->id);
+        $this->assertSame(1, Order::count());
     }
 
     public function test_completed_order_item_update_returns_conflict(): void
@@ -1593,6 +1724,10 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->time('business_day_start_time')->nullable();
             $table->time('business_day_end_time')->nullable();
             $table->string('timezone')->nullable();
+            $table->boolean('service_charge_enabled')->default(false);
+            $table->string('service_charge_type', 20)->nullable();
+            $table->decimal('service_charge_value', 12, 2)->nullable();
+            $table->boolean('service_charge_default_apply')->default(true);
             $table->timestamps();
         });
 
@@ -1615,6 +1750,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->string('status')->default('active');
             $table->unsignedInteger('guest_count')->nullable();
             $table->timestamp('opened_at')->nullable();
+            $table->timestamp('closed_at')->nullable();
             $table->timestamps();
         });
 
@@ -1644,6 +1780,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->decimal('subtotal', 15, 2)->default(0);
             $table->decimal('discount', 15, 2)->default(0);
             $table->decimal('tax', 15, 2)->default(0);
+            $table->decimal('service_charge', 15, 2)->default(0);
             $table->decimal('total', 15, 2)->default(0);
             $table->decimal('paid_amount', 15, 2)->default(0);
             $table->decimal('balance_due', 15, 2)->default(0);
@@ -1661,6 +1798,7 @@ class CheckoutPaymentReliabilityTest extends TestCase
             $table->string('type')->nullable();
             $table->decimal('price', 12, 2)->default(0);
             $table->boolean('track_inventory')->default(false);
+            $table->softDeletes();
             $table->timestamps();
         });
 

@@ -40,10 +40,10 @@ class RestaurantProductStrategy implements ProductStrategyInterface
         return $strategy->delete($product);
     }
 
-    public function search(?string $keyword = null, ?string $type = null, ?int $locationId = null, bool $includeInactive = false)
+    public function search(?string $keyword = null, ?string $type = null, ?int $locationId = null, bool $includeInactive = false, bool $onlyArchived = false)
     {
         $strategy = $this->typeResolver->resolve($type);
-        return $strategy->search($keyword, $type, $locationId, $includeInactive);
+        return $strategy->search($keyword, $type, $locationId, $includeInactive, $onlyArchived);
     }
 
     public function getById(int $id): ?Product

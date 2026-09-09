@@ -9,6 +9,7 @@
                 <a href="{{ route('master.dashboard') }}" class="rounded-md px-3 py-2 text-slate-600 hover:bg-slate-50">Dashboard</a>
                 <a href="{{ route('master.features.index') }}" class="rounded-md bg-slate-950 px-3 py-2 text-white">Features</a>
                 <a href="{{ route('master.plans.index') }}" class="rounded-md px-3 py-2 text-slate-600 hover:bg-slate-50">Plans</a>
+                <a href="{{ route('master.feature-announcements.index') }}" class="rounded-md px-3 py-2 text-slate-600 hover:bg-slate-50">Feature Announcements</a>
             </nav>
         </aside>
 
